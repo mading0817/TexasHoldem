@@ -7,12 +7,12 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core_game_logic.game_state import GameState
-from core_game_logic.player import Player
+from core_game_logic.game.game_state import GameState
+from core_game_logic.core.player import Player
 from core_game_logic.phases.preflop import PreFlopPhase
-from core_game_logic.deck import Deck
-from core_game_logic.enums import ActionType, Action
-from core_game_logic.action_validator import ActionValidator
+from core_game_logic.core.deck import Deck
+from core_game_logic.core.enums import ActionType, Action
+from core_game_logic.betting.action_validator import ActionValidator
 
 
 class TestChipConservation:
@@ -33,8 +33,8 @@ class TestChipConservation:
             big_blind=2
         )
         
-        # 记录开始时的筹码总量
-        total_before = sum(p.chips for p in players) + state.pot
+        # 记录开始时的筹码总量 - 正确的守恒公式
+        total_before = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         
         # 创建牌组并发牌
         state.deck = Deck(seed=42)
@@ -44,8 +44,8 @@ class TestChipConservation:
         preflop = PreFlopPhase(state)
         preflop.enter()
         
-        # 验证发牌后筹码守恒
-        total_after_deal = sum(p.chips for p in players) + state.pot
+        # 验证发牌后筹码守恒 - 使用正确的守恒公式
+        total_after_deal = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         assert total_before == total_after_deal, f"发牌后筹码不守恒！差异: {total_after_deal - total_before}"
         
         # 模拟行动：Alice跟注，Bob过牌
@@ -57,7 +57,7 @@ class TestChipConservation:
         continuing = preflop.act(alice_action)
         
         # 验证Alice行动后筹码守恒
-        total_after_alice = sum(p.chips for p in players) + state.pot
+        total_after_alice = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         assert total_before == total_after_alice, f"Alice行动后筹码不守恒！差异: {total_after_alice - total_before}"
         
         # Bob过牌
@@ -66,14 +66,14 @@ class TestChipConservation:
         continuing = preflop.act(bob_action)
         
         # 验证Bob行动后筹码守恒
-        total_after_bob = sum(p.chips for p in players) + state.pot
+        total_after_bob = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         assert total_before == total_after_bob, f"Bob行动后筹码不守恒！差异: {total_after_bob - total_before}"
         
         # 退出翻牌前阶段
         next_phase = preflop.exit()
         
         # 验证最终筹码守恒
-        total_final = sum(p.chips for p in players) + state.pot
+        total_final = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         assert total_before == total_final, f"最终筹码不守恒！差异: {total_final - total_before}"
     
     def test_multi_player_chip_conservation(self):
@@ -92,8 +92,8 @@ class TestChipConservation:
             big_blind=10
         )
         
-        # 记录开始时的筹码总量
-        total_before = sum(p.chips for p in players) + state.pot
+        # 记录开始时的筹码总量 - 正确的守恒公式
+        total_before = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         
         # 创建牌组并发牌
         state.deck = Deck(seed=123)
@@ -103,8 +103,8 @@ class TestChipConservation:
         preflop = PreFlopPhase(state)
         preflop.enter()
         
-        # 验证发牌后筹码守恒
-        total_after_deal = sum(p.chips for p in players) + state.pot
+        # 验证发牌后筹码守恒 - 使用正确的守恒公式
+        total_after_deal = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         assert total_before == total_after_deal, f"多玩家发牌后筹码不守恒！差异: {total_after_deal - total_before}"
         
         # 模拟一轮下注
@@ -115,7 +115,7 @@ class TestChipConservation:
         preflop.act(alice_action)
         
         # 验证筹码守恒
-        total_after_alice = sum(p.chips for p in players) + state.pot
+        total_after_alice = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         assert total_before == total_after_alice, f"Alice行动后筹码不守恒！"
         
         # Bob加注
@@ -123,7 +123,7 @@ class TestChipConservation:
         preflop.act(bob_action)
         
         # 验证筹码守恒
-        total_after_bob = sum(p.chips for p in players) + state.pot
+        total_after_bob = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         assert total_before == total_after_bob, f"Bob行动后筹码不守恒！"
         
         # Charlie弃牌
@@ -131,7 +131,7 @@ class TestChipConservation:
         preflop.act(charlie_action)
         
         # 验证筹码守恒
-        total_after_charlie = sum(p.chips for p in players) + state.pot
+        total_after_charlie = sum(p.chips for p in players) + sum(p.current_bet for p in players) + state.pot
         assert total_before == total_after_charlie, f"Charlie行动后筹码不守恒！"
 
 

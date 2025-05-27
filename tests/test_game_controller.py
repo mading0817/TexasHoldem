@@ -10,11 +10,11 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core_game_logic.game_controller import GameController
-from core_game_logic.game_state import GameState
-from core_game_logic.player import Player
-from core_game_logic.deck import Deck
-from core_game_logic.enums import GamePhase, SeatStatus
+from core_game_logic.game.game_controller import GameController
+from core_game_logic.game.game_state import GameState
+from core_game_logic.core.player import Player
+from core_game_logic.core.deck import Deck
+from core_game_logic.core.enums import GamePhase, SeatStatus
 
 
 class TestGameController:

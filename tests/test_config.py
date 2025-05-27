@@ -229,22 +229,24 @@ class TestGameConfig:
         except ValueError:
             pass
         
-        # 测试没有人类玩家
+        # 测试没有人类玩家 - 使用validate_for_game_start方法
         try:
             config = GameConfig(players=[
                 PlayerConfig(seat=0, type="ai", model="random"),
                 PlayerConfig(seat=1, type="ai", model="random")
             ])
+            config.validate_for_game_start()  # 这里应该抛出异常
             assert False, "没有人类玩家应该抛出异常"
         except ValueError:
             pass
         
-        # 测试多个人类玩家
+        # 测试多个人类玩家 - 使用validate_for_game_start方法
         try:
             config = GameConfig(players=[
                 PlayerConfig(seat=0, type="human"),
                 PlayerConfig(seat=1, type="human")
             ])
+            config.validate_for_game_start()  # 这里应该抛出异常
             assert False, "多个人类玩家应该抛出异常"
         except ValueError:
             pass

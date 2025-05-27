@@ -5,7 +5,7 @@
 ### Milestone 1: Core Game Logic - Basic Structure (Completed)
 - Implement basic data structures (Card, Deck, Player, GameState, SeatStatus, ActionEvent).
 
-### Milestone 2: Core Game Logic - Betting and Pot (Completed)
+### Milestone 2: Core Game Logic - Betting and Pot (Implemented & Initially Verified)
 - Implement BasePhase and the state machine framework.
 - Implement GameState for betting round control.
 - Implement PotManager for standard side pot calculations and distribution.
@@ -13,15 +13,16 @@
 - Implement GameState with transactional context manager and clone method.
 - Define business exceptions (PokerGameError, InvalidActionError).
 
-### Milestone 3: Core Game Logic - Phases Implementation (Completed)
+### Milestone 3: Core Game Logic - Phases Implementation (Implemented & Initially Verified)
 - Implement specific Phase subclasses (PreFlop, Flop, Turn, River, Showdown).
 - Implement chip conservation logic across all phases.
 
-### Milestone 4: Testing and Verification (Completed)
+### Milestone 4: Testing and Verification (Ongoing)
 - Implement basic unit tests (PotManager related tests).
 - Implement AI simulation test for end-to-end game flow and chip conservation.
 - Verify game flow, betting, and settlement are correct and comply with poker rules through AI simulation.
-- **所有核心游戏逻辑测试已成功运行并通过。**
+- **已完成对Pre-flop阶段底池计算和行动顺序bug的修复与验证。**
+- **核心游戏逻辑已实现基础框架，并通过初步测试，但需要持续集成测试和验证。**
 
 ### Milestone 5: Hand Evaluation (Next)
 - Implement a basic hand evaluation system.

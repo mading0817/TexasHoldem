@@ -10,12 +10,12 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core_game_logic.game_state import GameState, phase_transition
-from core_game_logic.player import Player
-from core_game_logic.deck import Deck
-from core_game_logic.card import CardPool
-from core_game_logic.enums import GamePhase, SeatStatus, Rank, Suit
-from core_game_logic.exceptions import GameStateError
+from core_game_logic.game.game_state import GameState, phase_transition
+from core_game_logic.core.player import Player
+from core_game_logic.core.deck import Deck
+from core_game_logic.core.card import CardPool
+from core_game_logic.core.enums import GamePhase, SeatStatus, Rank, Suit
+from core_game_logic.core.exceptions import GameStateError
 
 
 class TestGameState:
@@ -393,7 +393,7 @@ class TestGameState:
         # 测试__str__方法
         str_repr = str(self.state)
         assert "PRE_FLOP" in str_repr, "应该包含阶段信息"
-        assert "As Kh" in str_repr, "应该包含公共牌信息"
+        assert "A♠ K♥" in str_repr, "应该包含公共牌信息"
         assert "60" in str_repr, "应该包含底池信息"
         assert "20" in str_repr, "应该包含当前下注信息"
         

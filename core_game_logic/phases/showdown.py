@@ -5,7 +5,7 @@
 
 from typing import Optional, Dict, List, TYPE_CHECKING
 from .base_phase import BasePhase
-from ..enums import GamePhase, SeatStatus
+from ..core.enums import GamePhase, SeatStatus
 from ..evaluator import SimpleEvaluator
 
 if TYPE_CHECKING:
@@ -37,14 +37,16 @@ class ShowdownPhase(BasePhase):
         players_in_hand = self.state.get_players_in_hand()
         self.state.add_event(f"摊牌阶段开始，{len(players_in_hand)}名玩家参与")
         
-        # 显示所有玩家手牌（用于调试）
-        for player in players_in_hand:
-            cards_str = player.get_hole_cards_str(hidden=False)
-            print(f"玩家{player.seat_id}手牌: {cards_str}")
-        
-        # 显示公共牌
-        community_str = " ".join(card.to_str() for card in self.state.community_cards)
-        print(f"公共牌: {community_str}")
+        # 只有在多人摊牌时才显示手牌，单人获胜不显示
+        if len(players_in_hand) > 1:
+            # 显示所有玩家手牌
+            for player in players_in_hand:
+                cards_str = player.get_hole_cards_str(hidden=False)
+                print(f"{player.name}手牌: {cards_str}")
+            
+            # 显示公共牌
+            community_str = " ".join(card.to_display_str() for card in self.state.community_cards)
+            print(f"公共牌: {community_str}")
     
     def act(self, action: 'ValidatedAction') -> bool:
         """
@@ -85,7 +87,7 @@ class ShowdownPhase(BasePhase):
             # 只有一个玩家，直接获得所有底池
             winner = players_in_hand[0]
             winner.add_chips(self.state.pot)
-            self.state.add_event(f"玩家{winner.seat_id}获得底池{self.state.pot}（其他玩家弃牌）")
+            self.state.add_event(f"{winner.name}获得底池{self.state.pot}（其他玩家弃牌）")
             self.state.pot = 0
             return
         
@@ -105,9 +107,9 @@ class ShowdownPhase(BasePhase):
                     self.state.community_cards
                 )
                 player_hands[player.seat_id] = hand_result
-                print(f"玩家{player.seat_id}: {hand_result}")
+                print(f"{player.name}: {hand_result}")
             except Exception as e:
-                print(f"玩家{player.seat_id}牌型评估失败: {e}")
+                print(f"{player.name}牌型评估失败: {e}")
                 # 给予最低牌型（高牌2）
                 from ..evaluator import HandResult, HandRank
                 player_hands[player.seat_id] = HandResult(HandRank.HIGH_CARD, 2)
@@ -146,7 +148,7 @@ class ShowdownPhase(BasePhase):
             for i, winner in enumerate(winners):
                 award = pot_per_winner + (1 if i < remainder else 0)
                 winner.add_chips(award)
-                print(f"玩家{winner.seat_id}获得主池{award}")
+                print(f"{winner.name}获得主池{award}")
             
             # 清空底池
             self.state.pot = 0 

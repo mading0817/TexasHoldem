@@ -10,9 +10,9 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core_game_logic.player import Player
-from core_game_logic.card import Card, CardPool
-from core_game_logic.enums import SeatStatus, Suit, Rank
+from core_game_logic.core.player import Player
+from core_game_logic.core.card import Card, CardPool
+from core_game_logic.core.enums import SeatStatus, Suit, Rank
 
 
 class TestPlayer:
@@ -214,7 +214,7 @@ class TestPlayer:
         
         # 测试手牌字符串表示
         cards_str = self.player.get_hole_cards_str()
-        assert "As" in cards_str and "Kh" in cards_str, "手牌字符串应该包含正确的牌"
+        assert "A♠" in cards_str and "K♥" in cards_str, "手牌字符串应该包含正确的牌"
         
         # 测试隐藏手牌
         hidden_str = self.player.get_hole_cards_str(hidden=True)
@@ -320,7 +320,7 @@ class TestPlayer:
         assert "当前下注20" in str_repr, "应该包含当前下注"
         assert "庄家" in str_repr, "应该包含庄家标记"
         assert "小盲" in str_repr, "应该包含小盲标记"
-        assert "As Kh" in str_repr, "应该包含手牌"
+        assert "A♠ K♥" in str_repr, "应该包含手牌"
         
         # 测试__repr__方法
         repr_str = repr(self.player)

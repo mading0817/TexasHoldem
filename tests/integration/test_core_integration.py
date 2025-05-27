@@ -7,13 +7,13 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core_game_logic.game_state import GameState, phase_transition
-from core_game_logic.game_controller import GameController
-from core_game_logic.pot_manager import PotManager
-from core_game_logic.action_validator import ActionValidator
-from core_game_logic.player import Player
-from core_game_logic.enums import GamePhase, ActionType, Action, SeatStatus
-from core_game_logic.deck import Deck
+from core_game_logic.game.game_state import GameState, phase_transition
+from core_game_logic.game.game_controller import GameController
+from core_game_logic.betting.pot_manager import PotManager
+from core_game_logic.betting.action_validator import ActionValidator
+from core_game_logic.core.player import Player
+from core_game_logic.core.enums import GamePhase, ActionType, Action, SeatStatus
+from core_game_logic.core.deck import Deck
 
 
 class TestCoreIntegration:

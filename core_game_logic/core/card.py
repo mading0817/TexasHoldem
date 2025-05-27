@@ -30,6 +30,13 @@ class Card:
         例如: "As" (黑桃A), "Kh" (红桃K)
         """
         return f"{self.rank}{self.suit}"
+    
+    def to_display_str(self) -> str:
+        """
+        返回卡牌的显示字符串表示（使用花色符号）
+        例如: "A♠" (黑桃A), "K♥" (红桃K)
+        """
+        return f"{self.rank}{self.suit.symbol}"
 
     @classmethod
     def from_str(cls, card_str: str) -> 'Card':
@@ -50,8 +57,8 @@ class Card:
             raise ValueError(f"无法解析卡牌字符串 '{card_str}': {e}")
 
     def __str__(self) -> str:
-        """返回卡牌的可读表示"""
-        return f"{self.rank.name.title()} of {self.suit.name.title()}"
+        """返回卡牌的简短字符串表示"""
+        return self.to_str()
 
     def __repr__(self) -> str:
         """返回卡牌的调试表示"""

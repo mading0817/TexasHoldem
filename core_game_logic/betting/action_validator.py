@@ -4,10 +4,10 @@
 """
 
 from typing import Optional, List
-from .enums import ActionType, Action, ValidatedAction
-from .game_state import GameState
-from .player import Player
-from .exceptions import InvalidActionError, InsufficientChipsError
+from ..core.enums import ActionType, Action, ValidatedAction
+from ..game.game_state import GameState
+from ..core.player import Player
+from ..core.exceptions import InvalidActionError, InsufficientChipsError
 
 
 class ActionValidator:
@@ -155,7 +155,8 @@ class ActionValidator:
             raise InvalidActionError("没有下注时不能加注，请选择下注")
         
         call_amount = self._calculate_call_amount(state, player)
-        min_raise = state.current_bet * 2  # 最小加注为当前下注的两倍
+        # 最小加注为当前跟注金额+一个大盲注
+        min_raise = state.current_bet + state.big_blind
         
         # 检查加注金额
         if action.amount < min_raise:
@@ -233,7 +234,7 @@ class ActionValidator:
             # 有下注，可以跟注
             actions.append(ActionType.CALL)
             if player.chips > call_amount:
-                min_raise = state.current_bet * 2
+                min_raise = state.current_bet + state.big_blind
                 if player.chips >= min_raise:
                     actions.append(ActionType.RAISE)  # 可以加注
         

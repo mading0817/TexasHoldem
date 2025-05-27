@@ -10,9 +10,9 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core_game_logic.deck import Deck
-from core_game_logic.card import Card, CardPool
-from core_game_logic.enums import Suit, Rank
+from core_game_logic.core.deck import Deck
+from core_game_logic.core.card import Card, CardPool
+from core_game_logic.core.enums import Suit, Rank
 
 
 class TestDeck:

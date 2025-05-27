@@ -100,8 +100,8 @@ class GameConfig:
         if len(self.players) > self.max_players:
             raise ValueError(f"玩家数量({len(self.players)})超过最大限制({self.max_players})")
         
-        if len(self.players) < self.min_players:
-            raise ValueError(f"玩家数量({len(self.players)})少于最小要求({self.min_players})")
+        # 只有在有玩家时才检查最小数量要求
+        # 这允许在构建过程中逐步添加玩家
         
         # 检查座位号重复
         seats = [p.seat for p in self.players]
@@ -112,14 +112,6 @@ class GameConfig:
         for player in self.players:
             if player.seat >= self.max_players:
                 raise ValueError(f"座位号({player.seat})超出范围(0-{self.max_players-1})")
-        
-        # 检查是否有人类玩家
-        human_players = [p for p in self.players if p.is_human]
-        if len(human_players) == 0:
-            raise ValueError("至少需要一个人类玩家")
-        
-        if len(human_players) > 1:
-            raise ValueError("只能有一个人类玩家")
 
     def _set_default_ai_settings(self):
         """设置默认的AI配置"""
@@ -145,6 +137,19 @@ class GameConfig:
         
         self.players.append(player_config)
         self._validate_players()
+
+    def validate_for_game_start(self):
+        """验证配置是否可以开始游戏"""
+        if len(self.players) < self.min_players:
+            raise ValueError(f"玩家数量({len(self.players)})少于最小要求({self.min_players})")
+        
+        # 检查是否有人类玩家
+        human_players = [p for p in self.players if p.is_human]
+        if len(human_players) == 0:
+            raise ValueError("至少需要一个人类玩家")
+        
+        if len(human_players) > 1:
+            raise ValueError("只能有一个人类玩家")
 
     def get_human_player(self) -> Optional[PlayerConfig]:
         """获取人类玩家配置"""

@@ -5,7 +5,7 @@
 
 from typing import List, Dict, Optional
 from .side_pot import SidePot, calculate_side_pots
-from .player import Player
+from ..core.player import Player
 
 
 class PotManager:

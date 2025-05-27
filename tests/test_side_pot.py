@@ -3,8 +3,11 @@
 验证标准德州扑克边池算法的正确性
 """
 
-import pytest
-from core_game_logic.side_pot import calculate_side_pots, SidePot, validate_side_pot_calculation, get_pot_distribution_summary
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from core_game_logic.betting.side_pot import calculate_side_pots, SidePot, validate_side_pot_calculation, get_pot_distribution_summary
 
 
 class TestSidePotCalculation:
@@ -158,16 +161,25 @@ class TestSidePotDataStructure:
         assert pot.amount == 100
         
         # 负金额应该抛出异常
-        with pytest.raises(ValueError, match="边池金额不能为负数"):
+        try:
             SidePot(-10, [0, 1])
+            assert False, "应该抛出ValueError"
+        except ValueError as e:
+            assert "边池金额不能为负数" in str(e)
         
         # 空玩家列表应该抛出异常
-        with pytest.raises(ValueError, match="边池必须至少有一个有资格的玩家"):
+        try:
             SidePot(100, [])
+            assert False, "应该抛出ValueError"
+        except ValueError as e:
+            assert "边池必须至少有一个有资格的玩家" in str(e)
         
         # 重复玩家应该抛出异常
-        with pytest.raises(ValueError, match="边池的有资格玩家列表不能有重复"):
+        try:
             SidePot(100, [0, 1, 1])
+            assert False, "应该抛出ValueError"
+        except ValueError as e:
+            assert "边池的有资格玩家列表不能有重复" in str(e)
 
     def test_side_pot_string_representation(self):
         """测试边池字符串表示"""
@@ -182,5 +194,51 @@ class TestSidePotDataStructure:
         assert "amount=100" in repr_str
 
 
+def run_tests():
+    """运行所有测试"""
+    print("=== 边池计算系统单元测试 ===\n")
+    
+    calc_test = TestSidePotCalculation()
+    structure_test = TestSidePotDataStructure()
+    
+    test_methods = [
+        ("三人全押示例", calc_test.test_three_player_all_in_example),
+        ("空投入", calc_test.test_empty_contribution),
+        ("零投入", calc_test.test_zero_contribution),
+        ("单人投入", calc_test.test_single_player),
+        ("两人相等投入", calc_test.test_two_players_equal_contribution),
+        ("两人不同投入", calc_test.test_two_players_different_contribution),
+        ("四人递增全押", calc_test.test_four_players_incremental_all_in),
+        ("多人相同投入", calc_test.test_same_amount_multiple_players),
+        ("复杂场景", calc_test.test_complex_scenario),
+        ("验证函数", calc_test.test_validation_function),
+        ("边池分配摘要", calc_test.test_pot_distribution_summary),
+        ("边池创建", structure_test.test_side_pot_creation),
+        ("边池验证", structure_test.test_side_pot_validation),
+        ("边池字符串表示", structure_test.test_side_pot_string_representation),
+    ]
+    
+    passed = 0
+    failed = 0
+    
+    for test_name, test_func in test_methods:
+        try:
+            test_func()
+            print(f"✓ {test_name}测试通过")
+            passed += 1
+        except Exception as e:
+            print(f"✗ {test_name}测试失败: {e}")
+            failed += 1
+    
+    print(f"\n测试结果: {passed}通过, {failed}失败")
+    
+    if failed == 0:
+        print("🎉 所有边池计算测试通过！")
+        return True
+    else:
+        print("❌ 部分测试失败，需要修复")
+        return False
+
+
 if __name__ == "__main__":
-    pytest.main([__file__]) 
+    run_tests() 

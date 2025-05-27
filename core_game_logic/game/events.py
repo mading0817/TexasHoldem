@@ -6,7 +6,7 @@
 import time
 from dataclasses import dataclass
 from typing import List, Callable, Any, Optional
-from .enums import GamePhase, ActionType
+from ..core.enums import GamePhase, ActionType
 
 
 @dataclass(frozen=True)

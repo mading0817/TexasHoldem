@@ -6,9 +6,14 @@
 验证所有9种牌型的识别和比较逻辑
 """
 
-from core_game_logic.card import Card
-from core_game_logic.enums import Rank, Suit
-from core_game_logic.evaluator import SimpleEvaluator, HandResult, HandRank
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from core_game_logic.core.card import Card
+from core_game_logic.core.enums import Rank, Suit
+from core_game_logic.evaluator.simple_evaluator import SimpleEvaluator, HandResult
+from core_game_logic.evaluator.hand_rank import HandRank
 
 
 class TestSimpleEvaluator:

@@ -60,7 +60,11 @@ class Rank(Enum):
     def from_str(cls, rank_str: str) -> 'Rank':
         """从字符串创建Rank对象"""
         if rank_str.isdigit():
-            return cls(int(rank_str))
+            value = int(rank_str)
+            if 2 <= value <= 9:
+                return cls(value)
+            else:
+                raise ValueError(f"无效的点数值: {rank_str}")
         
         rank_map = {
             "T": cls.TEN,
@@ -69,7 +73,12 @@ class Rank(Enum):
             "K": cls.KING,
             "A": cls.ACE
         }
-        return rank_map[rank_str.upper()]
+        
+        upper_rank = rank_str.upper()
+        if upper_rank not in rank_map:
+            raise ValueError(f"无效的点数字符: {rank_str}")
+        
+        return rank_map[upper_rank]
 
 
 class SeatStatus(Enum):
@@ -99,7 +108,16 @@ class ActionType(Enum):
     ALL_IN = auto()    # 全押
 
     def __str__(self) -> str:
-        return self.name.lower()
+        """返回行动类型的中文描述"""
+        chinese_names = {
+            ActionType.FOLD: "弃牌",
+            ActionType.CHECK: "过牌", 
+            ActionType.CALL: "跟注",
+            ActionType.BET: "下注",
+            ActionType.RAISE: "加注",
+            ActionType.ALL_IN: "全押"
+        }
+        return chinese_names[self]
 
 
 # 在文件末尾添加Action数据类

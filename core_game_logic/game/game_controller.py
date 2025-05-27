@@ -5,8 +5,8 @@
 
 from typing import Optional
 from .game_state import GameState, phase_transition
-from .phases.base_phase import BasePhase
-from .exceptions import PhaseTransitionError
+from ..phases.base_phase import BasePhase
+from ..core.exceptions import PhaseTransitionError
 
 
 class GameController:

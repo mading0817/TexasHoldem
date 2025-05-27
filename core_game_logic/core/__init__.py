@@ -11,7 +11,7 @@ from .card import Card, CardPool
 from .deck import Deck
 from .player import Player
 from .config import GameConfig, PlayerConfig
-from .exceptions import TexasHoldemError, InvalidActionError, GameStateError
+from .exceptions import PokerGameError, InvalidActionError, GameStateError
 
 __all__ = [
     # 枚举类型
@@ -27,5 +27,5 @@ __all__ = [
     'GameConfig', 'PlayerConfig',
     
     # 异常类型
-    'TexasHoldemError', 'InvalidActionError', 'GameStateError',
+    'PokerGameError', 'InvalidActionError', 'GameStateError',
 ] 

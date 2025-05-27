@@ -6,7 +6,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 from .card import Card
-from .enums import SeatStatus
+from .enums import SeatStatus, ActionType
 
 
 @dataclass
@@ -24,6 +24,7 @@ class Player:
     is_dealer: bool = False                        # 是否为庄家
     is_small_blind: bool = False                   # 是否为小盲注
     is_big_blind: bool = False                     # 是否为大盲注
+    last_action_type: Optional[ActionType] = None  # 最后一次行动类型
 
     def __post_init__(self):
         """验证玩家数据的有效性"""
@@ -174,7 +175,7 @@ class Player:
         if hidden:
             return "XX XX" if len(self.hole_cards) == 2 else "XX" * len(self.hole_cards)
         
-        return " ".join(card.to_str() for card in self.hole_cards)
+        return " ".join(card.to_display_str() for card in self.hole_cards)
 
     def reset_for_new_hand(self):
         """
@@ -186,6 +187,7 @@ class Player:
         self.is_dealer = False
         self.is_small_blind = False
         self.is_big_blind = False
+        self.last_action_type = None  # 重置最后行动类型
         
         # 重置状态（除非玩家已出局）
         if self.status != SeatStatus.OUT:

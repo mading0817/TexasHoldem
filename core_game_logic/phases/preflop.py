@@ -5,8 +5,8 @@
 
 from typing import Optional, TYPE_CHECKING
 from .base_phase import BasePhase
-from ..enums import GamePhase, SeatStatus
-from ..deck import Deck
+from ..core.enums import GamePhase, SeatStatus
+from ..core.deck import Deck
 
 if TYPE_CHECKING:
     from ..action_validator import ValidatedAction
@@ -66,7 +66,7 @@ class PreFlopPhase(BasePhase):
         self._execute_action(player, action)
         
         # 记录事件
-        self.state.add_event(f"玩家{player.seat_id} {action}")
+        self.state.add_event(f"{player.name} {action}")
         
         # 推进到下一个玩家
         if not self.state.advance_current_player():
@@ -157,7 +157,7 @@ class PreFlopPhase(BasePhase):
     
     def _execute_action(self, player, action: 'ValidatedAction'):
         """执行玩家行动"""
-        from ..enums import ActionType
+        from ..core.enums import ActionType
         
         if action.actual_action_type == ActionType.FOLD:
             player.fold()
@@ -191,6 +191,9 @@ class PreFlopPhase(BasePhase):
             if player.current_bet > self.state.current_bet:
                 self.state.current_bet = player.current_bet
                 self.state.last_raiser = player.seat_id
+        
+        # 记录玩家的最后行动类型
+        player.last_action_type = action.actual_action_type
         
         # 增加行动计数
         self.state.street_index += 1 

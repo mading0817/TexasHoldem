@@ -67,7 +67,8 @@ Thumbs.db
 # Git相关
 .git/
 
-.xml
+*.xml
+*.iml
 
 # 只保留以下文件类型：
 # - Python源码文件 (.py)

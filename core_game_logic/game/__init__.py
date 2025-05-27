@@ -8,7 +8,7 @@
 
 from .game_state import GameState
 from .game_controller import GameController
-from .events import GameEvent, EventType, EventBus
+from .events import ActionEvent, EventBus
 
 __all__ = [
     # 游戏状态
@@ -18,5 +18,5 @@ __all__ = [
     'GameController',
     
     # 事件系统
-    'GameEvent', 'EventType', 'EventBus',
+    'ActionEvent', 'EventBus',
 ] 

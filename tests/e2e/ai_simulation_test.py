@@ -9,12 +9,12 @@ AI模拟测试
 import random
 from typing import List, Dict
 
-from core_game_logic.game_state import GameState
-from core_game_logic.player import Player
-from core_game_logic.enums import ActionType, Action, SeatStatus
-from core_game_logic.action_validator import ActionValidator
+from core_game_logic.game.game_state import GameState
+from core_game_logic.core.player import Player
+from core_game_logic.core.enums import ActionType, Action, SeatStatus
+from core_game_logic.betting.action_validator import ActionValidator
 from core_game_logic.phases import PreFlopPhase, FlopPhase, TurnPhase, RiverPhase, ShowdownPhase
-from core_game_logic.deck import Deck
+from core_game_logic.core.deck import Deck
 
 
 class AISimulation:

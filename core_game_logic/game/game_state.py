@@ -7,11 +7,11 @@ import copy
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
-from .card import Card
-from .player import Player
-from .enums import GamePhase, SeatStatus
-from .deck import Deck
-from .exceptions import GameStateError, PhaseTransitionError
+from ..core.card import Card
+from ..core.player import Player
+from ..core.enums import GamePhase, SeatStatus
+from ..core.deck import Deck
+from ..core.exceptions import GameStateError, PhaseTransitionError
 
 
 @dataclass
@@ -149,9 +149,24 @@ class GameState:
             return False
         
         # 检查是否所有玩家都至少行动过一次
-        # 这里简化处理：如果有最后加注者，检查是否轮回到加注者
+        # 如果有最后加注者，检查是否轮回到加注者
         if self.last_raiser is not None:
             return self.current_player == self.last_raiser
+        
+        # Pre-flop阶段特殊处理：大盲注玩家有行动权利
+        if self.phase == GamePhase.PRE_FLOP:
+            # 找到大盲注玩家
+            big_blind_player = None
+            for player in self.players:
+                if player.is_big_blind:
+                    big_blind_player = player
+                    break
+            
+            # 如果大盲注玩家还可以行动且没有被加注过，大盲有权行动
+            if (big_blind_player and big_blind_player.can_act() and 
+                self.current_bet == big_blind_player.current_bet and
+                self.last_raiser is None):
+                return self.current_player != big_blind_player.seat_id
         
         # 如果没有加注者，检查是否所有人都行动过
         return self.street_index >= len(active_players)
@@ -244,7 +259,7 @@ class GameState:
         if big_blind_player:
             big_blind_player.is_big_blind = True
             big_blind_player.bet(self.big_blind)
-            self.current_bet = big_blind_player.current_bet
+            self.current_bet = self.big_blind
 
     def to_dict(self, viewer_seat: Optional[int] = None) -> Dict[str, Any]:
         """
@@ -289,7 +304,7 @@ class GameState:
 
     def __str__(self) -> str:
         """返回游戏状态的可读表示"""
-        community_str = " ".join(card.to_str() for card in self.community_cards)
+        community_str = " ".join(card.to_display_str() for card in self.community_cards)
         active_count = len(self.get_active_players())
         
         return (f"阶段: {self.phase.name}, "

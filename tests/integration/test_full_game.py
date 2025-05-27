@@ -6,12 +6,12 @@
 验证从发牌到摊牌的整个德州扑克游戏流程
 """
 
-from core_game_logic.game_state import GameState
-from core_game_logic.player import Player
-from core_game_logic.enums import SeatStatus, GamePhase, ActionType, Action
-from core_game_logic.action_validator import ActionValidator
+from core_game_logic.game.game_state import GameState
+from core_game_logic.core.player import Player
+from core_game_logic.core.enums import SeatStatus, GamePhase, ActionType, Action
+from core_game_logic.betting.action_validator import ActionValidator
 from core_game_logic.phases import PreFlopPhase, FlopPhase, TurnPhase, RiverPhase, ShowdownPhase
-from core_game_logic.deck import Deck
+from core_game_logic.core.deck import Deck
 
 
 class TestFullGame:

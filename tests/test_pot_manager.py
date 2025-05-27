@@ -7,9 +7,9 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core_game_logic.pot_manager import PotManager
-from core_game_logic.player import Player
-from core_game_logic.enums import SeatStatus
+from core_game_logic.betting.pot_manager import PotManager
+from core_game_logic.core.player import Player
+from core_game_logic.core.enums import SeatStatus
 
 
 class TestPotManager:

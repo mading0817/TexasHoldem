@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional, Counter
 from collections import Counter as CollectionsCounter
 
-from ..card import Card
-from ..enums import Rank, Suit
+from ..core.card import Card
+from ..core.enums import Rank, Suit
 from .hand_rank import HandRank
 
 

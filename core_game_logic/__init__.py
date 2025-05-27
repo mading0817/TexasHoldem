@@ -18,12 +18,12 @@ from .core import (
     Suit, Rank, SeatStatus, GamePhase, ActionType, Action,
     Card, CardPool, Deck, Player,
     GameConfig, PlayerConfig,
-    TexasHoldemError, InvalidActionError, GameStateError
+    PokerGameError, InvalidActionError, GameStateError
 )
 
 from .game import (
     GameState, GameController,
-    GameEvent, EventType, EventBus
+    ActionEvent, EventBus
 )
 
 from .betting import (
@@ -44,11 +44,11 @@ __all__ = [
     'Suit', 'Rank', 'SeatStatus', 'GamePhase', 'ActionType', 'Action',
     'Card', 'CardPool', 'Deck', 'Player',
     'GameConfig', 'PlayerConfig',
-    'TexasHoldemError', 'InvalidActionError', 'GameStateError',
+    'PokerGameError', 'InvalidActionError', 'GameStateError',
     
     # 游戏逻辑
     'GameState', 'GameController',
-    'GameEvent', 'EventType', 'EventBus',
+    'ActionEvent', 'EventBus',
     
     # 下注系统
     'ActionValidator', 'PotManager',
