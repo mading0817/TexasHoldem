@@ -1,0 +1,14 @@
+# Texas Hold'em Poker Game Dependencies
+# MVP Phase Minimal Dependencies
+
+# Core Dependencies
+dataclasses-json>=0.6.0
+typing-extensions>=4.0.0
+
+# Testing Dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Development Dependencies
+black>=23.1.0
+mypy>=1.0.0 

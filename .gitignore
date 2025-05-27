@@ -1,0 +1,78 @@
+# Python相关
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虚拟环境
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDE相关
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 测试相关
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# 操作系统相关
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Git相关
+.git/
+
+.xml
+
+# 只保留以下文件类型：
+# - Python源码文件 (.py)
+# - 文本文档文件 (.txt, .md)
+# - 配置文件 (.json, .yaml, .yml, .toml)
+# - 需求文件 (requirements.txt)
+
+# 如果需要添加其他文件类型，请在此处注释说明原因 

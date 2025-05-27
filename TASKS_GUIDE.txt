@@ -1,0 +1,47 @@
+# TexasHoldem Project - TASKS GUIDE
+
+## MVP Phase Tasks
+
+### Milestone 1: Core Game Logic - Basic Structure (Completed)
+- Implement basic data structures (Card, Deck, Player, GameState, SeatStatus, ActionEvent).
+
+### Milestone 2: Core Game Logic - Betting and Pot (Completed)
+- Implement BasePhase and the state machine framework.
+- Implement GameState for betting round control.
+- Implement PotManager for standard side pot calculations and distribution.
+- Implement action validation and intelligent conversion.
+- Implement GameState with transactional context manager and clone method.
+- Define business exceptions (PokerGameError, InvalidActionError).
+
+### Milestone 3: Core Game Logic - Phases Implementation (Completed)
+- Implement specific Phase subclasses (PreFlop, Flop, Turn, River, Showdown).
+- Implement chip conservation logic across all phases.
+
+### Milestone 4: Testing and Verification (Completed)
+- Implement basic unit tests (PotManager related tests).
+- Implement AI simulation test for end-to-end game flow and chip conservation.
+- Verify game flow, betting, and settlement are correct and comply with poker rules through AI simulation.
+- **所有核心游戏逻辑测试已成功运行并通过。**
+
+### Milestone 5: Hand Evaluation (Next)
+- Implement a basic hand evaluation system.
+
+### Milestone 6: Command Line Interface (To Do)
+- Implement command line UI for state display and numerical input handling.
+
+### Milestone 7: AI Integration (To Do)
+- Implement AI adapter pattern (LLM call encapsulation, JSON processing, exceptions).
+- Integrate LLM AI for basic decision making.
+
+### Milestone 8: Refinements and Enhancements (To Do)
+- Improve AI decision-making strategy.
+- Implement save/load game functionality.
+- Implement dynamic AI model switching.
+- Implement viewing AI decision thinking process.
+
+### Milestone 9: Web Frontend Development (To Do)
+- Develop basic user interface using React + TypeScript.
+
+### Milestone 10: Integration and Final Testing (To Do)
+- Integrate backend and frontend.
+- Conduct comprehensive testing and optimization. 
