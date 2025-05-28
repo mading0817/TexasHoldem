@@ -93,7 +93,13 @@ class CLIGame:
             small_blind=1,
             big_blind=2
         )
+        
+        # 正确设置庄家标记
+        for player in state.players:
+            player.is_dealer = (player.seat_id == state.dealer_position)
+        
         print(f"[DEBUG] 游戏状态初始化完成: {state}")
+        print(f"[DEBUG] 庄家位置: {state.dealer_position}")
         
         return state
     
@@ -361,6 +367,10 @@ class CLIGame:
         # 轮换庄家位置（第一手牌除外）
         if hand_count > 1:
             self._rotate_dealer(state)
+        else:
+            # 第一手牌也要确保庄家标记正确设置
+            for player in state.players:
+                player.is_dealer = (player.seat_id == state.dealer_position)
         print("[DEBUG] 状态重置完成")
         
         # 创建新牌组

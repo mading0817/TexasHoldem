@@ -40,7 +40,7 @@ class TurnPhase(BasePhase):
     def act(self, action: 'ValidatedAction') -> bool:
         """
         处理玩家行动
-        复用现有的行动处理逻辑
+        使用BasePhase的通用方法
         
         Args:
             action: 经过验证的玩家行动
@@ -48,26 +48,7 @@ class TurnPhase(BasePhase):
         Returns:
             True如果下注轮继续，False如果下注轮结束
         """
-        player = self.state.get_player_by_seat(action.player_seat)
-        if not player:
-            raise ValueError(f"找不到座位{action.player_seat}的玩家")
-        
-        # 执行行动
-        self._execute_action(player, action)
-        
-        # 记录事件
-        self.state.add_event(f"{player.name} {action}")
-        
-        # 推进到下一个玩家
-        if not self.state.advance_current_player():
-            # 没有更多玩家可行动，下注轮结束
-            return False
-        
-        # 检查下注轮是否完成
-        if self.state.is_betting_round_complete():
-            return False
-        
-        return True
+        return self.process_standard_action(action)
     
     def exit(self) -> Optional['BasePhase']:
         """
@@ -77,25 +58,8 @@ class TurnPhase(BasePhase):
         Returns:
             下一个阶段的实例（RiverPhase）
         """
-        # 收集所有下注到底池
-        self.state.collect_bets_to_pot()
-        
-        # 推进游戏阶段
-        self.state.advance_phase()
-        
-        # 记录事件
-        self.state.add_event(f"转牌结束，底池: {self.state.pot}")
-        
-        # 检查是否只剩一个玩家（其他都弃牌了）
-        players_in_hand = self.state.get_players_in_hand()
-        if len(players_in_hand) <= 1:
-            # 直接进入摊牌阶段
-            from .showdown import ShowdownPhase
-            return ShowdownPhase(self.state)
-        
-        # 进入河牌阶段
         from .river import RiverPhase
-        return RiverPhase(self.state)
+        return self.standard_exit_to_next_phase(RiverPhase, "转牌")
     
     def _deal_turn(self):
         """发1张转牌"""

@@ -61,6 +61,13 @@ class ActionValidator:
         if state.current_player != player.seat_id:
             raise InvalidActionError(f"不是玩家{player.seat_id}的回合，当前玩家: {state.current_player}")
         
+        # 验证行动金额的基础合理性
+        # 注意：超出筹码的下注/加注由具体验证方法处理（可能转换为全押）
+        if action.action_type in [ActionType.BET, ActionType.RAISE]:
+            if action.amount <= 0:
+                raise InvalidActionError(f"下注/加注金额必须为正数: {action.amount}")
+            # 移除筹码上限检查，让具体验证方法处理转换
+        
         # 设置行动的玩家座位号
         action.player_seat = player.seat_id
     

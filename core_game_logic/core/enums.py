@@ -136,11 +136,19 @@ class Action:
     
     def __post_init__(self):
         """验证行动数据的有效性"""
+        # 检查金额是否为负数（所有行动都不应该有负数金额）
+        if self.amount < 0:
+            raise ValueError(f"行动金额不能为负数: {self.amount}")
+        
+        # 检查特定行动类型的金额要求
         if self.action_type in [ActionType.BET, ActionType.RAISE] and self.amount <= 0:
             raise ValueError(f"{self.action_type.name}行动必须指定正数金额")
         
-        if self.action_type in [ActionType.FOLD, ActionType.CHECK, ActionType.CALL] and self.amount != 0:
+        # 对于不需要金额的行动，确保金额为0
+        if self.action_type in [ActionType.FOLD, ActionType.CHECK, ActionType.ALL_IN] and self.amount != 0:
             self.amount = 0  # 这些行动不需要金额参数
+        
+        # CALL行动可以有金额参数（用于指定跟注金额），但会由validator验证是否合理
     
     def __str__(self) -> str:
         if self.amount > 0:

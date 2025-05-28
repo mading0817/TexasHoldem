@@ -148,7 +148,6 @@ class GameState:
         if len(set(current_bets)) > 1:
             return False
         
-        # 检查是否所有玩家都至少行动过一次
         # 如果有最后加注者，检查是否轮回到加注者
         if self.last_raiser is not None:
             return self.current_player == self.last_raiser
@@ -158,15 +157,20 @@ class GameState:
             # 找到大盲注玩家
             big_blind_player = None
             for player in self.players:
-                if player.is_big_blind:
+                if player.is_big_blind and player.can_act():
                     big_blind_player = player
                     break
             
-            # 如果大盲注玩家还可以行动且没有被加注过，大盲有权行动
-            if (big_blind_player and big_blind_player.can_act() and 
+            # 如果大盲注玩家还可以行动且没有被加注过，检查大盲权利
+            if (big_blind_player and 
                 self.current_bet == big_blind_player.current_bet and
                 self.last_raiser is None):
-                return self.current_player != big_blind_player.seat_id
+                # 如果大盲玩家还没有行动过，他有权利行动
+                if big_blind_player.last_action_type is None:
+                    return False
+                # 如果大盲玩家已经行动过了（比如check），下注轮完成
+                else:
+                    return True
         
         # 如果没有加注者，检查是否所有人都行动过
         return self.street_index >= len(active_players)
@@ -191,11 +195,16 @@ class GameState:
         if starting_player is not None:
             self.current_player = starting_player
         else:
-            # 默认规则：从庄家左边第一个可行动玩家开始
-            self._set_first_to_act()
+            # 根据游戏阶段使用不同的规则
+            if self.phase == GamePhase.PRE_FLOP:
+                # 翻牌前：使用现有的_set_first_to_act逻辑（从庄家左边开始）
+                self._set_first_to_act()
+            else:
+                # 翻牌后：从小盲注开始行动
+                self._set_postflop_first_to_act()
 
     def _set_first_to_act(self):
-        """设置第一个行动的玩家（根据德州扑克规则）"""
+        """设置第一个行动的玩家（翻牌前专用）"""
         all_seats = sorted([p.seat_id for p in self.players])
         dealer_index = all_seats.index(self.dealer_position)
         
@@ -207,6 +216,38 @@ class GameState:
             
             if next_player and next_player.can_act():
                 self.current_player = next_seat
+                return
+        
+        # 如果没有找到可行动的玩家，设置为庄家
+        self.current_player = self.dealer_position
+
+    def _set_postflop_first_to_act(self):
+        """设置翻牌后阶段第一个行动的玩家（从小盲注开始）"""
+        all_seats = sorted([p.seat_id for p in self.players if p.status != SeatStatus.OUT])
+        if not all_seats:
+            return
+        
+        dealer_index = all_seats.index(self.dealer_position)
+        
+        # 找到小盲注位置
+        if len(all_seats) == 2:
+            # 单挑：翻牌后非庄家（大盲）先行动
+            big_blind_index = 1 - dealer_index
+            start_seat = all_seats[big_blind_index]
+        else:
+            # 多人：庄家左边是小盲，从小盲开始
+            small_blind_index = (dealer_index + 1) % len(all_seats)
+            start_seat = all_seats[small_blind_index]
+        
+        # 从起始位置开始找第一个可行动的玩家
+        start_index = all_seats.index(start_seat)
+        for i in range(len(all_seats)):
+            check_index = (start_index + i) % len(all_seats)
+            check_seat = all_seats[check_index]
+            check_player = self.get_player_by_seat(check_seat)
+            
+            if check_player and check_player.can_act():
+                self.current_player = check_seat
                 return
         
         # 如果没有找到可行动的玩家，设置为庄家
@@ -234,6 +275,12 @@ class GameState:
         """设置盲注（在发牌前调用）"""
         if len(self.players) < 2:
             return
+        
+        # 首先重置所有玩家的位置标记
+        for player in self.players:
+            player.is_small_blind = False
+            player.is_big_blind = False
+            # 庄家标记保持不变，由外部管理
         
         all_seats = sorted([p.seat_id for p in self.players if p.status != SeatStatus.OUT])
         dealer_index = all_seats.index(self.dealer_position)

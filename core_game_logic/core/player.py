@@ -142,7 +142,7 @@ class Player:
 
     def fold(self):
         """玩家弃牌"""
-        if not self.can_act() and self.status != SeatStatus.ALL_IN:
+        if not self.can_act():
             raise ValueError(f"玩家{self.seat_id}无法弃牌")
         
         self.status = SeatStatus.FOLDED
@@ -181,12 +181,14 @@ class Player:
         """
         为新手牌重置玩家状态
         保留筹码，清空手牌和当前下注
+        注意：位置标记(is_dealer, is_small_blind, is_big_blind)由游戏状态管理，不在此重置
         """
         self.hole_cards.clear()
         self.current_bet = 0
-        self.is_dealer = False
-        self.is_small_blind = False
-        self.is_big_blind = False
+        # 不重置位置标记，这些由GameState.set_blinds()管理
+        # self.is_dealer = False
+        # self.is_small_blind = False  
+        # self.is_big_blind = False
         self.last_action_type = None  # 重置最后行动类型
         
         # 重置状态（除非玩家已出局）
