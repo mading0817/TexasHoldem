@@ -25,6 +25,13 @@ class Deck:
         self._random = random.Random(seed) if seed is not None else random.Random()
         self.reset()
 
+    # === 测试兼容性属性 ===
+    @property
+    def cards(self):
+        """为了向后兼容，提供cards属性访问内部_cards列表"""
+        return self._cards
+    # === 测试兼容性属性结束 ===
+
     def reset(self):
         """
         重置牌组，重新加载所有52张牌

@@ -1,11 +1,11 @@
 """
 转牌阶段实现
-发1张转牌并复用下注轮逻辑
+处理发转牌和下注轮
 """
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Callable, List, Any
 from .base_phase import BasePhase
-from ..core.enums import GamePhase
+from ..core.enums import GamePhase, SeatStatus
 
 if TYPE_CHECKING:
     from ..action_validator import ValidatedAction
@@ -14,28 +14,29 @@ if TYPE_CHECKING:
 class TurnPhase(BasePhase):
     """
     转牌阶段
-    负责发1张转牌和处理转牌下注轮
+    负责发出转牌（第4张公共牌）和处理转牌后下注轮
     """
     
     def enter(self):
         """
         进入转牌阶段的初始化操作
-        1. 发1张转牌
-        2. 开始新的下注轮
+        1. 设置游戏阶段为TURN
+        2. 发出转牌
+        3. 重置下注轮
         """
-        # 确保游戏状态正确
-        if self.state.phase != GamePhase.TURN:
-            self.state.phase = GamePhase.TURN
+        # 设置游戏阶段
+        self.state.phase = GamePhase.TURN
         
-        # 发1张转牌
+        # 发转牌（第4张公共牌）
         self._deal_turn()
         
-        # 开始新的下注轮
-        self.state.start_new_betting_round()
+        # 重置下注轮，从庄家左边第一个活跃玩家开始
+        self._start_post_flop_betting()
         
         # 记录事件
-        turn_card = self.state.community_cards[-1].to_display_str()
-        self.state.add_event(f"转牌: {turn_card}，底池: {self.state.pot}")
+        turn_card = str(self.state.community_cards[-1])
+        self.state.add_event(f"转牌: {turn_card}")
+        self.state.add_event(f"转牌阶段开始，底池: {self.state.pot}")
     
     def act(self, action: 'ValidatedAction') -> bool:
         """
@@ -49,6 +50,19 @@ class TurnPhase(BasePhase):
             True如果下注轮继续，False如果下注轮结束
         """
         return self.process_standard_action(action)
+
+    def process_betting_round(self, get_player_action_callback: Callable[[int], Any]) -> List[str]:
+        """
+        处理转牌下注轮
+        使用标准下注轮处理逻辑
+        
+        Args:
+            get_player_action_callback: 获取玩家行动的回调函数
+        
+        Returns:
+            产生的事件列表
+        """
+        return self._standard_process_betting_round(get_player_action_callback)
     
     def exit(self) -> Optional['BasePhase']:
         """
@@ -72,50 +86,34 @@ class TurnPhase(BasePhase):
         # 发1张转牌
         card = self.state.deck.deal_card()
         self.state.community_cards.append(card)
-    
-    def _execute_action(self, player, action: 'ValidatedAction'):
-        """
-        执行玩家行动
-        复用现有的行动执行逻辑
-        """
-        from ..core.enums import ActionType
+
+    def _start_post_flop_betting(self):
+        """开始转牌后下注轮"""
+        # 转牌后从庄家左边第一个活跃玩家开始
+        self.state.start_new_betting_round()
         
-        if action.actual_action_type == ActionType.FOLD:
-            player.fold()
+        # 设置第一个行动的玩家（从庄家左边开始找活跃玩家）
+        active_players = self.state.get_active_players()
+        if not active_players:
+            return
         
-        elif action.actual_action_type == ActionType.CHECK:
-            # 过牌不需要额外操作
-            pass
+        all_seats = sorted([p.seat_id for p in self.state.players 
+                           if p.status != SeatStatus.OUT])
+        if not all_seats:
+            return
+            
+        dealer_index = all_seats.index(self.state.dealer_position)
         
-        elif action.actual_action_type == ActionType.CALL:
-            # 跟注
-            call_amount = max(0, self.state.current_bet - player.current_bet)
-            player.bet(call_amount)
-        
-        elif action.actual_action_type == ActionType.BET:
-            # 下注
-            player.bet(action.actual_amount)
-            self.state.current_bet = player.current_bet
-            self.state.last_raiser = player.seat_id
-        
-        elif action.actual_action_type == ActionType.RAISE:
-            # 加注
-            call_amount = max(0, self.state.current_bet - player.current_bet)
-            total_needed = call_amount + (action.actual_amount - self.state.current_bet)
-            player.bet(total_needed)
-            self.state.current_bet = action.actual_amount
-            self.state.last_raiser = player.seat_id
-        
-        elif action.actual_action_type == ActionType.ALL_IN:
-            # 全押
-            player.bet(player.chips)
-            if player.current_bet > self.state.current_bet:
-                self.state.current_bet = player.current_bet
-                self.state.last_raiser = player.seat_id
-        
-        # 记录玩家的最后行动类型
-        player.last_action_type = action.actual_action_type
-        
-        # 增加行动计数
-        self.state.street_index += 1 
- 
+        # 从庄家左边开始找第一个可以行动的玩家
+        for i in range(1, len(all_seats) + 1):
+            check_index = (dealer_index + i) % len(all_seats)
+            check_seat = all_seats[check_index]
+            check_player = self.state.get_player_by_seat(check_seat)
+            
+            if check_player and check_player.can_act():
+                self.state.current_player = check_seat
+                break
+        else:
+            # 如果没有找到可行动的玩家，设置为第一个活跃玩家
+            if active_players:
+                self.state.current_player = active_players[0].seat_id 

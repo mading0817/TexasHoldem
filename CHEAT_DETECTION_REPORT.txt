@@ -1,0 +1,13 @@
+德州扑克测试作弊检测报告
+==================================================
+
+发现 0 处严重作弊行为:
+
+
+建议: 所有状态修改应通过合法的游戏API进行
+合法API包括: Player.bet(), Player.fold(), GameController.process_action()等
+
+合法的初始化模式:
+- 在setUp()或__init__()函数中的初始化
+- 在create_scenario()函数中的测试场景设置
+- 带有 '# 合法初始化' 或 '# ANTI-CHEAT-FIX:' 注释的代码

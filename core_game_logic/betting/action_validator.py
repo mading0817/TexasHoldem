@@ -58,6 +58,10 @@ class ActionValidator:
             raise InvalidActionError(f"玩家{player.seat_id}无法行动，当前状态: {player.status.name}")
         
         # 检查是否轮到该玩家
+        # 如果current_player为None，说明没有玩家可以行动
+        if state.current_player is None:
+            raise InvalidActionError(f"当前没有玩家可以行动，游戏阶段应转换")
+        
         if state.current_player != player.seat_id:
             raise InvalidActionError(f"不是玩家{player.seat_id}的回合，当前玩家: {state.current_player}")
         

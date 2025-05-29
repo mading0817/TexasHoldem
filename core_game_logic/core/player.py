@@ -40,6 +40,16 @@ class Player:
         if len(self.hole_cards) > 2:
             raise ValueError(f"手牌不能超过2张: {len(self.hole_cards)}")
 
+    def __hash__(self) -> int:
+        """使Player对象可hash，基于seat_id"""
+        return hash(self.seat_id)
+
+    def __eq__(self, other) -> bool:
+        """基于seat_id比较Player对象"""
+        if not isinstance(other, Player):
+            return False
+        return self.seat_id == other.seat_id
+
     def can_act(self) -> bool:
         """
         检查玩家是否可以行动
@@ -142,7 +152,7 @@ class Player:
 
     def fold(self):
         """玩家弃牌"""
-        if not self.can_act():
+        if not self.can_act() and self.status != SeatStatus.ALL_IN:
             raise ValueError(f"玩家{self.seat_id}无法弃牌")
         
         self.status = SeatStatus.FOLDED
@@ -175,7 +185,7 @@ class Player:
         if hidden:
             return "XX XX" if len(self.hole_cards) == 2 else "XX" * len(self.hole_cards)
         
-        return " ".join(card.to_display_str() for card in self.hole_cards)
+        return " ".join(card.to_str() for card in self.hole_cards)
 
     def reset_for_new_hand(self):
         """
@@ -239,4 +249,25 @@ class Player:
 
     def __repr__(self) -> str:
         """返回玩家的调试表示"""
-        return f"Player(seat={self.seat_id}, name='{self.name}', chips={self.chips}, status={self.status.name})" 
+        return f"Player(seat={self.seat_id}, name='{self.name}', chips={self.chips}, status={self.status.name})"
+    
+    # === 测试兼容性方法 ===
+    
+    def get_hand_cards(self) -> List[Card]:
+        """
+        获取玩家手牌（测试兼容性方法）
+        
+        Returns:
+            玩家的手牌列表
+        """
+        return self.hole_cards.copy()
+    
+    @property
+    def is_active(self) -> bool:
+        """
+        检查玩家是否处于活跃状态（测试兼容性属性）
+        
+        Returns:
+            True如果玩家处于活跃状态
+        """
+        return self.status == SeatStatus.ACTIVE 

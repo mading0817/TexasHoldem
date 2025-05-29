@@ -4,7 +4,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Callable, List, Any
 
 if TYPE_CHECKING:
     from ..game_state import GameState
@@ -44,6 +44,20 @@ class BasePhase(ABC):
             
         Returns:
             True如果下注轮继续，False如果下注轮结束
+        """
+        pass
+    
+    @abstractmethod
+    def process_betting_round(self, get_player_action_callback: Callable[[int], Any]) -> List[str]:
+        """
+        处理整个下注轮的核心业务逻辑
+        各个阶段可以有不同的下注轮处理策略
+        
+        Args:
+            get_player_action_callback: 获取玩家行动的回调函数
+        
+        Returns:
+            产生的事件列表
         """
         pass
     
@@ -199,7 +213,91 @@ class BasePhase(ABC):
         if len(players_in_hand) <= 1:
             # 直接进入摊牌阶段
             from .showdown import ShowdownPhase
+            self.state.phase = next_phase_class._phase_enum_value
             return ShowdownPhase(self.state)
         
-        # 进入下一阶段
-        return next_phase_class(self.state) 
+        # 正常进入下一阶段
+        return next_phase_class(self.state)
+
+    def _standard_process_betting_round(self, get_player_action_callback: Callable[[int], Any], max_actions_multiplier: int = 4) -> List[str]:
+        """
+        标准下注轮处理逻辑
+        大部分阶段可以直接使用这个通用实现
+        
+        Args:
+            get_player_action_callback: 获取玩家行动的回调函数
+            max_actions_multiplier: 最大行动数的倍数（防护栏）
+        
+        Returns:
+            产生的事件列表
+        """
+        from ..core.enums import ActionType, SeatStatus
+        from ..betting.action_validator import ActionValidator
+        
+        events = []
+        action_count = 0
+        max_actions = len(self.state.players) * max_actions_multiplier  # 防护栏
+        validator = ActionValidator()
+        
+        while not self.state.is_betting_round_complete() and action_count < max_actions:
+            current_seat = self.state.current_player
+            
+            if current_seat is None:
+                break
+            
+            current_player = self.state.get_player_by_seat(current_seat)
+            if not current_player or current_player.status not in [SeatStatus.ACTIVE]:
+                if not self.state.advance_current_player():
+                    break
+                continue
+            
+            try:
+                # 通过回调获取玩家行动输入
+                action_input = get_player_action_callback(current_seat)
+                
+                # 创建基础行动对象
+                from ..core.enums import Action
+                action = Action(
+                    action_type=action_input.action_type,
+                    amount=action_input.amount or 0,
+                    player_seat=current_seat
+                )
+                
+                # 验证行动
+                validated_action = validator.validate(self.state, current_player, action)
+                
+                # 执行行动（使用现有的act方法）
+                continue_round = self.act(validated_action)
+                
+                events.append(f"玩家 {current_player.name} 执行了 {validated_action}")
+                action_count += 1
+                
+                if not continue_round:
+                    break
+                    
+            except Exception as e:
+                # 处理异常：如果是AI玩家，强制弃牌；如果是人类玩家，重新抛出
+                if current_seat != 0:  # 假设0是人类玩家
+                    try:
+                        # 创建弃牌行动
+                        from ..core.enums import Action
+                        fold_action = Action(
+                            action_type=ActionType.FOLD,
+                            amount=0,
+                            player_seat=current_seat
+                        )
+                        validated_fold = validator.validate(self.state, current_player, fold_action)
+                        self.act(validated_fold)
+                        
+                        events.append(f"玩家 {current_player.name} 因异常强制弃牌: {str(e)}")
+                        action_count += 1
+                    except:
+                        break
+                else:
+                    # 人类玩家的异常向外抛出
+                    raise
+        
+        if action_count >= max_actions:
+            events.append("达到最大行动数限制，强制结束下注轮")
+        
+        return events

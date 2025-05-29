@@ -26,4 +26,9 @@ class GameStateError(PokerGameError):
 
 class PhaseTransitionError(PokerGameError):
     """阶段转换错误异常"""
+    pass
+
+
+class GameConfigError(PokerGameError):
+    """游戏配置错误异常"""
     pass 

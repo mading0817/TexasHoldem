@@ -3,7 +3,7 @@
 进行牌型比较和底池分配
 """
 
-from typing import Optional, Dict, List, TYPE_CHECKING
+from typing import Optional, Dict, List, TYPE_CHECKING, Callable, Any
 from .base_phase import BasePhase
 from ..core.enums import GamePhase, SeatStatus
 from ..evaluator import SimpleEvaluator
@@ -60,6 +60,19 @@ class ShowdownPhase(BasePhase):
         """
         # 摊牌阶段不需要玩家行动
         return False
+
+    def process_betting_round(self, get_player_action_callback: Callable[[int], Any]) -> List[str]:
+        """
+        摊牌阶段不需要下注轮
+        
+        Args:
+            get_player_action_callback: 获取玩家行动的回调函数（未使用）
+        
+        Returns:
+            空的事件列表，因为摊牌阶段不需要下注
+        """
+        # 摊牌阶段不需要下注轮，直接返回空事件列表
+        return []
     
     def exit(self) -> Optional['BasePhase']:
         """

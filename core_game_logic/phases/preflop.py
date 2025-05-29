@@ -3,7 +3,7 @@
 处理发底牌、设置盲注和下注轮处理，最大化复用GameState现有逻辑
 """
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Callable, List, Any
 from .base_phase import BasePhase
 from ..core.enums import GamePhase, SeatStatus
 from ..core.deck import Deck
@@ -60,6 +60,20 @@ class PreFlopPhase(BasePhase):
             True如果下注轮继续，False如果下注轮结束
         """
         return self.process_standard_action(action)
+
+    def process_betting_round(self, get_player_action_callback: Callable[[int], Any]) -> List[str]:
+        """
+        处理翻牌前下注轮
+        翻牌前有特殊的起始位置逻辑，但下注流程使用标准处理
+        
+        Args:
+            get_player_action_callback: 获取玩家行动的回调函数
+        
+        Returns:
+            产生的事件列表
+        """
+        # 翻牌前使用标准下注轮处理逻辑
+        return self._standard_process_betting_round(get_player_action_callback)
     
     def exit(self) -> Optional['BasePhase']:
         """

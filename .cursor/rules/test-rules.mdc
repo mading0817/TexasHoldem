@@ -1,0 +1,164 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                业务核心逻辑 ↔ 测试代码   分层与协作 BEST PRACTICE           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+> **目标：**
+>
+> 1. 让 **业务模块** 专注于“可复用、可维护、可推理”的核心规则；
+> 2. 让 **测试模块** 拥有“高可读、强隔离、易扩展”的自动化能力；
+> 3. 在二者之间建立 **清晰边界** 与 **稳定契约**。
+
+---
+
+## 0. 总纲规则（必须全部遵守）
+
+| #   | 规范要点                                                | 关键语义                         |
+| --- | --------------------------------------------------- | ---------------------------- |
+| R-1 | **单一来源真理**：业务规则只能写在核心层，测试层不得复制 / 推导                 | “测试永远调 API，不重写业务算法”          |
+| R-2 | **只读快照契约**：核心层对外暴露只读 `Snapshot`，禁止可写引用外泄            | 防御式编程，防止状态破坏                 |
+| R-3 | **依赖倒置**：业务层绝不感知测试层；测试层可通过接口注入策略 / Mock             | DIP & Hexagonal Architecture |
+| R-4 | **循环护栏**：凡 `while/for` 潜在无限循环，必须追加 `max_iterations` | 避免 CI 卡死                     |
+| R-5 | **可重放决定论**：核心随机行为全部接受 `RNG` 注入；测试固定种子               | 追溯、定位、复现                     |
+
+---
+
+## 1. 分层模型
+
+```
+           ┌─────────────────────────────┐
+           │      Test Script 层         │
+           │  · 各级测试用例 (pytest/unittest)│
+           │  · 断言 & 报告输出            │
+           └────────▲────────▲──────────┘
+                    │        │
+           ┌────────┴────────┴──────────┐
+           │  Test Harness / Simulator   │
+           │  · 封装循环、策略注入       │
+           │  · 日志、快照、护栏        │
+           └────────▲────────▲──────────┘
+                    │        │ 依赖注入
+           ┌────────┴────────┴──────────┐
+           │      业务核心 (Domain)      │
+           │  · 纯规则、状态机、实体    │
+           │  · 外部不可写 Snapshot     │
+           └─────────────────────────────┘
+```
+
+### 1.1 业务核心层规范
+
+| 规则  | 内容                              | 极简示例                                            |
+| --- | ------------------------------- | ----------------------------------------------- |
+| D-1 | 不引入任何测试或调试专用分支 (`if test_mode`) | `class GameController:`<br>  无 `self.test_mode` |
+| D-2 | 所有外部可见对象应 **不可变/受控**            | `@dataclass(frozen=True)` 的 `GameSnapshot`      |
+| D-3 | 随机行为全部依赖注入                      | `def shuffle(self, rng: Random): ...`           |
+| D-4 | 状态转换必须有**原子方法**且返回成功/失败         | `advance_phase() -> bool`                       |
+| D-5 | 不直接写日志 / print，使用可注入 logger     | `self.logger.debug(...)`                        |
+
+### 1.2 Harness / Simulator 层规范
+
+| 规则  | 内容                                     | 极简示例                                      |
+| --- | -------------------------------------- | ----------------------------------------- |
+| H-1 | **唯一拥有循环**：任何 while/for 只出现在 Simulator | `while not ctrl.is_hand_over(): ...`      |
+| H-2 | 每个循环强制 `guard ≤ MAX_X`                 | `if guard > MAX: raise RuntimeError(...)` |
+| H-3 | 支持多策略注入 (`Dict[Seat, Strategy]`)       | `strategies[current].decide(snapshot)`    |
+| H-4 | 失败时自动 Dump Snapshot / Log              | `dump_json("fail_20250529.json", snap)`   |
+| H-5 | 结果对象统一输出，测试只断言结果                       | `HandResult(completed, pot, winners)`     |
+
+### 1.3 Test Script 层规范
+
+| 规则  | 内容                             | 极简示例                                       |
+| --- | ------------------------------ | ------------------------------------------ |
+| T-1 | 不出现业务循环；只调用 `simulator.play_*` | `result = sim.play_hand(strats)`           |
+| T-2 | 固定随机种子，保证可复现                   | `sim = Simulator(ctrl, rng=Random(42))`    |
+| T-3 | 断言基于结果对象和快照摘要                  | `assert result.completed`                  |
+| T-4 | 测试互不共享状态，每次 `setUp` 全新实例       | `setUp(): self.ctrl = GameController(...)` |
+| T-5 | 遇到 guard 爆炸立即 fail，不吞异常        | `pytest.fail("guard hit")`                 |
+
+---
+
+## 2. 三层测试金字塔
+
+| 层级     | 典型粒度      | 主要关注         | 推荐工具                         |
+| ------ | --------- | ------------ | ---------------------------- |
+| **单元** | 单函数 / 小对象 | 纯算法、边界值      | pytest + param               |
+| **集成** | 业务子系统     | 对外 API 协同    | harness.play\_betting\_round |
+| **系统** | 端到端场景     | 完整流程、资源泄漏、性能 | harness.play\_n\_hands       |
+
+*✦ 只在单元测试直接访问 Domain 内部；集成 / 系统测试全部走正式 API。*
+
+---
+
+## 3. 必备通用工具
+
+1. **`Snapshot.pretty()`**：结构化打印，方便日志排查
+2. **`Result.to_json()`**：失败时写文件，CI 附件一键下载
+3. **`MockRNG(seed)`**：隔离外部 `random` 全局状态
+4. **`RepeatTest` 装饰器**：捕捉偶发随机失败
+5. **`TimeProfiler`**：系统测试输出总耗时 / #loop
+
+---
+
+## 4. 常见反模式（No-Go List）
+
+| 反模式                          | 风险                | 正确做法                 |
+| ---------------------------- | ----------------- | -------------------- |
+| **复制业务算法到测试**                | 规则双写 → 隐性故障       | 只用公开 API + 断言        |
+| **无限循环无保护**                  | CI 卡死 / 占用 runner | `guard` + `MAX_ITER` |
+| **业务层 if test\_mode**        | 污染生产代码            | Harness 注入策略或 mock   |
+| **在测试里 `random.seed()` 全局化** | 其他测试不可预期          | 给模拟器私有 RNG           |
+| **结果靠日志肉眼比对**                | 自动化失败             | 结构化对象 + assert       |
+
+---
+
+## 5. 代码片段范例
+
+```python
+# ---------- Domain ----------
+class GameController:
+    def __init__(self, players: list[Player], rng: Random):
+        self._rng = rng
+        ...
+    def start_new_hand(self) -> None: ...
+    def process_action(self, action: Action) -> None: ...
+    def is_hand_over(self) -> bool: ...
+    def snapshot(self) -> "GameSnapshot": ...
+
+# ---------- Simulator ----------
+class PokerSimulator:
+    MAX_STEPS = 500
+    def __init__(self, ctrl: GameController, rng: Random):
+        self.ctrl, self.rng = ctrl, rng
+    def play_hand(self, strategies: dict[int, Strategy]) -> HandResult:
+        self.ctrl.start_new_hand()
+        guard = 0
+        while not self.ctrl.is_hand_over():
+            guard += 1
+            if guard > self.MAX_STEPS:
+                raise RuntimeError("Guard hit: hand overflow")
+            seat = self.ctrl.snapshot().current_seat
+            action = strategies[seat].decide(self.ctrl.snapshot())
+            self.ctrl.process_action(action)
+        return self.ctrl.finish_hand()
+
+# ---------- Test Script ----------
+def test_one_hand():
+    ctrl = GameController(players=mk_players(6), rng=Random(42))
+    sim  = PokerSimulator(ctrl, rng=Random(42))
+    strat = ConservativeStrategy()
+    res   = sim.play_hand(defaultdict(lambda: strat))
+    assert res.completed and res.pot_after_payout >= 0
+```
+
+---
+
+### ✅ 牢记：**业务层越“干净”，测试层越“简单”，系统就越“可靠”。**
+
+将以上规则做成团队内 Wiki / README，即可长期保持代码质量与测试效能。
+

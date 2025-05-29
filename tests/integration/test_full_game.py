@@ -2,16 +2,28 @@
 # -*- coding: utf-8 -*-
 
 """
-完整游戏流程端到端测试
-验证从发牌到摊牌的整个德州扑克游戏流程
+德州扑克完整游戏流程集成测试
+模拟真实的游戏场景，测试各组件协作
 """
 
-from core_game_logic.game.game_state import GameState
+import sys
+import os
+
+# 添加项目根目录到路径  
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from core_game_logic.core.enums import ActionType, GamePhase, Action
 from core_game_logic.core.player import Player
-from core_game_logic.core.enums import SeatStatus, GamePhase, ActionType, Action
+from core_game_logic.game.game_state import GameState
 from core_game_logic.betting.action_validator import ActionValidator
-from core_game_logic.phases import PreFlopPhase, FlopPhase, TurnPhase, RiverPhase, ShowdownPhase
+from core_game_logic.phases.preflop import PreFlopPhase
+from core_game_logic.phases.flop import FlopPhase
+from core_game_logic.phases.turn import TurnPhase
+from core_game_logic.phases.river import RiverPhase
+from core_game_logic.phases.showdown import ShowdownPhase
 from core_game_logic.core.deck import Deck
+from core_game_logic.core.enums import SeatStatus
+from tests.common.test_helpers import ActionHelper
 
 
 class TestFullGame:
@@ -84,8 +96,8 @@ class TestFullGame:
             if player.is_big_blind:
                 big_blind_player = player
         
-        assert small_blind_player is not None, "应该有小盲注玩家"
-        assert big_blind_player is not None, "应该有大盲注玩家"
+        assert small_blind_player is not None, "Should have small blind player"
+        assert big_blind_player is not None, "Should have big blind player"
         assert small_blind_player.current_bet == 1, "小盲注应该是1"
         assert big_blind_player.current_bet == 2, "大盲注应该是2"
         assert state.current_bet == 2, "当前下注应该是大盲注"
@@ -106,7 +118,8 @@ class TestFullGame:
         phase.enter()
         
         print(f"\n翻牌阶段:")
-        print(f"  公共牌: {' '.join(card.to_str() for card in state.community_cards)}")
+        community_str = " ".join(card.to_str() for card in state.community_cards)
+        print(f"  公共牌: {community_str}")
         print(f"  底池: {state.pot}")
         
         # 验证翻牌
@@ -124,7 +137,8 @@ class TestFullGame:
         phase.enter()
         
         print(f"\n转牌阶段:")
-        print(f"  公共牌: {' '.join(card.to_str() for card in state.community_cards)}")
+        community_str = " ".join(card.to_str() for card in state.community_cards)
+        print(f"  公共牌: {community_str}")
         
         # 验证转牌
         assert len(state.community_cards) == 4, "应该有4张公共牌"
@@ -141,7 +155,8 @@ class TestFullGame:
         phase.enter()
         
         print(f"\n河牌阶段:")
-        print(f"  公共牌: {' '.join(card.to_str() for card in state.community_cards)}")
+        community_str = " ".join(card.to_str() for card in state.community_cards)
+        print(f"  公共牌: {community_str}")
         
         # 验证河牌
         assert len(state.community_cards) == 5, "应该有5张公共牌"
@@ -187,7 +202,7 @@ class TestFullGame:
         assert total_chips_after == total_chips_before, "筹码总数应该守恒"
         assert state.pot == 0, "游戏结束后底池应该为0"
         
-        print("✓ 基础游戏流程测试通过")
+        print("[PASS] 基础游戏流程测试通过")
     
     def test_fold_scenario(self):
         """测试弃牌场景"""
@@ -204,7 +219,7 @@ class TestFullGame:
         
         # 第一个玩家弃牌
         current_player = state.get_current_player()
-        fold_action = Action(ActionType.FOLD)
+        fold_action = ActionHelper.create_current_player_action(state, ActionType.FOLD)
         validated_action = self.validator.validate(state, current_player, fold_action)
         
         continuing = phase.act(validated_action)
@@ -218,7 +233,7 @@ class TestFullGame:
             current_player = state.get_current_player()
             if current_player and current_player.can_act():
                 # 其他玩家也弃牌
-                fold_action = Action(ActionType.FOLD)
+                fold_action = ActionHelper.create_current_player_action(state, ActionType.FOLD)
                 validated_action = self.validator.validate(state, current_player, fold_action)
                 continuing = phase.act(validated_action)
                 print(f"玩家{current_player.seat_id}弃牌")
@@ -238,7 +253,7 @@ class TestFullGame:
         players_in_hand = state.get_players_in_hand()
         assert len(players_in_hand) == 1, "应该只有一个玩家未弃牌"
         
-        print("✓ 弃牌场景测试通过")
+        print("[PASS] 弃牌场景测试通过")
     
     def test_all_in_scenario(self):
         """测试全押场景"""
@@ -266,7 +281,7 @@ class TestFullGame:
             current_player = state.get_current_player()
             if current_player and current_player.can_act():
                 # 让玩家全押
-                all_in_action = Action(ActionType.ALL_IN)
+                all_in_action = ActionHelper.create_current_player_action(state, ActionType.ALL_IN)
                 validated_action = self.validator.validate(state, current_player, all_in_action)
                 continuing = phase.act(validated_action)
                 print(f"玩家{current_player.seat_id}全押{validated_action.actual_amount}")
@@ -291,7 +306,7 @@ class TestFullGame:
             if not isinstance(current_phase, ShowdownPhase):
                 print(f"跳过{current_phase.__class__.__name__}行动（全押场景）")
         
-        print("✓ 全押场景测试通过")
+        print("[PASS] 全押场景测试通过")
     
     def _simulate_preflop_actions(self, state, phase):
         """模拟翻牌前行动"""
@@ -302,7 +317,7 @@ class TestFullGame:
                 break
             
             # 简单策略：跟注
-            call_action = Action(ActionType.CALL)
+            call_action = ActionHelper.create_current_player_action(state, ActionType.CALL)
             validated_action = self.validator.validate(state, current_player, call_action)
             continuing = phase.act(validated_action)
             
@@ -317,7 +332,7 @@ class TestFullGame:
                 break
             
             # 所有人过牌
-            check_action = Action(ActionType.CHECK)
+            check_action = ActionHelper.create_current_player_action(state, ActionType.CHECK)
             validated_action = self.validator.validate(state, current_player, check_action)
             continuing = phase.act(validated_action)
             
@@ -345,19 +360,19 @@ def main():
         try:
             test_instance.setup_method()
             test_func()
-            print(f"✓ {test_name}测试通过\n")
+            print(f"[PASS] {test_name}测试通过\n")
             passed += 1
         except Exception as e:
-            print(f"✗ {test_name}测试失败: {e}\n")
+            print(f"[FAIL] {test_name}测试失败: {e}\n")
             failed += 1
     
     print(f"测试结果: {passed}通过, {failed}失败")
     
     if failed == 0:
-        print("🎉 所有端到端测试通过！")
+        print("[SUCCESS] 所有端到端测试通过！")
         return True
     else:
-        print("❌ 部分测试失败，需要修复")
+        print("[ERROR] 部分测试失败，需要修复")
         return False
 
 

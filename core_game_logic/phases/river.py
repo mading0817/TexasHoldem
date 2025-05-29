@@ -1,11 +1,11 @@
 """
 河牌阶段实现
-发1张河牌并复用下注轮逻辑
+处理发河牌和下注轮
 """
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Callable, List, Any
 from .base_phase import BasePhase
-from ..core.enums import GamePhase
+from ..core.enums import GamePhase, SeatStatus
 
 if TYPE_CHECKING:
     from ..action_validator import ValidatedAction
@@ -14,28 +14,29 @@ if TYPE_CHECKING:
 class RiverPhase(BasePhase):
     """
     河牌阶段
-    负责发1张河牌和处理河牌下注轮
+    负责发出河牌（第5张公共牌）和处理河牌后下注轮
     """
     
     def enter(self):
         """
         进入河牌阶段的初始化操作
-        1. 发1张河牌
-        2. 开始新的下注轮
+        1. 设置游戏阶段为RIVER
+        2. 发出河牌
+        3. 重置下注轮
         """
-        # 确保游戏状态正确
-        if self.state.phase != GamePhase.RIVER:
-            self.state.phase = GamePhase.RIVER
+        # 设置游戏阶段
+        self.state.phase = GamePhase.RIVER
         
-        # 发1张河牌
+        # 发河牌（第5张公共牌）
         self._deal_river()
         
-        # 开始新的下注轮
-        self.state.start_new_betting_round()
+        # 重置下注轮，从庄家左边第一个活跃玩家开始
+        self._start_post_flop_betting()
         
         # 记录事件
-        river_card = self.state.community_cards[-1].to_display_str()
-        self.state.add_event(f"河牌: {river_card}，底池: {self.state.pot}")
+        river_card = str(self.state.community_cards[-1])
+        self.state.add_event(f"河牌: {river_card}")
+        self.state.add_event(f"河牌阶段开始，底池: {self.state.pot}")
     
     def act(self, action: 'ValidatedAction') -> bool:
         """
@@ -49,6 +50,19 @@ class RiverPhase(BasePhase):
             True如果下注轮继续，False如果下注轮结束
         """
         return self.process_standard_action(action)
+
+    def process_betting_round(self, get_player_action_callback: Callable[[int], Any]) -> List[str]:
+        """
+        处理河牌下注轮
+        使用标准下注轮处理逻辑
+        
+        Args:
+            get_player_action_callback: 获取玩家行动的回调函数
+        
+        Returns:
+            产生的事件列表
+        """
+        return self._standard_process_betting_round(get_player_action_callback)
     
     def exit(self) -> Optional['BasePhase']:
         """
@@ -81,4 +95,35 @@ class RiverPhase(BasePhase):
         
         # 发1张河牌
         card = self.state.deck.deal_card()
-        self.state.community_cards.append(card) 
+        self.state.community_cards.append(card)
+
+    def _start_post_flop_betting(self):
+        """开始河牌后下注轮"""
+        # 河牌后从庄家左边第一个活跃玩家开始
+        self.state.start_new_betting_round()
+        
+        # 设置第一个行动的玩家（从庄家左边开始找活跃玩家）
+        active_players = self.state.get_active_players()
+        if not active_players:
+            return
+        
+        all_seats = sorted([p.seat_id for p in self.state.players 
+                           if p.status != SeatStatus.OUT])
+        if not all_seats:
+            return
+            
+        dealer_index = all_seats.index(self.state.dealer_position)
+        
+        # 从庄家左边开始找第一个可以行动的玩家
+        for i in range(1, len(all_seats) + 1):
+            check_index = (dealer_index + i) % len(all_seats)
+            check_seat = all_seats[check_index]
+            check_player = self.state.get_player_by_seat(check_seat)
+            
+            if check_player and check_player.can_act():
+                self.state.current_player = check_seat
+                break
+        else:
+            # 如果没有找到可行动的玩家，设置为第一个活跃玩家
+            if active_players:
+                self.state.current_player = active_players[0].seat_id 

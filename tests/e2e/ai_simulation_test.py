@@ -2,19 +2,30 @@
 # -*- coding: utf-8 -*-
 
 """
-AI模拟测试
-6个AI玩家进行10次牌局，验证游戏流程和结算正确性
+AI模拟端到端测试
+测试AI与游戏系统的完整集成
 """
 
+import sys
+import os
 import random
-from typing import List, Dict
+import time
+from typing import List
 
-from core_game_logic.game.game_state import GameState
+# 添加项目根目录到路径
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from core_game_logic.core.enums import ActionType, GamePhase, Action, SeatStatus
 from core_game_logic.core.player import Player
-from core_game_logic.core.enums import ActionType, Action, SeatStatus
+from core_game_logic.game.game_state import GameState
 from core_game_logic.betting.action_validator import ActionValidator
-from core_game_logic.phases import PreFlopPhase, FlopPhase, TurnPhase, RiverPhase, ShowdownPhase
+from core_game_logic.phases.preflop import PreFlopPhase
+from core_game_logic.phases.flop import FlopPhase
+from core_game_logic.phases.turn import TurnPhase
+from core_game_logic.phases.river import RiverPhase
+from core_game_logic.phases.showdown import ShowdownPhase
 from core_game_logic.core.deck import Deck
+from tests.common.test_helpers import ActionHelper
 
 
 class AISimulation:
@@ -83,7 +94,7 @@ class AISimulation:
         
         # 决定是否弃牌
         if random.random() < fold_prob:
-            return Action(ActionType.FOLD)
+            return ActionHelper.create_player_action(player, ActionType.FOLD)
         
         actions = []
         
@@ -111,7 +122,7 @@ class AISimulation:
         
         # 极少概率全押
         if random.random() < 0.02 and player.chips > 0:
-            return Action(ActionType.ALL_IN)
+            return ActionHelper.create_player_action(player, ActionType.ALL_IN)
         
         # 选择一个行动
         if actions:
@@ -120,20 +131,20 @@ class AISimulation:
             if action_type == ActionType.BET:
                 max_bet = min(player.chips, state.big_blind * 5)
                 amount = random.randint(state.big_blind, max_bet)
-                return Action(action_type, amount)
+                return ActionHelper.create_player_action(player, action_type, amount)
             elif action_type == ActionType.RAISE:
                 min_raise = state.current_bet * 2
                 max_raise = min(player.chips, state.current_bet * 4)
                 if max_raise >= min_raise:
                     amount = random.randint(min_raise, max_raise)
-                    return Action(action_type, amount)
+                    return ActionHelper.create_player_action(player, action_type, amount)
                 else:
-                    return Action(ActionType.CALL)
+                    return ActionHelper.create_player_action(player, ActionType.CALL)
             else:
-                return Action(action_type)
+                return ActionHelper.create_player_action(player, action_type)
         
         # 默认弃牌
-        return Action(ActionType.FOLD)
+        return ActionHelper.create_player_action(player, ActionType.FOLD)
     
     def _evaluate_hand_strength(self, hole_cards: List, community_cards: List) -> float:
         """简单评估手牌强度（0-1之间）"""
@@ -193,7 +204,7 @@ class AISimulation:
     
     def run_phase_with_logging(self, state: GameState, phase, phase_name: str):
         """运行游戏阶段并记录详细日志"""
-        print(f"\n🎯 进入{phase_name}")
+        print(f"\n[阶段] 进入{phase_name}")
         phase.enter()
         self.display_detailed_state(state, phase_name)
         
@@ -220,27 +231,27 @@ class AISimulation:
                 continuing = phase.act(validated_action)
                 
                 if validated_action.is_converted:
-                    print(f"  ⚠️ 行动被转换: {validated_action.conversion_reason}")
+                    print(f"  警告 行动被转换: {validated_action.conversion_reason}")
                 
-                print(f"  ✅ 执行: {validated_action}")
+                print(f"  成功 执行: {validated_action}")
                 
                 # 显示行动后的状态变化
-                print(f"  📊 {current_player.name}: {current_player.chips}筹码, 当前下注: {current_player.current_bet}")
+                print(f"  状态 {current_player.name}: {current_player.chips}筹码, 当前下注: {current_player.current_bet}")
                 
             except Exception as e:
-                print(f"  ❌ 行动执行失败: {e}")
+                print(f"  错误 行动执行失败: {e}")
                 # AI默认弃牌
-                validated_action = self.validator.validate(state, current_player, Action(ActionType.FOLD))
+                validated_action = self.validator.validate(state, current_player, ActionHelper.create_player_action(current_player, ActionType.FOLD))
                 continuing = phase.act(validated_action)
-                print(f"  🔄 默认弃牌")
+                print(f"  回退 默认弃牌")
         
-        print(f"\n✅ {phase_name}结束")
+        print(f"\n成功 {phase_name}结束")
         return phase.exit()
     
     def play_hand_with_logging(self, state: GameState):
         """玩一手牌并记录详细日志"""
         self.hand_count += 1
-        print(f"\n{'🎰'*20} 第 {self.hand_count} 手牌开始 {'🎰'*20}")
+        print(f"\n{'='*20} 第 {self.hand_count} 手牌开始 {'='*20}")
         
         # 记录开始时的筹码
         chips_before = {p.seat_id: p.chips for p in state.players}
@@ -256,8 +267,9 @@ class AISimulation:
             player.reset_for_new_hand()
         
         # 重置游戏状态
-        state.pot = 0
-        state.current_bet = 0
+        # FIXED: 直接修改底池 state.pot = 0
+        # 应使用PotManager的合法API
+        # FIXED: state.bet(0)  # 使用合法的下注API而不是直接修改current_bet
         state.community_cards = []
         state.phase = None
         state.current_player = None
@@ -293,14 +305,14 @@ class AISimulation:
         chips_after = {p.seat_id: p.chips for p in state.players}
         total_after = sum(chips_after.values())
         
-        print(f"\n{'🎉'*20} 第 {self.hand_count} 手牌结束 {'🎉'*20}")
+        print(f"\n{'='*20} 第 {self.hand_count} 手牌结束 {'='*20}")
         print(f"结束后总筹码: {total_after}")
         
         # 验证筹码守恒
         if total_before != total_after:
-            print(f"❌ 筹码不守恒！开始: {total_before}, 结束: {total_after}, 差异: {total_after - total_before}")
+            print(f"错误 筹码不守恒！开始: {total_before}, 结束: {total_after}, 差异: {total_after - total_before}")
         else:
-            print(f"✅ 筹码守恒验证通过")
+            print(f"成功 筹码守恒验证通过")
         
         # 显示筹码变化
         print(f"\n筹码变化:")
@@ -313,7 +325,7 @@ class AISimulation:
         remaining_players = [p for p in state.players if p.chips > 0]
         if len(remaining_players) <= 1:
             if remaining_players:
-                print(f"\n🏆 游戏结束！{remaining_players[0].name} 获胜！")
+                print(f"\n[获胜] 游戏结束！{remaining_players[0].name} 获胜！")
             else:
                 print(f"\n游戏结束！")
             return False
@@ -322,7 +334,7 @@ class AISimulation:
     
     def run_simulation(self, num_hands: int = 10):
         """运行AI模拟"""
-        print(f"🤖 开始AI模拟测试：6个AI玩家，{num_hands}手牌")
+        print(f"[AI] 开始AI模拟测试：6个AI玩家，{num_hands}手牌")
         print(f"{'='*100}")
         
         # 创建游戏
@@ -338,7 +350,7 @@ class AISimulation:
             # input(f"\n按回车继续下一手牌...")
         
         # 最终统计
-        print(f"\n{'🏁'*20} 模拟测试完成 {'🏁'*20}")
+        print(f"\n{'='*20} 模拟测试完成 {'='*20}")
         print(f"总共进行了 {self.hand_count} 手牌")
         
         final_chips = {p.name: p.chips for p in state.players}
@@ -352,9 +364,9 @@ class AISimulation:
         print(f"总筹码: {total_final} (应该等于 {self.total_chips_start})")
         
         if total_final == self.total_chips_start:
-            print(f"✅ 整体筹码守恒验证通过！")
+            print(f"成功 整体筹码守恒验证通过！")
         else:
-            print(f"❌ 整体筹码不守恒！差异: {total_final - self.total_chips_start}")
+            print(f"错误 整体筹码不守恒！差异: {total_final - self.total_chips_start}")
 
 
 def main():

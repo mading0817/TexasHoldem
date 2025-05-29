@@ -109,11 +109,28 @@ class GameState:
         """
         active_players = self.get_active_players()
         if not active_players:
+            self.current_player = None  # 修复：当没有可行动玩家时设置为None
             return False
         
         # 获取所有玩家的座位号，按顺序排列
         all_seats = sorted([p.seat_id for p in self.players])
-        current_index = all_seats.index(self.current_player)
+        
+        # 如果current_player为None，从第一个活跃玩家开始
+        if self.current_player is None:
+            if active_players:
+                self.current_player = active_players[0].seat_id
+                return True
+            return False
+        
+        try:
+            current_index = all_seats.index(self.current_player)
+        except ValueError:
+            # 如果current_player不在all_seats中，设置为第一个可行动的玩家
+            if active_players:
+                self.current_player = active_players[0].seat_id
+                return True
+            self.current_player = None
+            return False
         
         # 从下一个座位开始查找可行动的玩家
         for i in range(1, len(all_seats)):
@@ -125,6 +142,8 @@ class GameState:
                 self.current_player = next_seat
                 return True
         
+        # 如果没有找到下一个可行动的玩家，设置为None
+        self.current_player = None
         return False
 
     def is_betting_round_complete(self) -> bool:
