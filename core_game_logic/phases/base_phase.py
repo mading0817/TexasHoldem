@@ -102,24 +102,38 @@ class BasePhase(ABC):
         
         elif action.actual_action_type == ActionType.BET:
             # 下注
+            previous_current_bet = self.state.current_bet # Should be 0 for a BET
             player.bet(action.actual_amount)
             self.state.current_bet = player.current_bet
             self.state.last_raiser = player.seat_id
+            self.state.last_raise_amount = action.actual_amount - previous_current_bet # Amount of this bet/raise
         
         elif action.actual_action_type == ActionType.RAISE:
             # 加注
-            call_amount = max(0, self.state.current_bet - player.current_bet)
-            total_needed = call_amount + (action.actual_amount - self.state.current_bet)
-            player.bet(total_needed)
-            self.state.current_bet = action.actual_amount
+            previous_current_bet_on_street = self.state.current_bet
+            call_amount = max(0, previous_current_bet_on_street - player.current_bet)
+            # total_needed is the amount of chips player must add to their current_bet on street to reach action.actual_amount
+            # action.actual_amount is the new total bet for the player for this street.
+            # The amount of chips to physically add from their stack:
+            chips_to_add = action.actual_amount - player.current_bet
+            player.bet(chips_to_add)
+            
+            self.state.current_bet = action.actual_amount # New highest bet on the table
             self.state.last_raiser = player.seat_id
+            self.state.last_raise_amount = action.actual_amount - previous_current_bet_on_street # Amount of this raise increment
         
         elif action.actual_action_type == ActionType.ALL_IN:
             # 全押
-            player.bet(player.chips)
-            if player.current_bet > self.state.current_bet:
+            previous_current_bet_on_street = self.state.current_bet
+            amount_all_in = player.chips # The amount of chips player is adding to their current bet
+            player.bet(amount_all_in)
+            # player.current_bet is now their total bet for the street after going all-in
+            
+            if player.current_bet > previous_current_bet_on_street:
                 self.state.current_bet = player.current_bet
                 self.state.last_raiser = player.seat_id
+                self.state.last_raise_amount = player.current_bet - previous_current_bet_on_street # Amount of this all-in raise increment
+            # If all-in is just a call or less, last_raise_amount is not updated by this player.
         
         # 记录玩家的最后行动类型
         player.last_action_type = action.actual_action_type

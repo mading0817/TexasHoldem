@@ -157,35 +157,84 @@ class ActionValidator:
     
     def _validate_raise(self, state: GameState, player: Player, action: Action) -> ValidatedAction:
         """验证加注行动"""
-        # 必须有下注才能加注
         if state.current_bet == 0:
             raise InvalidActionError("没有下注时不能加注，请选择下注")
         
-        call_amount = self._calculate_call_amount(state, player)
-        # 最小加注为当前跟注金额+一个大盲注
-        min_raise = state.current_bet + state.big_blind
+        # The amount the player wants their total bet to be for this street.
+        intended_total_bet_by_player = action.amount
+
+        # Determine the minimum legal raise amount.
+        # This is the difference between the current bet and the bet before the last raise.
+        # Or, if no raise yet, it's the big blind.
+        # GameState.last_raise_amount should store this value.
+        actual_last_raise_increment = state.last_raise_amount if state.last_raise_amount > 0 else state.big_blind
         
-        # 检查加注金额
-        if action.amount < min_raise:
-            raise InvalidActionError(f"加注金额{action.amount}不能小于最小加注{min_raise}")
-        
-        total_needed = call_amount + (action.amount - state.current_bet)
-        
-        if player.chips < total_needed:
-            # 筹码不足，转换为全押
+        # The minimum total bet a player must make to constitute a valid raise.
+        min_legal_total_bet_for_raise = state.current_bet + actual_last_raise_increment
+
+        # Check if the player's intended total bet meets the minimum raise requirement.
+        if intended_total_bet_by_player < min_legal_total_bet_for_raise:
+            # Exception: Player is going all-in.
+            # An all-in can be for less than a full raise, but must be more than a call.
+            # Player's total commitment if they go all-in now:
+            player_total_commitment_if_all_in = player.current_bet + player.chips
+
+            if intended_total_bet_by_player == player_total_commitment_if_all_in and player.chips > 0: # Player IS going all-in with this action.amount
+                if intended_total_bet_by_player <= state.current_bet: # All-in is not even a call or is for 0 effective chips
+                    # This should ideally be caught by chip check later or converted to CALL if chips < call_amount
+                    # but if action.amount is the all-in amount and it's less than current_bet, it's an issue.
+                    # This case is complex: if all-in is for less than call, it should be call all-in.
+                    # If all-in is for more than call, but less than min raise, it is a valid all-in raise.
+                    # The primary check here is for *non-all-in* raises that are too small.
+                    pass # All-in for less than min raise is allowed, will be handled by chip check / conversion to ALL_IN type
+                # else: This is an all-in raise that is valid but potentially short.
+            else: # Not an all-in, and raise is too small
+                raise InvalidActionError(
+                    f"加注总额 {intended_total_bet_by_player} 小于最小加注目标 {min_legal_total_bet_for_raise}. "
+                    f"(当前下注: {state.current_bet}, 要求至少增加: {actual_last_raise_increment})"
+                )
+
+        # Calculate how many additional chips the player needs to put into the pot for this action.
+        chips_to_add = intended_total_bet_by_player - player.current_bet
+        if chips_to_add <= 0 and intended_total_bet_by_player > state.current_bet:
+            # This implies player.current_bet was already >= intended_total_bet_by_player,
+            # but intended_total_bet_by_player is a raise. This state seems inconsistent.
+            # For a raise, intended_total_bet_by_player must be > state.current_bet.
+            # And player.current_bet should be <= state.current_bet.
+            # If intended_total_bet_by_player is the target, player must add (intended_total_bet_by_player - player.current_bet).
+            pass # This scenario should be okay if player.chips is sufficient.
+
+        if player.chips < chips_to_add:
+            # Not enough chips for the intended raise. Convert to All-In.
+            # The actual all-in amount becomes the player's new total bet.
+            all_in_new_total_bet = player.current_bet + player.chips
+
+            # An all-in must at least be a call if a call is possible.
+            # If all_in_new_total_bet < state.current_bet, it should be an AllIn Call.
+            # If all_in_new_total_bet > state.current_bet, it's an AllIn Raise.
+            # The previous check for intended_total_bet_by_player < min_legal_total_bet_for_raise
+            # already covers non-all-in small raises. If we are here, it's an all-in conversion.
+            if all_in_new_total_bet < state.current_bet and player.chips > 0:
+                 # This implies the all-in is not even enough to call. 
+                 # This should be handled by _validate_call conversion to ALL_IN if action was CALL.
+                 # If action was RAISE but all-in is less than call, it's an invalid state for RAISE intent.
+                 # However, an ALL_IN action type would be fine.
+                 # For RAISE type, player must be able to at least call.
+                raise InsufficientChipsError(f"筹码不足以完成跟注 {state.current_bet} (需要 {state.current_bet - player.current_bet}), 无法加注")
+
             return ValidatedAction(
                 original_action=action,
                 actual_action_type=ActionType.ALL_IN,
-                actual_amount=player.chips,
+                actual_amount=all_in_new_total_bet, # The player's new total bet for the street
                 player_seat=player.seat_id,
                 is_converted=True,
-                conversion_reason=f"筹码不足加注到{action.amount}，转为全押{player.chips}"
+                conversion_reason=f"筹码不足加注到{intended_total_bet_by_player}，转为全押至{all_in_new_total_bet}"
             )
         
         return ValidatedAction(
             original_action=action,
             actual_action_type=ActionType.RAISE,
-            actual_amount=action.amount,
+            actual_amount=intended_total_bet_by_player,
             player_seat=player.seat_id
         )
     

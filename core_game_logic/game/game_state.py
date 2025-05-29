@@ -33,6 +33,7 @@ class GameState:
     # 下注轮次信息
     current_bet: int = 0                          # 当前轮最高下注额
     last_raiser: Optional[int] = None             # 最后加注的玩家
+    last_raise_amount: int = 0                    # 最后一次加注的金额 (不是总下注额，是增加的额度)
     street_index: int = 0                         # 当前阶段的行动次数
     
     # 游戏控制信息
@@ -185,6 +186,7 @@ class GameState:
         # 重置下注轮信息
         self.current_bet = 0
         self.last_raiser = None
+        self.last_raise_amount = 0 # Reset last raise amount for the new street
         self.street_index = 0
         
         # 重置所有玩家的当前下注
@@ -307,6 +309,7 @@ class GameState:
             big_blind_player.is_big_blind = True
             big_blind_player.bet(self.big_blind)
             self.current_bet = self.big_blind
+            self.last_raise_amount = self.big_blind # Initial "raise" is the BB itself over 0
 
     def to_dict(self, viewer_seat: Optional[int] = None) -> Dict[str, Any]:
         """

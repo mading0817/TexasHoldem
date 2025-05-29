@@ -77,6 +77,29 @@ class ShowdownPhase(BasePhase):
     
     def _conduct_showdown(self):
         """进行摊牌和底池分配"""
+        # 首先，将所有玩家在本轮的下注收集到总底池中
+        # 注意：PotManager 通常会处理更复杂的边池形成。
+        # 这里的简化处理是为了确保 _award_simple_pot 和单赢家场景能正确工作。
+        # 理想情况下，这个收集应该由 PotManager 完成，或者在 PotManager 构建 pots 时完成。
+        
+        # 收集所有玩家（包括已弃牌但本轮有下注的）的 current_bet 到 state.pot
+        # 这里的逻辑需要小心，因为 current_bet 可能来自不同街道。
+        # Showdown 发生时，应该是当前最后一条街的赌注。
+        # GameState.collect_bets_to_pot() 或 PotManager.collect_bets() 更合适。
+        # 暂时，我们直接从 players_in_hand 和可能已弃牌的玩家处收集。
+        # ShowdownPhase 应该只处理那些 "in hand" 的玩家的最终摊牌。
+        # 之前的赌注应该已经被 PotManager 整理好了。
+        # 但测试表明 current_bet 没有被计入。
+        # 让我们假设在进入Showdown时，所有相关赌注应该被移入pot。
+
+        # 清理：一个更健壮的方法是让 PotManager 处理所有赌注的收集。
+        # ShowdownPhase 在调用时，state.pot 应该已经是最终的总额（或 PotManager.pots 已构建好）。
+        # 由于当前测试显示 current_bet 未被计入，这里做一个临时的收集：
+        for p in self.state.players: # 遍历所有玩家以收集赌注
+            if p.current_bet > 0:
+                self.state.pot += p.current_bet
+                p.reset_current_bet() # 清零他们的 current_bet，因为它已被计入pot
+
         players_in_hand = self.state.get_players_in_hand()
         
         if len(players_in_hand) == 0:
@@ -89,6 +112,8 @@ class ShowdownPhase(BasePhase):
             winner.add_chips(self.state.pot)
             self.state.add_event(f"{winner.name}获得底池{self.state.pot}（其他玩家弃牌）")
             self.state.pot = 0
+            # 清理赢家的 current_bet (虽然上面循环已做，但以防万一)
+            # winner.reset_current_bet() # 已在上面的循环中完成
             return
         
         # 多个玩家摊牌
@@ -151,4 +176,10 @@ class ShowdownPhase(BasePhase):
                 print(f"{winner.name}获得主池{award}")
             
             # 清空底池
-            self.state.pot = 0 
+            self.state.pot = 0
+            # 分配后，所有参与摊牌的玩家的 current_bet 也应清零 (已在_conduct_showdown开头完成)
+            # for player in winners:
+            #     player.reset_current_bet()
+            # for player in players_in_hand: # 确保所有参与者都被清零
+            #     if player not in winners:
+            #         player.reset_current_bet() 
