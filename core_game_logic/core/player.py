@@ -212,8 +212,10 @@ class Player:
     def reset_current_bet(self):
         """
         重置当前下注（通常在下注轮结束时调用）
+        同时重置最后行动类型，为新的下注轮做准备
         """
         self.current_bet = 0
+        self.last_action_type = None  # 重置最后行动类型
 
     def add_chips(self, amount: int):
         """

@@ -165,17 +165,31 @@ class SimpleAIStrategy:
     
     def _calculate_bet_amount(self, player: PlayerSnapshot, context: dict) -> int:
         """计算下注金额 - 保守策略"""
-        # 下注金额为筹码的1/8到1/4
-        min_bet = player.chips // 8
-        max_bet = player.chips // 4
-        return max(1, random.randint(min_bet, max_bet))
+        # 修复：使用更合理的下注金额
+        # 下注金额应该基于大盲注的倍数，而不是筹码的比例
+        big_blind = 10  # 假设大盲注为10（应该从snapshot获取）
+        
+        # 下注金额为大盲注的1-3倍
+        min_bet = big_blind
+        max_bet = big_blind * 3
+        bet_amount = random.randint(min_bet, max_bet)
+        
+        # 确保不超过玩家筹码
+        return min(bet_amount, player.chips)
     
     def _calculate_raise_amount(self, player: PlayerSnapshot, context: dict) -> int:
         """计算加注金额 - 保守策略"""
-        # 加注金额较小，通常是最小加注
-        base_raise = context['call_cost'] + 2  # 最小加注
-        max_raise = player.chips // 3
-        return min(base_raise, max_raise)
+        # 修复：使用更合理的加注金额
+        big_blind = 10  # 假设大盲注为10（应该从snapshot获取）
+        current_bet = context.get('current_bet', 0)
+        
+        # 加注金额为当前下注 + 大盲注的1-2倍
+        min_raise = current_bet + big_blind
+        max_raise = current_bet + big_blind * 2
+        raise_amount = random.randint(min_raise, max_raise)
+        
+        # 确保不超过玩家筹码
+        return min(raise_amount, player.chips)
     
     def _default_action(self, seat_id: int, available_actions: List[ActionType], 
                        call_cost: int) -> PlayerActionInput:

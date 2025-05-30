@@ -996,13 +996,27 @@ class PokerController:
     
     def _is_hand_complete(self) -> bool:
         """判断手牌是否完成"""
-        return (self.state.phase == GamePhase.SHOWDOWN or 
-                len([p for p in self.state.players if p.status == SeatStatus.ACTIVE]) <= 1)
+        # 检查仍在手牌中的玩家数量
+        players_in_hand = self.state.get_players_in_hand()
+        
+        # 如果只剩一个或零个玩家，手牌完成
+        if len(players_in_hand) <= 1:
+            return True
+        
+        # 如果到达摊牌阶段且下注轮完成，手牌完成
+        if (self.state.phase == GamePhase.SHOWDOWN and 
+            self.state.is_betting_round_complete()):
+            return True
+        
+        # 其他情况下，手牌继续
+        return False
     
     def _has_enough_active_players(self) -> bool:
         """检查是否有足够的活跃玩家继续游戏"""
-        active_players = [p for p in self.state.players if p.status == SeatStatus.ACTIVE]
-        return len(active_players) >= 2
+        # 修复：应该检查仍在手牌中的玩家，而不是只检查可行动的玩家
+        # 弃牌的玩家状态是FOLDED，不在active_players中，但游戏应该继续
+        players_in_hand = self.state.get_players_in_hand()
+        return len(players_in_hand) >= 2
     
     def _try_advance_phase(self) -> ActionResult:
         """尝试推进游戏阶段"""
