@@ -350,15 +350,15 @@ class GameState:
                 raise ValueError(f"牌组中牌数不足，无法发{count}张公共牌")
         
         # 记录事件
-        if count == 3:
-            cards_str = " ".join(card.to_display_str() for card in self.community_cards[-3:])
+        if self.phase == GamePhase.FLOP:
+            cards_str = " ".join(card.to_str() for card in self.community_cards[-3:])
             self.add_event(f"翻牌发出: {cards_str}")
-        elif count == 1:
-            card_str = self.community_cards[-1].to_display_str()
-            if len(self.community_cards) == 4:
-                self.add_event(f"转牌发出: {card_str}")
-            elif len(self.community_cards) == 5:
-                self.add_event(f"河牌发出: {card_str}")
+        elif self.phase == GamePhase.TURN:
+            card_str = self.community_cards[-1].to_str()
+            self.add_event(f"转牌发出: {card_str}")
+        elif self.phase == GamePhase.RIVER:
+            card_str = self.community_cards[-1].to_str()
+            self.add_event(f"河牌发出: {card_str}")
 
     def set_blinds(self):
         """设置盲注（在发牌前调用）"""
@@ -478,7 +478,7 @@ class GameState:
 
     def __str__(self) -> str:
         """返回游戏状态的可读表示"""
-        community_str = " ".join(card.to_display_str() for card in self.community_cards)
+        community_str = " ".join(card.to_str() for card in self.community_cards)
         active_count = len(self.get_active_players())
         
         return (f"阶段: {self.phase.name}, "

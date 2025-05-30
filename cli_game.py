@@ -163,38 +163,22 @@ class TexasHoldemCLI:
     
     def display_game_state(self):
         """显示当前游戏状态"""
-        if not self.controller:
-            return
-            
         snapshot = self.controller.get_state_snapshot()
         
-        # 显示游戏阶段
-        phase_name = {
-            GamePhase.PRE_FLOP: "翻牌前",
-            GamePhase.FLOP: "翻牌",
-            GamePhase.TURN: "转牌", 
-            GamePhase.RIVER: "河牌",
-            GamePhase.SHOWDOWN: "摊牌"
-        }.get(snapshot.phase, str(snapshot.phase))
+        print(f"\n当前阶段: {snapshot.phase}")
+        print(f"有效底池: {self.format_chips(snapshot.pot)}")
         
-        print(f"\n当前阶段: {phase_name}")
+        if snapshot.current_bet > 0:
+            print(f"当前下注: {self.format_chips(snapshot.current_bet)}")
         
-        # 计算有效底池（已收集的底池 + 所有玩家的当前下注）
-        current_bets_total = sum(player.current_bet for player in snapshot.players)
-        effective_pot = snapshot.pot + current_bets_total
-        
-        print(f"有效底池: {self.format_chips(effective_pot)}")
-        if current_bets_total > 0:
-            print(f"  (已收集: {self.format_chips(snapshot.pot)}, 当前下注: {self.format_chips(current_bets_total)})")
-        print(f"当前下注: {self.format_chips(snapshot.current_bet)}")
-        
-        # 显示公共牌
+        # 显示公共牌 - 修复Unicode显示问题
         if snapshot.community_cards:
+            # 使用to_str()而不是to_display_str()避免Unicode符号
             cards_str = " ".join(snapshot.community_cards)
             print(f"公共牌: {cards_str}")
         
-        # 显示玩家信息
         print(f"\n玩家状态:")
+        
         for player in snapshot.players:
             status_mark = " <- 当前玩家" if player.seat_id == snapshot.current_player_seat else ""
             action_mark = ""
@@ -211,11 +195,15 @@ class TexasHoldemCLI:
             
             print(f"  座位{player.seat_id}: {player.name} - 筹码:{self.format_chips(player.chips)}{bet_info}{action_mark}{status_mark}")
         
-        # 显示用户手牌
+        # 显示用户手牌 - 修复Unicode显示问题
         if self.human_seat < len(snapshot.players):
             human_player = snapshot.players[self.human_seat]
             if human_player.hole_cards_display and human_player.hole_cards_display != "隐藏":
                 print(f"\n您的手牌: {human_player.hole_cards_display}")
+        
+        if self.debug_mode:
+            print(f"[DEBUG] 当前玩家座位: {snapshot.current_player_seat}")
+            print(f"[DEBUG] 人类玩家座位: {self.human_seat}")
     
     # ==============================================
     # 玩家行动处理

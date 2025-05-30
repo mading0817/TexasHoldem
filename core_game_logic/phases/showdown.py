@@ -45,7 +45,7 @@ class ShowdownPhase(BasePhase):
                 print(f"{player.name}手牌: {cards_str}")
             
             # 显示公共牌
-            community_str = " ".join(card.to_display_str() for card in self.state.community_cards)
+            community_str = " ".join(card.to_str() for card in self.state.community_cards)
             print(f"公共牌: {community_str}")
     
     def act(self, action: 'ValidatedAction') -> bool:

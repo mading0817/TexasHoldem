@@ -392,7 +392,7 @@ class PokerController:
             
             self.pending_events.append(GameEvent(
                 event_type=GameEventType.CARDS_DEALT,
-                message=f"翻牌发出: {' '.join(card.to_display_str() for card in self.state.community_cards[-3:])}"
+                message=f"翻牌发出: {' '.join(card.to_str() for card in self.state.community_cards[-3:])}"
             ))
     
     def _deal_turn(self):
@@ -406,7 +406,7 @@ class PokerController:
             
             self.pending_events.append(GameEvent(
                 event_type=GameEventType.CARDS_DEALT,
-                message=f"转牌发出: {card.to_display_str()}"
+                message=f"转牌发出: {card.to_str()}"
             ))
     
     def _deal_river(self):
@@ -420,7 +420,7 @@ class PokerController:
             
             self.pending_events.append(GameEvent(
                 event_type=GameEventType.CARDS_DEALT,
-                message=f"河牌发出: {card.to_display_str()}"
+                message=f"河牌发出: {card.to_str()}"
             ))
     
     def _enter_showdown(self):
@@ -1003,9 +1003,8 @@ class PokerController:
         if len(players_in_hand) <= 1:
             return True
         
-        # 如果到达摊牌阶段且下注轮完成，手牌完成
-        if (self.state.phase == GamePhase.SHOWDOWN and 
-            self.state.is_betting_round_complete()):
+        # 如果到达摊牌阶段，手牌完成（摊牌阶段没有下注轮）
+        if self.state.phase == GamePhase.SHOWDOWN:
             return True
         
         # 其他情况下，手牌继续

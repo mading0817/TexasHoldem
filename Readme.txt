@@ -114,6 +114,12 @@ python -m pytest tests/test_controller/ # Controller测试
 - 🎯 **结果**: 筹码守恒定律完全满足，游戏规则完全符合德州扑克标准
 - 🎨 **改进**: 新增"有效底池"显示，提升用户体验
 
+**v2.9 阶段推进与下注轮逻辑修复 (2024年12月17日)**:
+- 🔧 **问题**: 游戏在翻牌后阶段跳过玩家行动，下注轮立即结束，导致阶段跳跃到SHOWDOWN
+- 🔍 **根源**: `core_game_logic/core/player.py` 的 `reset_current_bet()` 方法未重置 `last_action_type`，导致 `is_betting_round_complete()` 判断错误
+- ✅ **修复**: 在 `reset_current_bet()` 中添加 `self.last_action_type = None`
+- 🎯 **结果**: 游戏流程完全恢复正常，所有阶段下注轮逻辑正确，符合德州扑克标准
+
 ### 当前架构问题分析 (Critical Review) - 已解决
 
 **Phase 5 MVC职责纯化完成**：

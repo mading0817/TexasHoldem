@@ -81,7 +81,7 @@ class GameStateSnapshot:
         return cls(
             version=version,
             phase=game_state.phase,
-            community_cards=tuple(card.to_display_str() for card in game_state.community_cards),
+            community_cards=tuple(card.to_str() for card in game_state.community_cards),
             pot=game_state.pot,
             current_bet=game_state.current_bet,
             current_player_seat=game_state.current_player,
