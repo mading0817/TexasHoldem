@@ -192,7 +192,18 @@ class GameState:
                 else:
                     return True
         
-        # 如果没有加注者，检查是否所有人都行动过
+        # 修复：如果没有加注者，检查是否所有活跃玩家都行动过
+        # 在Pre-flop之外的阶段，或者Pre-flop但大盲注已经行动过的情况下
+        # 当所有玩家下注相等且都至少行动过一次时，下注轮结束
+        if self.last_raiser is None:
+            # 检查所有活跃玩家是否都至少行动过一次
+            for player in active_players:
+                if player.last_action_type is None:
+                    return False
+            # 所有活跃玩家都行动过且下注相等，下注轮结束
+            return True
+        
+        # 备用逻辑：基于行动计数（保留作为最后的安全网）
         return self.street_index >= len(active_players)
 
     def start_new_betting_round(self, starting_player: Optional[int] = None):
@@ -226,17 +237,35 @@ class GameState:
 
     def _set_first_to_act(self):
         """设置第一个行动的玩家（翻牌前专用）"""
-        all_seats = sorted([p.seat_id for p in self.players])
-        dealer_index = all_seats.index(self.dealer_position)
+        # 在翻牌前：
+        # - 单挑：庄家（小盲）先行动
+        # - 多人：从UTG（Under The Gun，大盲左边）开始行动
         
-        # 从庄家左边开始找第一个可行动的玩家
-        for i in range(1, len(all_seats) + 1):
-            next_index = (dealer_index + i) % len(all_seats)
-            next_seat = all_seats[next_index]
-            next_player = self.get_player_by_seat(next_seat)
+        eligible_seats = sorted([p.seat_id for p in self.players 
+                               if p.status not in [SeatStatus.OUT, SeatStatus.FOLDED]])
+        
+        if len(eligible_seats) < 2:
+            return
             
-            if next_player and next_player.can_act():
-                self.current_player = next_seat
+        if len(eligible_seats) == 2:
+            # 单挑：庄家（小盲）先行动
+            self.current_player = self.dealer_position
+            return
+        
+        # 多人游戏：从UTG（大盲左边）开始
+        dealer_index = eligible_seats.index(self.dealer_position)
+        
+        # UTG是大盲左边，即庄家右边第三个位置（庄家→小盲→大盲→UTG）
+        utg_index = (dealer_index + 3) % len(eligible_seats)
+        
+        # 从UTG开始找第一个可行动的玩家
+        for i in range(len(eligible_seats)):
+            check_index = (utg_index + i) % len(eligible_seats)
+            check_seat = eligible_seats[check_index]
+            check_player = self.get_player_by_seat(check_seat)
+            
+            if check_player and check_player.can_act():
+                self.current_player = check_seat
                 return
         
         # 如果没有找到可行动的玩家，设置为庄家
@@ -292,6 +321,45 @@ class GameState:
             self.pot += player.current_bet
             player.reset_current_bet()
 
+    def deal_community_cards(self, count: int):
+        """
+        发公共牌
+        
+        Args:
+            count: 要发的公共牌数量
+            
+        Raises:
+            ValueError: 当牌组未初始化或牌数不足时
+        """
+        if not self.deck:
+            raise ValueError("牌组未初始化，无法发公共牌")
+        
+        if count <= 0:
+            return
+        
+        # 烧掉一张牌（德州扑克规则）
+        if self.deck.remaining_count > 0:
+            self.deck.deal_card()
+        
+        # 发指定数量的公共牌
+        for _ in range(count):
+            if self.deck.remaining_count > 0:
+                card = self.deck.deal_card()
+                self.community_cards.append(card)
+            else:
+                raise ValueError(f"牌组中牌数不足，无法发{count}张公共牌")
+        
+        # 记录事件
+        if count == 3:
+            cards_str = " ".join(card.to_display_str() for card in self.community_cards[-3:])
+            self.add_event(f"翻牌发出: {cards_str}")
+        elif count == 1:
+            card_str = self.community_cards[-1].to_display_str()
+            if len(self.community_cards) == 4:
+                self.add_event(f"转牌发出: {card_str}")
+            elif len(self.community_cards) == 5:
+                self.add_event(f"河牌发出: {card_str}")
+
     def set_blinds(self):
         """设置盲注（在发牌前调用）"""
         if len(self.players) < 2:
@@ -303,8 +371,29 @@ class GameState:
             player.is_big_blind = False
             # 庄家标记保持不变，由外部管理
         
-        all_seats = sorted([p.seat_id for p in self.players if p.status != SeatStatus.OUT])
-        dealer_index = all_seats.index(self.dealer_position)
+        # 只考虑有足够筹码的玩家（至少能支付小盲注）
+        eligible_players = [p for p in self.players 
+                          if p.status != SeatStatus.OUT and p.chips >= self.small_blind]
+        
+        # 如果没有足够的合格玩家，无法继续
+        if len(eligible_players) < 2:
+            # 将筹码不足的玩家设为OUT状态
+            for player in self.players:
+                if player.chips < self.small_blind and player.status != SeatStatus.OUT:
+                    player.status = SeatStatus.OUT
+                    self.add_event(f"玩家{player.name}筹码不足({player.chips})，无法支付小盲注({self.small_blind})，被淘汰")
+            return
+        
+        all_seats = sorted([p.seat_id for p in eligible_players])
+        try:
+            dealer_index = all_seats.index(self.dealer_position)
+        except ValueError:
+            # 如果当前庄家不在合格玩家中，选择第一个合格玩家作为庄家
+            self.dealer_position = all_seats[0]
+            dealer_index = 0
+            # 更新庄家标记
+            for player in self.players:
+                player.is_dealer = (player.seat_id == self.dealer_position)
         
         # 单挑时的特殊规则
         if len(all_seats) == 2:
@@ -318,17 +407,33 @@ class GameState:
         
         # 设置小盲注
         small_blind_player = self.get_player_by_seat(small_blind_seat)
-        if small_blind_player:
+        if small_blind_player and small_blind_player.chips >= self.small_blind:
             small_blind_player.is_small_blind = True
-            small_blind_player.bet(self.small_blind)
+            actual_sb_bet = small_blind_player.bet(self.small_blind)
+            # 修复：不要直接加入底池，让collect_bets_to_pot统一处理
+            # self.pot += actual_sb_bet # 删除这行，避免重复计算
+        else:
+            # 小盲注玩家筹码不足，设为OUT
+            if small_blind_player:
+                small_blind_player.status = SeatStatus.OUT
+                self.add_event(f"小盲注玩家{small_blind_player.name}筹码不足，被淘汰")
+            return
         
         # 设置大盲注
         big_blind_player = self.get_player_by_seat(big_blind_seat)
-        if big_blind_player:
+        if big_blind_player and big_blind_player.chips >= self.big_blind:
             big_blind_player.is_big_blind = True
-            big_blind_player.bet(self.big_blind)
+            actual_bb_bet = big_blind_player.bet(self.big_blind)
+            # 修复：不要直接加入底池，让collect_bets_to_pot统一处理
+            # self.pot += actual_bb_bet # 删除这行，避免重复计算
             self.current_bet = self.big_blind
             self.last_raise_amount = self.big_blind # Initial "raise" is the BB itself over 0
+        else:
+            # 大盲注玩家筹码不足，设为OUT
+            if big_blind_player:
+                big_blind_player.status = SeatStatus.OUT
+                self.add_event(f"大盲注玩家{big_blind_player.name}筹码不足，被淘汰")
+            return
 
     def to_dict(self, viewer_seat: Optional[int] = None) -> Dict[str, Any]:
         """

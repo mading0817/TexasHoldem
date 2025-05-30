@@ -208,6 +208,7 @@ class GameEventType(Enum):
     CARDS_DEALT = "cards_dealt"
     POT_AWARDED = "pot_awarded"
     PLAYER_ELIMINATED = "player_eliminated"
+    WARNING = "warning"  # 添加 WARNING 事件类型
 
 
 @dataclass
@@ -258,4 +259,157 @@ class GameEvent:
             'affected_seat_ids': self.affected_seat_ids,
             'data': self.data,
             'timestamp': self.timestamp.isoformat()
+        }
+
+
+@dataclass
+class PlayerActionRequest:
+    """玩家行动请求对象 - 用于高级API回调机制"""
+    seat_id: int
+    player_name: str
+    available_actions: List[ActionType]  # 当前可用的行动类型
+    snapshot: GameStateSnapshot  # 当前游戏状态快照
+    current_bet_to_call: int  # 需要跟注的金额
+    minimum_raise_amount: int  # 最小加注金额
+    player_chips: int  # 玩家当前筹码
+    
+    def format_action_choices(self) -> str:
+        """格式化行动选择为用户友好的字符串"""
+        choices = []
+        for i, action in enumerate(self.available_actions, 1):
+            if action == ActionType.FOLD:
+                choices.append(f"{i}. 弃牌 (Fold)")
+            elif action == ActionType.CHECK:
+                choices.append(f"{i}. 过牌 (Check)")
+            elif action == ActionType.CALL:
+                choices.append(f"{i}. 跟注 (Call {self.current_bet_to_call})")
+            elif action == ActionType.BET:
+                choices.append(f"{i}. 下注 (Bet, min: {self.minimum_raise_amount})")
+            elif action == ActionType.RAISE:
+                choices.append(f"{i}. 加注 (Raise, min: {self.minimum_raise_amount})")
+            elif action == ActionType.ALL_IN:
+                choices.append(f"{i}. 全下 (All-in {self.player_chips})")
+        return "\n".join(choices)
+    
+    def validate_action_choice(self, choice_index: int, amount: Optional[int] = None) -> bool:
+        """验证用户选择的行动是否有效"""
+        if choice_index < 1 or choice_index > len(self.available_actions):
+            return False
+        
+        action_type = self.available_actions[choice_index - 1]
+        
+        # 下注/加注需要验证金额
+        if action_type in [ActionType.BET, ActionType.RAISE]:
+            if amount is None or amount < self.minimum_raise_amount:
+                return False
+            if amount > self.player_chips:
+                return False
+        
+        return True
+    
+    def to_action_input(self, choice_index: int, amount: Optional[int] = None) -> PlayerActionInput:
+        """将用户选择转换为PlayerActionInput对象"""
+        if not self.validate_action_choice(choice_index, amount):
+            raise ValueError(f"无效的行动选择: {choice_index}, amount: {amount}")
+        
+        action_type = self.available_actions[choice_index - 1]
+        
+        # 特殊处理金额
+        final_amount = None
+        if action_type in [ActionType.BET, ActionType.RAISE]:
+            final_amount = amount
+        elif action_type == ActionType.CALL:
+            final_amount = self.current_bet_to_call
+        elif action_type == ActionType.ALL_IN:
+            final_amount = self.player_chips
+        
+        return PlayerActionInput(
+            seat_id=self.seat_id,
+            action_type=action_type,
+            amount=final_amount
+        )
+
+
+@dataclass
+class HandResult:
+    """手牌结果对象 - 用于完整手牌流程的结果返回"""
+    completed: bool  # 手牌是否正常完成
+    winners: List[int]  # 获胜者座位号列表
+    pot_distribution: Dict[int, int]  # 底池分配：座位号 -> 获得筹码
+    total_pot: int  # 总底池金额
+    final_phase: GamePhase  # 最终完成的阶段
+    phases_completed: List[GamePhase]  # 已完成的阶段列表
+    hand_duration_seconds: float  # 手牌持续时间（秒）
+    total_actions: int  # 总行动次数
+    events: List[GameEvent] = field(default_factory=list)  # 手牌过程中的事件
+    error_message: Optional[str] = None  # 如果未正常完成，记录错误信息
+    metadata: Dict[str, Any] = field(default_factory=dict)  # 额外元数据
+    
+    @classmethod
+    def successful_completion(cls, winners: List[int], pot_distribution: Dict[int, int], 
+                             total_pot: int, phases_completed: List[GamePhase],
+                             duration_seconds: float, total_actions: int,
+                             events: List[GameEvent] = None) -> 'HandResult':
+        """创建成功完成的手牌结果"""
+        return cls(
+            completed=True,
+            winners=winners,
+            pot_distribution=pot_distribution,
+            total_pot=total_pot,
+            final_phase=phases_completed[-1] if phases_completed else GamePhase.PRE_FLOP,
+            phases_completed=phases_completed,
+            hand_duration_seconds=duration_seconds,
+            total_actions=total_actions,
+            events=events or []
+        )
+    
+    @classmethod
+    def interrupted_completion(cls, error_message: str, final_phase: GamePhase,
+                              phases_completed: List[GamePhase], duration_seconds: float,
+                              total_actions: int, events: List[GameEvent] = None) -> 'HandResult':
+        """创建中断的手牌结果"""
+        return cls(
+            completed=False,
+            winners=[],
+            pot_distribution={},
+            total_pot=0,
+            final_phase=final_phase,
+            phases_completed=phases_completed,
+            hand_duration_seconds=duration_seconds,
+            total_actions=total_actions,
+            events=events or [],
+            error_message=error_message
+        )
+    
+    def format_summary(self) -> str:
+        """格式化手牌结果摘要"""
+        if not self.completed:
+            return f"手牌中断: {self.error_message}\n" \
+                   f"完成阶段: {[p.name for p in self.phases_completed]}\n" \
+                   f"持续时间: {self.hand_duration_seconds:.2f}秒"
+        
+        winner_info = f"获胜者: {self.winners}" if len(self.winners) == 1 else f"平分获胜者: {self.winners}"
+        pot_info = "\n".join([f"座位{seat}: +{amount}筹码" for seat, amount in self.pot_distribution.items()])
+        
+        return f"{winner_info}\n" \
+               f"总底池: {self.total_pot}\n" \
+               f"筹码分配:\n{pot_info}\n" \
+               f"完成阶段: {self.final_phase.name}\n" \
+               f"总行动数: {self.total_actions}\n" \
+               f"持续时间: {self.hand_duration_seconds:.2f}秒"
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典格式，方便序列化"""
+        return {
+            'completed': self.completed,
+            'winners': self.winners,
+            'pot_distribution': self.pot_distribution,
+            'total_pot': self.total_pot,
+            'final_phase': self.final_phase.name,
+            'phases_completed': [p.name for p in self.phases_completed],
+            'hand_duration_seconds': self.hand_duration_seconds,
+            'total_actions': self.total_actions,
+            'events': [event.to_dict() for event in self.events],
+            'error_message': self.error_message,
+            'metadata': self.metadata
         } 

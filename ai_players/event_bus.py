@@ -3,12 +3,13 @@
 提供发布-订阅模式的事件处理机制
 """
 
-from typing import List, Dict, Callable, Any, Optional
+from typing import List, Dict, Callable, Any, Optional, Union
 from dataclasses import dataclass, field
 from datetime import datetime
 from collections import defaultdict
 import logging
 from threading import Lock
+import uuid
 
 from app_controller.dto_models import GameEvent, GameEventType
 
@@ -20,10 +21,14 @@ EventHandler = Callable[[GameEvent], None]
 @dataclass
 class EventSubscription:
     """事件订阅信息"""
+    subscription_id: str
     handler: EventHandler
     priority: int = 0  # 优先级，数字越大优先级越高
     filter_func: Optional[Callable[[GameEvent], bool]] = None  # 事件过滤函数
-    subscription_id: str = field(default_factory=lambda: f"sub_{id(object())}")
+    
+    def __post_init__(self):
+        if not self.subscription_id:
+            self.subscription_id = str(uuid.uuid4())
 
 
 class EventBus:
@@ -50,13 +55,13 @@ class EventBus:
             'failed_handlers': 0
         }
     
-    def subscribe(self, event_type: GameEventType, handler: EventHandler, 
+    def subscribe(self, event_type: Union[GameEventType, str], handler: EventHandler, 
                  priority: int = 0, filter_func: Optional[Callable[[GameEvent], bool]] = None) -> str:
         """
-        订阅特定类型的事件
+        订阅特定类型的事件或所有事件
         
         Args:
-            event_type: 事件类型
+            event_type: 事件类型或 '*' 表示订阅所有事件
             handler: 事件处理器函数
             priority: 优先级（数字越大优先级越高）
             filter_func: 事件过滤函数，返回True的事件才会被处理
@@ -65,46 +70,38 @@ class EventBus:
             订阅ID，用于取消订阅
         """
         subscription = EventSubscription(
+            subscription_id=str(uuid.uuid4()),
             handler=handler,
             priority=priority,
             filter_func=filter_func
         )
         
-        with self._lock:
-            self._subscribers[event_type].append(subscription)
-            # 按优先级排序（高优先级在前）
-            self._subscribers[event_type].sort(key=lambda s: s.priority, reverse=True)
-        
-        if self._logger:
-            self._logger.debug(f"订阅事件: {event_type.value}, 处理器: {handler.__name__}, 优先级: {priority}")
-        
-        return subscription.subscription_id
-    
-    def subscribe_all(self, handler: EventHandler, priority: int = 0, 
-                     filter_func: Optional[Callable[[GameEvent], bool]] = None) -> str:
-        """
-        订阅所有类型的事件
-        
-        Args:
-            handler: 事件处理器函数
-            priority: 优先级
-            filter_func: 事件过滤函数
+        # 处理全局订阅（'*'）
+        if event_type == '*':
+            with self._lock:
+                self._global_subscribers.append(subscription)
+                # 按优先级排序（高优先级在前）
+                self._global_subscribers.sort(key=lambda s: s.priority, reverse=True)
             
-        Returns:
-            订阅ID
-        """
-        subscription = EventSubscription(
-            handler=handler,
-            priority=priority,
-            filter_func=filter_func
-        )
-        
-        with self._lock:
-            self._global_subscribers.append(subscription)
-            self._global_subscribers.sort(key=lambda s: s.priority, reverse=True)
-        
-        if self._logger:
-            self._logger.debug(f"订阅所有事件: 处理器: {handler.__name__}, 优先级: {priority}")
+            if self._logger:
+                self._logger.debug(f"订阅所有事件: 处理器: {handler.__name__}, 优先级: {priority}")
+        else:
+            # 确保是有效的枚举类型
+            if isinstance(event_type, str):
+                # 尝试转换字符串为枚举
+                try:
+                    event_type = GameEventType[event_type.upper()]
+                except KeyError:
+                    raise ValueError(f"无效的事件类型: {event_type}")
+            
+            with self._lock:
+                self._subscribers[event_type].append(subscription)
+                # 按优先级排序（高优先级在前）
+                self._subscribers[event_type].sort(key=lambda s: s.priority, reverse=True)
+            
+            if self._logger:
+                event_type_str = event_type.value if hasattr(event_type, 'value') else str(event_type)
+                self._logger.debug(f"订阅事件: {event_type_str}, 处理器: {handler.__name__}, 优先级: {priority}")
         
         return subscription.subscription_id
     
@@ -125,7 +122,8 @@ class EventBus:
                     if sub.subscription_id == subscription_id:
                         del subscriptions[i]
                         if self._logger:
-                            self._logger.debug(f"取消订阅: {subscription_id} for {event_type.value}")
+                            event_type_str = event_type.value if hasattr(event_type, 'value') else str(event_type)
+                            self._logger.debug(f"取消订阅: {subscription_id} for {event_type_str}")
                         return True
             
             # 在全局订阅者中查找
@@ -238,7 +236,8 @@ class EventBus:
                 'global_subscribers': len(self._global_subscribers)
             }
             for event_type, subscriptions in self._subscribers.items():
-                stats[f'{event_type.value}_subscribers'] = len(subscriptions)
+                event_type_str = event_type.value if hasattr(event_type, 'value') else str(event_type)
+                stats[f'{event_type_str}_subscribers'] = len(subscriptions)
         
         return stats
 
@@ -290,8 +289,9 @@ class EventLogger:
         self.logger = logger or logging.getLogger(__name__)
         self.event_bus = get_global_event_bus()
         
-        # 注册日志处理器
-        self.subscription_id = self.event_bus.subscribe_all(
+        # 注册日志处理器 - 使用 '*' 订阅所有事件
+        self.subscription_id = self.event_bus.subscribe(
+            event_type='*',
             handler=self._log_event,
             priority=-100  # 低优先级，确保在其他处理器之后执行
         )

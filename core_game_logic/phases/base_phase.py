@@ -189,8 +189,8 @@ class BasePhase(ABC):
     
     def standard_exit_to_next_phase(self, next_phase_class, phase_name: str):
         """
-        标准的阶段退出流程
-        适用于除摊牌外的所有阶段
+        标准的阶段退出流程 - 修复版本控制问题
+        不再直接修改GameState，而是返回转换指令让Controller执行
         
         Args:
             next_phase_class: 下一阶段的类
@@ -202,18 +202,18 @@ class BasePhase(ABC):
         # 收集所有下注到底池
         self.state.collect_bets_to_pot()
         
-        # 推进游戏阶段
-        self.state.advance_phase()
+        # *** 重要修复：不直接调用 state.advance_phase() ***
+        # 这将由 Controller 层的 @atomic 方法统一处理
         
         # 记录事件
-        self.state.add_event(f"{phase_name}结束，底池: {self.state.pot}")
+        self.state.add_event(f"{phase_name}阶段完成，准备转换")
         
         # 检查是否只剩一个玩家（其他都弃牌了）
         players_in_hand = self.state.get_players_in_hand()
         if len(players_in_hand) <= 1:
             # 直接进入摊牌阶段
             from .showdown import ShowdownPhase
-            self.state.phase = next_phase_class._phase_enum_value
+            # 不直接修改 state.phase，让调用者处理
             return ShowdownPhase(self.state)
         
         # 正常进入下一阶段
@@ -267,17 +267,21 @@ class BasePhase(ABC):
                 validated_action = validator.validate(self.state, current_player, action)
                 
                 # 执行行动（使用现有的act方法）
+                # act方法会自动推进玩家并检查下注轮状态
                 continue_round = self.act(validated_action)
                 
                 events.append(f"玩家 {current_player.name} 执行了 {validated_action}")
                 action_count += 1
                 
+                # 如果act方法返回False，说明下注轮结束
                 if not continue_round:
                     break
                     
             except Exception as e:
-                # 处理异常：如果是AI玩家，强制弃牌；如果是人类玩家，重新抛出
-                if current_seat != 0:  # 假设0是人类玩家
+                # 处理异常：AI玩家强制弃牌，人类玩家向外抛出
+                # 移除硬编码的座位0假设，改为从玩家属性判断
+                is_human_player = hasattr(current_player, 'is_human') and current_player.is_human
+                if not is_human_player:  # AI玩家的异常处理
                     try:
                         # 创建弃牌行动
                         from ..core.enums import Action
@@ -287,10 +291,14 @@ class BasePhase(ABC):
                             player_seat=current_seat
                         )
                         validated_fold = validator.validate(self.state, current_player, fold_action)
-                        self.act(validated_fold)
+                        continue_round = self.act(validated_fold)
                         
                         events.append(f"玩家 {current_player.name} 因异常强制弃牌: {str(e)}")
                         action_count += 1
+                        
+                        # 检查是否需要继续下注轮
+                        if not continue_round:
+                            break
                     except:
                         break
                 else:

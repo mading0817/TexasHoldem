@@ -25,6 +25,7 @@ class Player:
     is_small_blind: bool = False                   # 是否为小盲注
     is_big_blind: bool = False                     # 是否为大盲注
     last_action_type: Optional[ActionType] = None  # 最后一次行动类型
+    is_human: bool = False                         # 是否为人类玩家（新增）
 
     def __post_init__(self):
         """验证玩家数据的有效性"""

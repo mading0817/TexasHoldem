@@ -152,8 +152,8 @@ class GameController:
     
     def next_phase(self) -> bool:
         """
-        转换到下一个游戏阶段
-        使用事务性转换确保状态一致性
+        转换到下一个游戏阶段 - 修复版本控制问题
+        使用事务性转换确保状态一致性，统一处理阶段推进
         
         Returns:
             True如果成功转换，False如果游戏结束
@@ -173,6 +173,12 @@ class GameController:
                 self.current_phase = None
                 self.state.add_event("游戏结束")
                 return False
+            
+            # *** 重要修复：统一在Controller层处理阶段推进 ***
+            # 因为Phase层不再直接调用 state.advance_phase()
+            old_phase = self.state.phase
+            self.state.advance_phase()
+            self.state.add_event(f"阶段转换: {old_phase.name} -> {self.state.phase.name}")
             
             # 设置新阶段并进入
             self.current_phase = next_phase

@@ -332,6 +332,7 @@ class AIDecisionEngine:
             return PlayerActionInput(seat_id=seat_id, action_type=ActionType.CHECK)
         elif required_amount <= player_snapshot.chips * 0.1:
             # 代价很小时跟注
+            # 修复：CALL行动返回增量金额
             call_amount = min(required_amount, player_snapshot.chips)
             action_type = ActionType.ALL_IN if call_amount == player_snapshot.chips else ActionType.CALL
             return PlayerActionInput(seat_id=seat_id, action_type=action_type, amount=call_amount)

@@ -79,92 +79,61 @@ class AIStrategy(ABC):
 class ConservativeStrategy(AIStrategy):
     """保守型AI策略 - 偏向于保守决策"""
     
-    def __init__(self, name: str = "保守型AI"):
+    def __init__(self, name: str = "保守AI"):
         super().__init__(name, {
-            'aggression': 0.3,      # 攻击性低
-            'bluff_frequency': 0.1, # 很少虚张声势
-            'risk_tolerance': 0.4   # 风险承受能力低
+            'hand_strength_threshold': 0.3,
+            'bluff_frequency': 0.05,
+            'pot_odds_threshold': 3.0
         })
     
     def decide_action(self, context: AIDecisionContext) -> PlayerActionInput:
-        """保守策略决策逻辑"""
+        """保守决策逻辑"""
         snapshot = context.game_snapshot
         player_snapshot = snapshot.get_player_snapshot(context.player_seat_id)
         
         if not player_snapshot:
-            # 异常情况处理 - 找不到玩家信息
             return PlayerActionInput(
                 seat_id=context.player_seat_id,
                 action_type=ActionType.FOLD
             )
         
-        # 计算基础信息
         required_amount = snapshot.current_bet - player_snapshot.current_bet
-        hand_strength = context.hand_strength or 0.3  # 默认为中等偏低
-        pot_odds = context.pot_odds or 1.0
+        hand_strength = context.hand_strength or 0.3
         
-        reasoning = f"保守策略分析: 手牌强度={hand_strength:.2f}, 底池赔率={pot_odds:.2f}"
-        
-        # 保守策略决策逻辑
-        if hand_strength >= 0.8:  # 非常强的牌
-            action = self._handle_strong_hand(snapshot, player_snapshot, required_amount)
-            reasoning += ", 强牌积极行动"
-        elif hand_strength >= 0.6:  # 中等强度
-            action = self._handle_medium_hand(snapshot, player_snapshot, required_amount, pot_odds)
-            reasoning += ", 中等牌谨慎行动"
-        else:  # 弱牌
-            action = self._handle_weak_hand(snapshot, player_snapshot, required_amount, pot_odds)
-            reasoning += ", 弱牌保守行动"
-        
-        # 记录决策
-        self.record_decision(context, action, reasoning)
-        return action
-    
-    def _handle_strong_hand(self, snapshot: GameStateSnapshot, 
-                           player_snapshot, required_amount: int) -> PlayerActionInput:
-        """处理强牌的情况"""
-        if required_amount == 0:  # 没有人下注
-            # 小幅下注引诱对手
-            bet_amount = max(snapshot.big_blind, snapshot.pot // 4)
-            bet_amount = min(bet_amount, player_snapshot.chips)
-            return PlayerActionInput(
-                seat_id=player_snapshot.seat_id,
-                action_type=ActionType.BET,
-                amount=bet_amount
-            )
-        else:  # 有人下注
-            if required_amount >= player_snapshot.chips:
-                # All-in情况
-                return PlayerActionInput(
-                    seat_id=player_snapshot.seat_id,
-                    action_type=ActionType.ALL_IN,
-                    amount=player_snapshot.chips
-                )
+        # 修复决策逻辑：正确理解德州扑克规则
+        if required_amount == 0:  # 不需要跟注
+            # 检查是否真的没有人下注（可以主动下注）
+            if snapshot.current_bet == 0:
+                # 确实没有人下注，可以主动下注
+                if hand_strength > 0.5:  # 好牌下注
+                    bet_amount = min(snapshot.big_blind, player_snapshot.chips)
+                    return PlayerActionInput(
+                        seat_id=player_snapshot.seat_id,
+                        action_type=ActionType.BET,
+                        amount=bet_amount
+                    )
+                else:  # 弱牌过牌
+                    return PlayerActionInput(
+                        seat_id=player_snapshot.seat_id,
+                        action_type=ActionType.CHECK
+                    )
             else:
-                # 小幅加注
-                raise_amount = snapshot.current_bet + snapshot.big_blind
-                raise_amount = min(raise_amount, player_snapshot.chips)
+                # 有人下注了，但我们已经跟上了（比如已付盲注），只能过牌
                 return PlayerActionInput(
                     seat_id=player_snapshot.seat_id,
-                    action_type=ActionType.RAISE,
-                    amount=raise_amount
+                    action_type=ActionType.CHECK
                 )
-    
-    def _handle_medium_hand(self, snapshot: GameStateSnapshot, 
-                           player_snapshot, required_amount: int, pot_odds: float) -> PlayerActionInput:
-        """处理中等牌的情况"""
-        if required_amount == 0:  # 过牌
-            return PlayerActionInput(
-                seat_id=player_snapshot.seat_id,
-                action_type=ActionType.CHECK
-            )
-        else:  # 根据底池赔率决定
-            if pot_odds > 3.0:  # 好的赔率
+        else:  # 需要跟注
+            pot_odds = self._calculate_pot_odds(snapshot, player_snapshot.seat_id)
+            
+            if hand_strength > 0.6:  # 强牌跟注
+                # 修复：CALL行动返回增量金额
                 call_amount = min(required_amount, player_snapshot.chips)
                 if call_amount == player_snapshot.chips:
                     action_type = ActionType.ALL_IN
                 else:
                     action_type = ActionType.CALL
+                
                 return PlayerActionInput(
                     seat_id=player_snapshot.seat_id,
                     action_type=action_type,
@@ -175,43 +144,20 @@ class ConservativeStrategy(AIStrategy):
                     seat_id=player_snapshot.seat_id,
                     action_type=ActionType.FOLD
                 )
-    
-    def _handle_weak_hand(self, snapshot: GameStateSnapshot, 
-                         player_snapshot, required_amount: int, pot_odds: float) -> PlayerActionInput:
-        """处理弱牌的情况"""
-        if required_amount == 0:  # 免费看牌
-            return PlayerActionInput(
-                seat_id=player_snapshot.seat_id,
-                action_type=ActionType.CHECK
-            )
-        else:  # 通常弃牌，除非赔率极好
-            if pot_odds > 5.0 and required_amount <= player_snapshot.chips * 0.05:
-                # 赔率极好且代价很小时跟注
-                call_amount = min(required_amount, player_snapshot.chips)
-                return PlayerActionInput(
-                    seat_id=player_snapshot.seat_id,
-                    action_type=ActionType.CALL,
-                    amount=call_amount
-                )
-            else:
-                return PlayerActionInput(
-                    seat_id=player_snapshot.seat_id,
-                    action_type=ActionType.FOLD
-                )
 
 
 class AggressiveStrategy(AIStrategy):
     """激进型AI策略 - 偏向于激进决策"""
     
-    def __init__(self, name: str = "激进型AI"):
+    def __init__(self, name: str = "激进AI"):
         super().__init__(name, {
-            'aggression': 0.8,      # 攻击性高
-            'bluff_frequency': 0.3, # 经常虚张声势
-            'risk_tolerance': 0.7   # 风险承受能力高
+            'hand_strength_threshold': 0.2,
+            'bluff_frequency': 0.3,
+            'aggression_factor': 2.5
         })
     
     def decide_action(self, context: AIDecisionContext) -> PlayerActionInput:
-        """激进策略决策逻辑"""
+        """激进决策逻辑"""
         snapshot = context.game_snapshot
         player_snapshot = snapshot.get_player_snapshot(context.player_seat_id)
         
@@ -222,55 +168,67 @@ class AggressiveStrategy(AIStrategy):
             )
         
         required_amount = snapshot.current_bet - player_snapshot.current_bet
-        hand_strength = context.hand_strength or 0.5
-        aggression = self.get_personality_trait('aggression', 0.8)
+        hand_strength = context.hand_strength or 0.3
         
-        reasoning = f"激进策略分析: 手牌强度={hand_strength:.2f}, 攻击性={aggression}"
-        
-        # 激进策略倾向于更多的下注和加注
-        if hand_strength >= 0.5 or random.random() < aggression * 0.3:  # 虚张声势
-            action = self._aggressive_action(snapshot, player_snapshot, required_amount)
-            reasoning += ", 激进行动"
+        # 激进决策：偏向于加注和下注
+        if hand_strength > 0.4 or random.random() < 0.3:  # 中等牌或虚张声势
+            return self._aggressive_action(snapshot, player_snapshot, required_amount)
         else:
-            action = self._conservative_fallback(snapshot, player_snapshot, required_amount)
-            reasoning += ", 保守回退"
-        
-        self.record_decision(context, action, reasoning)
-        return action
+            return self._conservative_action(snapshot, player_snapshot, required_amount)
     
     def _aggressive_action(self, snapshot: GameStateSnapshot, 
                           player_snapshot, required_amount: int) -> PlayerActionInput:
         """执行激进行动"""
-        if required_amount == 0:  # 主动下注
-            bet_amount = max(snapshot.big_blind * 2, snapshot.pot // 2)
-            bet_amount = min(bet_amount, player_snapshot.chips)
-            return PlayerActionInput(
-                seat_id=player_snapshot.seat_id,
-                action_type=ActionType.BET,
-                amount=bet_amount
-            )
-        else:  # 加注或跟注
-            if random.random() < 0.6:  # 60%概率加注
-                raise_amount = snapshot.current_bet + snapshot.big_blind * 2
-                if raise_amount <= player_snapshot.chips:
+        if required_amount == 0:  # 不需要跟注
+            # 修复：正确判断是否可以下注
+            if snapshot.current_bet == 0:
+                # 确实没有人下注，可以主动下注
+                # 合理的下注金额：大盲注的2-4倍
+                bet_amount = snapshot.big_blind * random.randint(2, 4)
+                bet_amount = min(bet_amount, player_snapshot.chips)
+                return PlayerActionInput(
+                    seat_id=player_snapshot.seat_id,
+                    action_type=ActionType.BET,
+                    amount=bet_amount
+                )
+            else:
+                # 有人下注了，但我们已经跟上了（比如已付盲注），只能过牌
+                return PlayerActionInput(
+                    seat_id=player_snapshot.seat_id,
+                    action_type=ActionType.CHECK
+                )
+        else:  # 跟注或加注
+            if player_snapshot.chips > required_amount + snapshot.big_blind:
+                # 有足够筹码加注
+                min_raise = snapshot.current_bet + snapshot.big_blind
+                max_raise = min(
+                    snapshot.current_bet * 2,
+                    player_snapshot.chips + player_snapshot.current_bet
+                )
+                if min_raise <= max_raise:
+                    raise_amount = random.randint(min_raise, max_raise)
                     return PlayerActionInput(
                         seat_id=player_snapshot.seat_id,
                         action_type=ActionType.RAISE,
                         amount=raise_amount
                     )
             
-            # 跟注
+            # 修复：CALL行动返回增量金额
             call_amount = min(required_amount, player_snapshot.chips)
-            action_type = ActionType.ALL_IN if call_amount == player_snapshot.chips else ActionType.CALL
+            if call_amount == player_snapshot.chips:
+                action_type = ActionType.ALL_IN
+            else:
+                action_type = ActionType.CALL
+            
             return PlayerActionInput(
                 seat_id=player_snapshot.seat_id,
                 action_type=action_type,
                 amount=call_amount
             )
     
-    def _conservative_fallback(self, snapshot: GameStateSnapshot, 
-                              player_snapshot, required_amount: int) -> PlayerActionInput:
-        """保守回退行动"""
+    def _conservative_action(self, snapshot: GameStateSnapshot, 
+                           player_snapshot, required_amount: int) -> PlayerActionInput:
+        """执行保守行动"""
         if required_amount == 0:
             return PlayerActionInput(
                 seat_id=player_snapshot.seat_id,
@@ -308,7 +266,10 @@ class RandomStrategy(AIStrategy):
         available_actions = []
         
         if required_amount == 0:
-            available_actions.extend([ActionType.CHECK, ActionType.BET])
+            # 修复：只有真正没有人下注时才能下注
+            available_actions.append(ActionType.CHECK)
+            if snapshot.current_bet == 0:
+                available_actions.append(ActionType.BET)
         else:
             available_actions.extend([ActionType.FOLD, ActionType.CALL])
             if required_amount < player_snapshot.chips:
@@ -319,14 +280,30 @@ class RandomStrategy(AIStrategy):
         # 计算行动金额
         amount = None
         if action_type == ActionType.BET:
-            amount = random.randint(snapshot.big_blind, min(player_snapshot.chips, snapshot.pot))
+            # 合理的下注金额：大盲注的1-5倍，但不超过筹码的20%
+            max_bet = min(
+                snapshot.big_blind * 5,
+                player_snapshot.chips // 5,  # 不超过筹码的20%
+                player_snapshot.chips
+            )
+            min_bet = snapshot.big_blind
+            if max_bet >= min_bet:
+                amount = random.randint(min_bet, max_bet)
+            else:
+                amount = min_bet
         elif action_type == ActionType.CALL:
+            # 修复：CALL行动返回增量金额
             amount = min(required_amount, player_snapshot.chips)
             if amount == player_snapshot.chips:
                 action_type = ActionType.ALL_IN
         elif action_type == ActionType.RAISE:
             min_raise = snapshot.current_bet + snapshot.big_blind
-            max_raise = player_snapshot.chips
+            # 合理的加注上限：当前下注线的2倍或大盲注的10倍，取较小值
+            max_raise = min(
+                snapshot.current_bet * 2,
+                snapshot.current_bet + snapshot.big_blind * 5,
+                player_snapshot.chips + player_snapshot.current_bet
+            )
             if min_raise <= max_raise:
                 amount = random.randint(min_raise, max_raise)
             else:

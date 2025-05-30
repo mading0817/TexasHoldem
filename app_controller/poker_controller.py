@@ -5,9 +5,11 @@
 
 import copy
 import logging
+import time
 from functools import wraps
 from typing import Optional, List, Dict, Any, Callable
 from datetime import datetime
+import random
 
 from core_game_logic.game.game_state import GameState
 from core_game_logic.core.enums import Action, ActionType, GamePhase, SeatStatus
@@ -22,8 +24,19 @@ from .dto_models import (
     ActionResult, 
     ActionResultType,
     GameEvent, 
-    GameEventType
+    GameEventType,
+    PlayerActionRequest,
+    HandResult
 )
+
+# Phase 5: 导入简化AI策略
+try:
+    from ai_players.simple_ai import get_simple_ai_decision, BALANCED_AI
+except ImportError:
+    # 如果导入失败，定义一个简单的回退函数
+    def get_simple_ai_decision(seat_id, snapshot, available_actions, config=None):
+        return PlayerActionInput(seat_id=seat_id, action_type=ActionType.FOLD)
+    BALANCED_AI = None
 
 
 # 原子性装饰器
@@ -105,11 +118,31 @@ class PokerController:
         if last_known_version is not None and last_known_version == self.version:
             return None
         
-        # 缓存优化：如果viewer_seat为None且版本无变化，复用缓存
+        # 修复缓存问题：在下注轮过程中，游戏状态会频繁变化，但版本号不会更新
+        # 因此我们需要检查关键状态是否发生变化来决定是否使用缓存
         if (viewer_seat is None and 
             self._last_snapshot is not None and 
             self._last_snapshot_version == self.version):
-            return self._last_snapshot
+            # 检查关键状态是否发生变化
+            if (self._last_snapshot.current_player_seat == self.state.current_player and
+                self._last_snapshot.pot == self.state.pot and
+                self._last_snapshot.current_bet == self.state.current_bet):
+                # 进一步检查玩家状态是否发生变化
+                state_changed = False
+                for i, player in enumerate(self.state.players):
+                    if i < len(self._last_snapshot.players):
+                        cached_player = self._last_snapshot.players[i]
+                        if (cached_player.chips != player.chips or
+                            cached_player.current_bet != player.current_bet or
+                            cached_player.status != player.status):
+                            state_changed = True
+                            break
+                    else:
+                        state_changed = True
+                        break
+                
+                if not state_changed:
+                    return self._last_snapshot
         
         # 创建新快照
         snapshot = GameStateSnapshot.from_game_state(self.state, self.version, viewer_seat)
@@ -232,25 +265,38 @@ class PokerController:
             events.append(GameEvent.player_action_event(player.seat_id, action_type))
             
         elif action_type in [ActionType.CALL, ActionType.BET, ActionType.RAISE]:
-            # 计算实际需要投入的金额
-            additional_bet = amount - player.current_bet
+            # 根据行动类型计算实际需要投入的金额
+            if action_type == ActionType.CALL:
+                # CALL: amount已经是ActionValidator计算的增量金额
+                additional_bet = amount
+                total_bet = player.current_bet + additional_bet
+            else:  # BET or RAISE
+                # BET/RAISE: amount是总下注金额，需要计算增量
+                additional_bet = amount - player.current_bet
+                total_bet = amount
+            
+            # 下注
             player.bet(additional_bet)
+            # self.state.pot += additional_bet # 由 BasePhase.execute_action 处理
             
             # 更新游戏状态的当前下注线
-            if amount > self.state.current_bet:
+            if total_bet > self.state.current_bet:
                 # 记录加注信息
                 if action_type == ActionType.RAISE:
-                    self.state.last_raise_amount = amount - self.state.current_bet
+                    self.state.last_raise_amount = total_bet - self.state.current_bet
                     self.state.last_raiser = player.seat_id
-                self.state.current_bet = amount
+                self.state.current_bet = total_bet
             
-            events.append(GameEvent.player_action_event(player.seat_id, action_type, amount))
+            # 记录事件时使用总下注金额
+            events.append(GameEvent.player_action_event(player.seat_id, action_type, total_bet))
             
         elif action_type == ActionType.ALL_IN:
             # 全押：玩家投入所有筹码
-            additional_bet = player.chips
-            player.bet(additional_bet)
-            total_bet = player.current_bet
+            all_in_amount = player.chips # 这是玩家此动作实际投入的全部剩余筹码
+            player.bet(all_in_amount) # player.chips 会在这里变成0, player.current_bet 会增加
+            # self.state.pot += all_in_amount # 由 BasePhase.execute_action 处理
+            
+            total_bet = player.current_bet # player.current_bet 是玩家此轮总下注
             
             # 如果全押超过当前下注线，更新状态
             if total_bet > self.state.current_bet:
@@ -259,6 +305,9 @@ class PokerController:
                 self.state.current_bet = total_bet
             
             events.append(GameEvent.player_action_event(player.seat_id, action_type, total_bet))
+        
+        # 修复：设置玩家的最后行动类型
+        player.last_action_type = action_type
         
         # 推进到下一个玩家
         if not self.state.advance_current_player():
@@ -276,6 +325,32 @@ class PokerController:
         if self.state.is_betting_round_complete():
             self._advance_to_next_phase()
     
+    @atomic
+    def advance_to_next_phase(self) -> ActionResult:
+        """
+        公开的阶段转换方法 - 修复版本控制问题
+        确保所有阶段转换都通过 @atomic 装饰器进行版本控制
+        
+        Returns:
+            操作结果
+        """
+        try:
+            current_phase = self.state.phase
+            
+            # 调用私有方法执行实际转换
+            self._advance_to_next_phase()
+            
+            return ActionResult.success_result(
+                message=f"阶段转换完成: {current_phase.name} -> {self.state.phase.name}",
+                events=self.pending_events.copy()
+            )
+        except Exception as e:
+            return ActionResult.error_result(
+                ActionResultType.GAME_ERROR,
+                f"阶段转换失败: {str(e)}"
+            )
+
+    @atomic
     def _advance_to_next_phase(self):
         """推进到下一个游戏阶段"""
         current_phase = self.state.phase
@@ -367,14 +442,39 @@ class PokerController:
             # 重置游戏状态为新手牌
             self._reset_for_new_hand()
             
+            # 检查是否有足够玩家继续游戏
+            eligible_players = [p for p in self.state.players 
+                              if p.status != SeatStatus.OUT and p.chips >= self.state.small_blind]
+            
+            if len(eligible_players) < 2:
+                # 将筹码不足的玩家设为OUT状态
+                for player in self.state.players:
+                    if player.chips < self.state.small_blind and player.status != SeatStatus.OUT:
+                        player.status = SeatStatus.OUT
+                
+                return ActionResult.error_result(
+                    ActionResultType.GAME_ERROR,
+                    f"没有足够玩家继续游戏（需要至少2名玩家有{self.state.small_blind}+筹码）"
+                )
+            
             # 设置盲注
             self.state.set_blinds()
+            
+            # 再次检查盲注设置是否成功
+            small_blind_found = any(p.is_small_blind for p in self.state.players)
+            big_blind_found = any(p.is_big_blind for p in self.state.players)
+            
+            if not (small_blind_found and big_blind_found):
+                return ActionResult.error_result(
+                    ActionResultType.GAME_ERROR,
+                    "无法设置盲注，可能是玩家筹码不足"
+                )
             
             # 发起始手牌
             self._deal_hole_cards()
             
-            # 开始翻牌前下注轮
-            self.state.start_new_betting_round()
+            # 设置翻牌前第一个行动玩家（不调用start_new_betting_round因为会重置盲注）
+            self.state._set_first_to_act()
             
             events = [GameEvent(
                 event_type=GameEventType.CARDS_DEALT,
@@ -412,11 +512,10 @@ class PokerController:
                 player.reset_for_new_hand()
             # 筹码为0的玩家保持OUT状态
         
-        # 创建新牌组（如果需要）
-        if self.state.deck is None:
-            from core_game_logic.core.deck import Deck
-            self.state.deck = Deck()
-            self.state.deck.shuffle()
+        # 每次新手牌都要重置并洗牌牌组
+        from core_game_logic.core.deck import Deck
+        self.state.deck = Deck()
+        self.state.deck.shuffle()
     
     def _deal_hole_cards(self):
         """为活跃玩家发手牌"""
@@ -646,8 +745,27 @@ class PokerController:
                 if not snapshot:
                     raise ValueError(f"无法获取座位{seat_id}的状态快照")
                 
+                # 构建PlayerActionRequest
+                player = snapshot.get_player_snapshot(seat_id)
+                if not player:
+                    raise ValueError(f"无法找到座位{seat_id}的玩家")
+                
+                available_actions = self._get_available_actions_for_player(seat_id)
+                current_bet_to_call = max(0, snapshot.current_bet - player.current_bet)
+                minimum_raise = snapshot.current_bet + snapshot.big_blind
+                
+                request = PlayerActionRequest(
+                    seat_id=seat_id,
+                    player_name=player.name,
+                    available_actions=available_actions,
+                    snapshot=snapshot,
+                    current_bet_to_call=current_bet_to_call,
+                    minimum_raise_amount=minimum_raise,
+                    player_chips=player.chips
+                )
+                
                 # 调用原始回调获取行动输入
-                return get_player_action_callback(seat_id, snapshot)
+                return get_player_action_callback(request)
             
             # 委托给Phase层处理下注轮
             events = current_phase.process_betting_round(phase_callback)
@@ -703,6 +821,336 @@ class PokerController:
         """记录错误日志"""
         self.logger.error(f"[PokerController v{self.version}] {message}")
     
+    # ==============================================
+    # Phase 5: 高级API - 完整手牌流程控制
+    # ==============================================
+    
+    def play_full_hand(self, get_action_callback: Callable[[PlayerActionRequest], PlayerActionInput]) -> HandResult:
+        """
+        执行完整手牌流程的高级API
+        
+        这个方法封装了从发牌到结算的完整流程，包括：
+        1. 开始新手牌
+        2. 执行所有下注轮
+        3. 处理阶段转换
+        4. 最终结算
+        
+        Args:
+            get_action_callback: 获取玩家行动的回调函数
+                接收 PlayerActionRequest，返回 PlayerActionInput
+        
+        Returns:
+            HandResult: 完整的手牌结果
+        """
+        start_time = time.time()
+        total_actions = 0
+        events = []
+        phases_completed = []
+        
+        try:
+            # 1. 开始新手牌
+            start_result = self.start_new_hand()
+            if not start_result.success:
+                return HandResult.interrupted_completion(
+                    error_message=f"开始新手牌失败: {start_result.message}",
+                    final_phase=self.state.phase,
+                    phases_completed=phases_completed,
+                    duration_seconds=time.time() - start_time,
+                    total_actions=total_actions,
+                    events=start_result.events
+                )
+            
+            events.extend(start_result.events)
+            phases_completed.append(self.state.phase)
+            
+            # 2. 主要游戏循环 - 执行所有阶段
+            max_phases = 10  # 防护栏：最多10个阶段转换
+            phase_guard = 0
+            
+            while not self._is_hand_complete() and phase_guard < max_phases:
+                phase_guard += 1
+                current_phase = self.state.phase
+                
+                # 执行当前阶段的下注轮
+                betting_result = self.process_betting_round(get_action_callback)
+                if not betting_result.success:
+                    return HandResult.interrupted_completion(
+                        error_message=f"下注轮执行失败: {betting_result.message}",
+                        final_phase=current_phase,
+                        phases_completed=phases_completed,
+                        duration_seconds=time.time() - start_time,
+                        total_actions=total_actions,
+                        events=events + betting_result.events
+                    )
+                
+                events.extend(betting_result.events)
+                total_actions += len(betting_result.events)
+                
+                # 尝试推进阶段
+                advance_result = self._try_advance_phase()
+                if advance_result.success:
+                    events.extend(advance_result.events)
+                    if self.state.phase != current_phase:
+                        phases_completed.append(self.state.phase)
+                
+                # 检查是否还有活跃玩家
+                if not self._has_enough_active_players():
+                    break
+            
+            # 防护栏检查
+            if phase_guard >= max_phases:
+                return HandResult.interrupted_completion(
+                    error_message="手牌流程超出最大阶段限制",
+                    final_phase=self.state.phase,
+                    phases_completed=phases_completed,
+                    duration_seconds=time.time() - start_time,
+                    total_actions=total_actions,
+                    events=events
+                )
+            
+            # 3. 获取最终结果
+            final_result = self._get_hand_final_result()
+            duration = time.time() - start_time
+            
+            return HandResult.successful_completion(
+                winners=final_result['winners'],
+                pot_distribution=final_result['pot_distribution'],
+                total_pot=final_result['total_pot'],
+                phases_completed=phases_completed,
+                duration_seconds=duration,
+                total_actions=total_actions,
+                events=events
+            )
+            
+        except Exception as e:
+            self._log_error(f"play_full_hand异常: {str(e)}")
+            return HandResult.interrupted_completion(
+                error_message=f"手牌执行异常: {str(e)}",
+                final_phase=self.state.phase,
+                phases_completed=phases_completed,
+                duration_seconds=time.time() - start_time,
+                total_actions=total_actions,
+                events=events
+            )
+    
+    def get_ai_decision(self, seat_id: int, snapshot: GameStateSnapshot) -> PlayerActionInput:
+        """
+        获取AI决策的简化方法
+        
+        基于座位号和当前状态快照，返回AI的决策。
+        使用简化的基础规则驱动策略，确保决策可预测。
+        
+        Args:
+            seat_id: AI玩家座位号
+            snapshot: 当前游戏状态快照
+        
+        Returns:
+            PlayerActionInput: AI的行动决策
+        """
+        try:
+            player = snapshot.get_player_snapshot(seat_id)
+            if not player:
+                raise ValueError(f"座位{seat_id}的玩家不存在")
+            
+            # 获取可用行动
+            available_actions = self._get_available_actions_for_player(seat_id)
+            if not available_actions:
+                # 默认弃牌
+                return PlayerActionInput(seat_id=seat_id, action_type=ActionType.FOLD)
+            
+            # 使用新的简化AI策略
+            decision = get_simple_ai_decision(
+                seat_id=seat_id,
+                snapshot=snapshot,
+                available_actions=available_actions,
+                config=BALANCED_AI  # 使用平衡型AI配置
+            )
+            
+            self._log_info(f"AI座位{seat_id}决策: {decision.action_type.name}" + 
+                          (f" {decision.amount}" if decision.amount else "") +
+                          f" (原因: {decision.metadata.get('reasoning', '无')})")
+            
+            return decision
+            
+        except Exception as e:
+            self._log_error(f"AI决策异常 (座位{seat_id}): {str(e)}")
+            # 异常情况下默认弃牌
+            return PlayerActionInput(seat_id=seat_id, action_type=ActionType.FOLD)
+    
+    # ==============================================
+    # Phase 5: 辅助方法
+    # ==============================================
+    
+    def _get_available_actions_for_player(self, seat_id: int) -> List[ActionType]:
+        """获取玩家可用的行动类型"""
+        try:
+            player = self.state.get_player_by_seat(seat_id)
+            if not player or player.status != SeatStatus.ACTIVE:
+                return []
+            
+            # 使用正确的ActionValidator方法名
+            return self.validator.get_available_actions(self.state, player)
+        except Exception as e:
+            self._log_error(f"获取可用行动失败 (座位{seat_id}): {str(e)}")
+            return [ActionType.FOLD]  # 默认只能弃牌
+    
+    def _is_hand_complete(self) -> bool:
+        """判断手牌是否完成"""
+        return (self.state.phase == GamePhase.SHOWDOWN or 
+                len([p for p in self.state.players if p.status == SeatStatus.ACTIVE]) <= 1)
+    
+    def _has_enough_active_players(self) -> bool:
+        """检查是否有足够的活跃玩家继续游戏"""
+        active_players = [p for p in self.state.players if p.status == SeatStatus.ACTIVE]
+        return len(active_players) >= 2
+    
+    def _try_advance_phase(self) -> ActionResult:
+        """尝试推进游戏阶段"""
+        try:
+            # 使用现有的advance_phase方法
+            current_phase = self.state.phase
+            
+            if current_phase == GamePhase.PRE_FLOP and self.state.is_betting_round_complete():
+                # 收集当前轮的下注到底池
+                self.state.collect_bets_to_pot()
+                self.state.phase = GamePhase.FLOP
+                self.state.deal_community_cards(3)  # 发3张翻牌
+                self.state.start_new_betting_round()
+                return ActionResult.success_result(f"进入翻牌阶段")
+            elif current_phase == GamePhase.FLOP and self.state.is_betting_round_complete():
+                # 收集当前轮的下注到底池
+                self.state.collect_bets_to_pot()
+                self.state.phase = GamePhase.TURN
+                self.state.deal_community_cards(1)  # 发1张转牌
+                self.state.start_new_betting_round()
+                return ActionResult.success_result(f"进入转牌阶段")
+            elif current_phase == GamePhase.TURN and self.state.is_betting_round_complete():
+                # 收集当前轮的下注到底池
+                self.state.collect_bets_to_pot()
+                self.state.phase = GamePhase.RIVER
+                self.state.deal_community_cards(1)  # 发1张河牌
+                self.state.start_new_betting_round()
+                return ActionResult.success_result(f"进入河牌阶段")
+            elif current_phase == GamePhase.RIVER and self.state.is_betting_round_complete():
+                # 收集当前轮的下注到底池
+                self.state.collect_bets_to_pot()
+                self.state.phase = GamePhase.SHOWDOWN
+                return ActionResult.success_result(f"进入摊牌阶段")
+            
+            return ActionResult.success_result("无需推进阶段")
+            
+        except Exception as e:
+            return ActionResult.error_result(
+                ActionResultType.GAME_ERROR,
+                f"推进阶段失败: {str(e)}"
+            )
+    
+    def _get_hand_final_result(self) -> Dict[str, Any]:
+        """获取手牌最终结果"""
+        # 注意：不要在这里调用collect_bets_to_pot()，因为在阶段转换时已经调用过了
+        # 如果在SHOWDOWN阶段还有未收集的下注，才需要收集
+        if self.state.phase == GamePhase.SHOWDOWN:
+            # 检查是否还有未收集的下注
+            total_current_bets = sum(player.current_bet for player in self.state.players)
+            if total_current_bets > 0:
+                self.state.collect_bets_to_pot()
+        
+        # 获取仍在手牌中的玩家（未弃牌的玩家）
+        players_in_hand = self.state.get_players_in_hand()
+        
+        if len(players_in_hand) == 0:
+            # 没有玩家在手牌中，这种情况不应该发生
+            return {
+                'winners': [],
+                'pot_distribution': {},
+                'total_pot': self.state.pot
+            }
+        elif len(players_in_hand) == 1:
+            # 只有一个玩家，直接获胜
+            winner = players_in_hand[0]
+            # 将底池分配给获胜者
+            winner.add_chips(self.state.pot)
+            return {
+                'winners': [winner.seat_id],
+                'pot_distribution': {winner.seat_id: self.state.pot},
+                'total_pot': self.state.pot
+            }
+        else:
+            # 多个玩家，需要比牌
+            try:
+                # 使用评估器确定获胜者
+                from core_game_logic.evaluator import SimpleEvaluator
+                evaluator = SimpleEvaluator()
+                
+                # 评估每个玩家的手牌
+                player_hands = {}
+                for player in players_in_hand:
+                    if len(player.hole_cards) == 2 and len(self.state.community_cards) == 5:
+                        hand_result = evaluator.evaluate_hand(
+                            player.hole_cards, 
+                            self.state.community_cards
+                        )
+                        player_hands[player] = hand_result
+                
+                if not player_hands:
+                    # 如果无法评估，平分底池
+                    per_player_share = self.state.pot // len(players_in_hand)
+                    winners = [p.seat_id for p in players_in_hand]
+                    distribution = {}
+                    for player in players_in_hand:
+                        player.add_chips(per_player_share)
+                        distribution[player.seat_id] = per_player_share
+                    
+                    return {
+                        'winners': winners,
+                        'pot_distribution': distribution,
+                        'total_pot': self.state.pot
+                    }
+                
+                # 找出最佳牌型
+                best_hand = None
+                winners = []
+                
+                for player, hand in player_hands.items():
+                    if best_hand is None or hand.compare_to(best_hand) > 0:
+                        best_hand = hand
+                        winners = [player]
+                    elif hand.compare_to(best_hand) == 0:
+                        winners.append(player)
+                
+                # 分配底池给获胜者
+                per_winner_share = self.state.pot // len(winners)
+                remainder = self.state.pot % len(winners)
+                distribution = {}
+                
+                for i, winner in enumerate(winners):
+                    # 第一个获胜者获得余数
+                    share = per_winner_share + (remainder if i == 0 else 0)
+                    winner.add_chips(share)
+                    distribution[winner.seat_id] = share
+                
+                return {
+                    'winners': [w.seat_id for w in winners],
+                    'pot_distribution': distribution,
+                    'total_pot': self.state.pot
+                }
+                
+            except Exception as e:
+                self._log_error(f"比牌过程出错: {str(e)}")
+                # 异常情况下平分底池
+                per_player_share = self.state.pot // len(players_in_hand)
+                winners = [p.seat_id for p in players_in_hand]
+                distribution = {}
+                for player in players_in_hand:
+                    player.add_chips(per_player_share)
+                    distribution[player.seat_id] = per_player_share
+                
+                return {
+                    'winners': winners,
+                    'pot_distribution': distribution,
+                    'total_pot': self.state.pot
+                }
+
     def __str__(self) -> str:
         """返回控制器状态的字符串表示"""
         return f"PokerController(version={self.version}, phase={self.state.phase.name}, players={len(self.state.players)})" 

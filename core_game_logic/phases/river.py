@@ -66,8 +66,8 @@ class RiverPhase(BasePhase):
     
     def exit(self) -> Optional['BasePhase']:
         """
-        退出河牌阶段
-        收集下注到底池，推进到摊牌阶段
+        退出河牌阶段 - 修复版本控制问题
+        收集下注到底池，让Controller层处理阶段转换
         
         Returns:
             下一个阶段的实例（ShowdownPhase）
@@ -75,11 +75,11 @@ class RiverPhase(BasePhase):
         # 收集所有下注到底池
         self.state.collect_bets_to_pot()
         
-        # 推进游戏阶段
-        self.state.advance_phase()
+        # *** 重要修复：不直接调用 state.advance_phase() ***
+        # 这将由 Controller 层的 @atomic 方法统一处理
         
         # 记录事件
-        self.state.add_event(f"河牌结束，底池: {self.state.pot}")
+        self.state.add_event(f"河牌阶段完成，准备进入摊牌")
         
         # 进入摊牌阶段
         from .showdown import ShowdownPhase
