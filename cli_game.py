@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-德州扑克CLI游戏界面 - 3AI+1用户玩家配置版本
-基于Phase 5 MVC纯化架构，专门配置为固定4人游戏
+德州扑克CLI游戏界面 - 自动化测试版本
+基于Phase 5 MVC纯化架构，专门配置为全AI自动对战测试
+用于自动化测试、性能分析、统计收集和日志输出
 """
 
 import os
@@ -34,20 +35,21 @@ from core_game_logic.core.player import Player
 
 class TexasHoldemCLI:
     """
-    德州扑克CLI界面类 - 固定配置版本
+    德州扑克CLI界面类 - 自动化测试版本
     
     配置：
-    - 固定4个玩家：1个用户玩家(座位0) + 3个AI玩家(座位1,2,3)
+    - 固定4个AI玩家：所有玩家都使用AI决策进行自动对战
     - 固定初始筹码：1000
     - 支持调试模式
+    - 用于自动化测试、统计分析和日志输出
     """
     
     def __init__(self):
-        """初始化CLI界面"""
+        """初始化CLI界面 - 自动化测试版本"""
         self.controller: Optional[PokerController] = None
-        self.debug_mode = False
-        self.human_seat = 0  # 用户玩家固定座位0
-        self.player_name = "TestPlayer"  # 默认玩家名
+        self.debug_mode = True  # 默认开启调试模式，便于测试观察
+        self.human_seat = None  # 自动化测试版本不再需要人类玩家座位
+        self.player_name = "TestAI_0"  # 默认AI玩家名
         self.stats = {
             'hands_played': 0,
             'hands_won': 0,
@@ -86,56 +88,32 @@ class TexasHoldemCLI:
     # ==============================================
     
     def get_game_config(self) -> Tuple[int, int, bool, str]:
-        """收集游戏配置，兼容test_input.txt格式"""
+        """收集游戏配置，自动化测试版本 - 无需用户输入"""
         
-        # 获取玩家数量 (test_input.txt第1行: 4)
-        while True:
-            try:
-                num_players_input = input("请输入玩家数量 (2-8，默认4): ").strip()
-                if not num_players_input:
-                    num_players = 4
-                else:
-                    num_players = int(num_players_input)
-                if 2 <= num_players <= 8:
-                    break
-                print("玩家数量必须在2-8之间")
-            except ValueError:
-                print("请输入有效数字")
+        # 自动化测试配置 - 固定参数，便于测试
+        num_players = 4  # 固定4个玩家进行测试
+        starting_chips = 1000  # 固定初始筹码1000
+        debug_mode = True  # 默认开启调试模式，便于观察测试过程
+        player_name = "TestAI_0"  # 将原来的人类玩家也改为AI玩家
         
-        # 获取初始筹码 (test_input.txt第2行: 1000)
-        while True:
-            try:
-                chips_input = input("请输入初始筹码 (默认1000): ").strip()
-                if not chips_input:
-                    starting_chips = 1000
-                else:
-                    starting_chips = int(chips_input)
-                if starting_chips > 0:
-                    break
-                print("初始筹码必须大于0")
-            except ValueError:
-                print("请输入有效数字")
-        
-        # 调试模式 (test_input.txt第3行: y/n)
-        debug_choice = input("是否开启调试模式？(y/N): ").strip().lower()
-        debug_mode = debug_choice in ['y', 'yes']
-        
-        # 玩家名称 (test_input.txt第4行: TestPlayer)
-        player_name = input("请输入您的玩家名称 (默认TestPlayer): ").strip()
-        if not player_name:
-            player_name = "TestPlayer"
+        print(f"\n=== 自动化测试配置 ===")
+        print(f"玩家数量: {num_players} (全AI玩家)")
+        print(f"初始筹码: {starting_chips}")
+        print(f"调试模式: {'开启' if debug_mode else '关闭'}")
+        print(f"测试配置: 4个AI玩家进行自动对战")
+        print(f"========================")
         
         return num_players, starting_chips, debug_mode, player_name
     
-    def create_game(self, num_players: int = 4, starting_chips: int = 1000, player_name: str = "TestPlayer") -> None:
-        """创建游戏"""
-        # 创建玩家列表：座位0为用户，其他为AI
+    def create_game(self, num_players: int = 4, starting_chips: int = 1000, player_name: str = "TestAI_0") -> None:
+        """创建游戏 - 自动化测试版本，所有玩家都是AI"""
+        # 创建玩家列表：所有玩家都是AI，使用不同的AI策略配置
         players = []
         for i in range(num_players):
             if i == 0:
-                name = player_name
+                name = player_name  # 第一个AI使用传入的名称
             else:
-                name = f"AI_{i}"
+                name = f"TestAI_{i}"
             players.append(Player(seat_id=i, name=name, chips=starting_chips))
         
         # 创建初始状态，设置标准盲注
@@ -151,10 +129,10 @@ class TexasHoldemCLI:
         self.player_name = player_name
         
         print(f"\n游戏创建成功！")
-        print(f"玩家数量: {num_players}")
+        print(f"玩家数量: {num_players} (全AI自动对战)")
         print(f"初始筹码: {self.format_chips(starting_chips)}")
         print(f"盲注: {5}/{10}")
-        print(f"{player_name} (座位0) vs {num_players-1}个AI对手")
+        print(f"AI玩家配置: {', '.join([f'{p.name}(座位{p.seat_id})' for p in players])}")
         print(f"初始庄家: {player_name} (座位0)")
     
     # ==============================================
@@ -195,104 +173,39 @@ class TexasHoldemCLI:
             
             print(f"  座位{player.seat_id}: {player.name} - 筹码:{self.format_chips(player.chips)}{bet_info}{action_mark}{status_mark}")
         
-        # 显示用户手牌 - 修复Unicode显示问题
-        if self.human_seat < len(snapshot.players):
-            human_player = snapshot.players[self.human_seat]
-            if human_player.hole_cards_display and human_player.hole_cards_display != "隐藏":
-                print(f"\n您的手牌: {human_player.hole_cards_display}")
+        # 显示当前行动AI玩家的手牌信息（自动化测试版本）
+        if snapshot.current_player_seat is not None and snapshot.current_player_seat < len(snapshot.players):
+            current_player = snapshot.players[snapshot.current_player_seat]
+            if current_player.hole_cards_display and current_player.hole_cards_display != "隐藏":
+                print(f"\n当前行动玩家 {current_player.name} 的手牌: {current_player.hole_cards_display}")
         
         if self.debug_mode:
             print(f"[DEBUG] 当前玩家座位: {snapshot.current_player_seat}")
-            print(f"[DEBUG] 人类玩家座位: {self.human_seat}")
+            print(f"[DEBUG] 自动化测试模式 - 所有玩家都是AI")
     
     # ==============================================
     # 玩家行动处理
     # ==============================================
     
     def get_player_action(self, request: PlayerActionRequest) -> PlayerActionInput:
-        """获取玩家行动 - PokerController回调方法"""
+        """获取玩家行动 - PokerController回调方法 (自动化测试版本，所有玩家都使用AI决策)"""
         
         # 添加调试输出
         if self.debug_mode:
             print(f"[DEBUG] get_player_action被调用: 座位{request.seat_id} ({request.player_name})")
-            print(f"[DEBUG] human_seat = {self.human_seat}")
-            print(f"[DEBUG] request.seat_id == self.human_seat: {request.seat_id == self.human_seat}")
+            print(f"[DEBUG] 自动化测试模式 - 所有玩家使用AI决策")
         
         # 显示当前游戏状态（每次行动前更新）
         self.display_game_state()
         
-        if request.seat_id == self.human_seat:
-            # 用户玩家
-            if self.debug_mode:
-                print(f"[DEBUG] 进入人类玩家分支")
-            return self.get_human_action(request)
-        else:
-            # AI玩家
-            if self.debug_mode:
-                print(f"[DEBUG] 进入AI玩家分支")
-            return self.get_ai_decision(request)
+        # 自动化测试版本：所有玩家都使用AI决策
+        # 原来的人类玩家(座位0)现在也使用AI决策，便于自动化测试
+        if self.debug_mode:
+            print(f"[DEBUG] 为座位{request.seat_id}获取AI决策")
+        return self.get_ai_decision(request)
     
-    def get_human_action(self, request: PlayerActionRequest) -> PlayerActionInput:
-        """获取用户行动输入"""
-        
-        # 显示可用行动
-        print(f"\n您的回合 - 可用行动:")
-        action_map = {}
-        for i, action_type in enumerate(request.available_actions, 1):
-            action_name = {
-                ActionType.FOLD: "弃牌",
-                ActionType.CHECK: "过牌", 
-                ActionType.CALL: "跟注",
-                ActionType.BET: "下注",
-                ActionType.RAISE: "加注",
-                ActionType.ALL_IN: "全下"
-            }.get(action_type, str(action_type))
-            
-            action_map[i] = action_type
-            
-            # 显示额外信息
-            extra_info = ""
-            if action_type == ActionType.CALL:
-                call_amount = request.current_bet_to_call
-                extra_info = f" ({self.format_chips(call_amount)})"
-            elif action_type in [ActionType.BET, ActionType.RAISE]:
-                min_bet = max(request.snapshot.current_bet * 2, 
-                             request.snapshot.big_blind) if action_type == ActionType.RAISE else request.snapshot.big_blind
-                extra_info = f" (最少{self.format_chips(min_bet)})"
-            
-            print(f"  {i}. {action_name}{extra_info}")
-        
-        # 获取用户选择 (兼容test_input.txt第5-6行)
-        while True:
-            try:
-                choice_input = input(f"请选择行动 (1-{len(action_map)}): ").strip()
-                if not choice_input:
-                    continue
-                    
-                choice = int(choice_input)
-                if choice in action_map:
-                    selected_action = action_map[choice]
-                    break
-                print(f"请选择1-{len(action_map)}之间的数字")
-            except ValueError:
-                print("请输入有效数字")
-        
-        # 处理需要金额的行动
-        amount = 0
-        if selected_action in [ActionType.BET, ActionType.RAISE]:
-            while True:
-                try:
-                    amount_input = input("请输入金额: ").strip()
-                    if not amount_input:
-                        continue
-                    amount = int(amount_input)
-                    if amount > 0:
-                        break
-                    print("金额必须大于0")
-                except ValueError:
-                    print("请输入有效数字")
-        
-        return PlayerActionInput(seat_id=request.seat_id, action_type=selected_action, amount=amount)
+    # get_human_action方法已删除 - 自动化测试版本不再需要人类输入
+    # 所有玩家现在都使用AI决策逻辑
     
     def get_ai_decision(self, request: PlayerActionRequest) -> PlayerActionInput:
         """获取AI决策"""
@@ -403,55 +316,75 @@ class TexasHoldemCLI:
         return True
     
     def display_final_stats(self):
-        """显示最终统计"""
+        """显示最终统计 - 自动化测试版本"""
         print(f"\n" + "="*60)
-        print(f"游戏统计")
+        print(f"自动化测试统计报告")
         print(f"="*60)
         print(f"总手牌数: {self.stats['hands_played']}")
-        print(f"获胜手牌: {self.stats['hands_won']}")
+        print(f"TestAI_0获胜手牌: {self.stats['hands_won']}")
         if self.stats['hands_played'] > 0:
             win_rate = (self.stats['hands_won'] / self.stats['hands_played']) * 100
-            print(f"胜率: {win_rate:.1f}%")
-        print(f"总盈亏: {self.format_chips(self.stats['total_winnings'])}")
+            print(f"TestAI_0胜率: {win_rate:.1f}%")
+        print(f"TestAI_0总盈亏: {self.format_chips(self.stats['total_winnings'])}")
+        
+        # 显示最终游戏状态
+        if self.controller:
+            snapshot = self.controller.get_state_snapshot()
+            print(f"\n最终玩家状态:")
+            for player in snapshot.players:
+                print(f"  {player.name}: {self.format_chips(player.chips)} 筹码")
+        
+        print(f"="*60)
+        print(f"自动化测试完成")
     
     # ==============================================
     # 主运行方法
     # ==============================================
     
     def run(self):
-        """运行CLI游戏"""
+        """运行CLI游戏 - 自动化测试版本"""
         try:
-            # 获取游戏配置 (兼容test_input.txt)
+            # 获取游戏配置 (自动化测试配置)
             num_players, starting_chips, debug_mode, player_name = self.get_game_config()
             self.debug_mode = debug_mode
             
             # 创建游戏
             self.create_game(num_players, starting_chips, player_name)
             
-            print(f"\n按Enter开始游戏，按Ctrl+C退出...")
-            start_choice = input().strip().lower()
+            print(f"\n=== 开始自动化测试 ===")
+            print(f"将自动运行多手牌进行测试...")
             
-            # 游戏主循环
-            while self.check_game_continuation():
+            # 自动化测试参数
+            max_hands = 10  # 最多测试10手牌
+            auto_delay = 1.0  # 每手牌之间的延迟（秒）
+            
+            # 游戏主循环 - 自动化版本
+            hand_count = 0
+            while self.check_game_continuation() and hand_count < max_hands:
+                hand_count += 1
+                print(f"\n{'='*60}")
+                print(f"自动化测试 - 第 {hand_count}/{max_hands} 手牌")
+                print(f"{'='*60}")
+                
                 self.play_hand()
                 
-                if self.check_game_continuation():
-                    print(f"\n按Enter继续下一手，按Ctrl+C退出...")
-                    continue_choice = input().strip().lower()
-                    # test_input.txt第7行: n (不继续)
-                    if continue_choice == 'n':
-                        print("游戏结束")
-                        break
+                if self.check_game_continuation() and hand_count < max_hands:
+                    print(f"\n等待 {auto_delay} 秒后继续下一手...")
+                    time.sleep(auto_delay)
+                else:
+                    break
             
             # 显示最终统计
+            print(f"\n=== 自动化测试完成 ===")
+            print(f"总共完成 {hand_count} 手牌测试")
             self.display_final_stats()
             
         except KeyboardInterrupt:
-            print(f"\n\n游戏退出")
+            print(f"\n\n自动化测试被中断")
             if self.stats['hands_played'] > 0:
                 self.display_final_stats()
         except Exception as e:
-            print(f"\n游戏出现错误: {e}")
+            print(f"\n自动化测试出现错误: {e}")
             if self.debug_mode:
                 import traceback
                 traceback.print_exc()
