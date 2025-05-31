@@ -49,6 +49,51 @@ class Card:
         """
         return f"Card({self.rank.name}, {self.suit.name})"
     
+    @classmethod
+    def from_str(cls, card_str: str) -> 'Card':
+        """从字符串创建Card对象。
+        
+        Args:
+            card_str: 牌的字符串表示，如"As"表示黑桃A，"Kh"表示红桃K
+            
+        Returns:
+            对应的Card对象
+            
+        Raises:
+            ValueError: 如果字符串格式无效
+        """
+        if len(card_str) < 2:
+            raise ValueError(f"卡牌字符串格式错误: {card_str}")
+        
+        # 处理10的特殊情况
+        if card_str.startswith("10"):
+            rank_str, suit_str = "10", card_str[2:]
+        else:
+            rank_str, suit_str = card_str[0], card_str[1:]
+        
+        # 解析点数
+        rank_map = {
+            "2": Rank.TWO, "3": Rank.THREE, "4": Rank.FOUR, "5": Rank.FIVE,
+            "6": Rank.SIX, "7": Rank.SEVEN, "8": Rank.EIGHT, "9": Rank.NINE,
+            "10": Rank.TEN, "T": Rank.TEN, "J": Rank.JACK, "Q": Rank.QUEEN,
+            "K": Rank.KING, "A": Rank.ACE
+        }
+        
+        # 解析花色
+        suit_map = {
+            "h": Suit.HEARTS, "H": Suit.HEARTS,
+            "d": Suit.DIAMONDS, "D": Suit.DIAMONDS,
+            "c": Suit.CLUBS, "C": Suit.CLUBS,
+            "s": Suit.SPADES, "S": Suit.SPADES
+        }
+        
+        if rank_str not in rank_map:
+            raise ValueError(f"无效的点数: {rank_str}")
+        if suit_str not in suit_map:
+            raise ValueError(f"无效的花色: {suit_str}")
+        
+        return cls(suit_map[suit_str], rank_map[rank_str])
+    
     def __lt__(self, other: 'Card') -> bool:
         """比较两张牌的大小（仅比较点数）。
         

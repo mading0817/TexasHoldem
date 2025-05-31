@@ -7,8 +7,8 @@
 ### 核心层 (core/)
 - **enums.py**: 游戏相关枚举定义 ✅
 - **cards.py**: 扑克牌和牌堆对象 ✅
-- **evaluator.py**: 牌型评估器 🚧
-- **player.py**: 玩家状态管理 🚧
+- **evaluator.py**: 牌型评估器 ✅
+- **player.py**: 玩家状态管理 ✅
 - **validator.py**: 行动验证器 🚧
 - **pot.py**: 边池管理器 🚧
 - **state.py**: 游戏状态管理 🚧
@@ -32,16 +32,16 @@
 
 ## 开发状态
 
-### ✅ 已完成 (PLAN #1-6)
+### ✅ 已完成 (PLAN #1-8)
 - v2目录结构建立
 - 核心枚举定义 (Suit, Rank, ActionType, Phase等)
 - 扑克牌对象 (Card, Deck)
-- 基础测试框架 (44个测试用例全部通过)
-- **文档生成**: 使用pdoc生成完整API文档，包含4个HTML文件
+- **牌型评估器 (SimpleEvaluator, HandResult)**
+- **玩家状态管理 (Player)**
+- 基础测试框架 (116个测试用例全部通过)
+- **文档生成**: 使用pdoc生成完整API文档，包含5个HTML文件
 
-### 🚧 进行中 (PLAN #7-18)
-- 牌型评估器迁移
-- 玩家状态管理
+### 🚧 进行中 (PLAN #9-18)
 - 行动验证器
 - 边池计算
 - 游戏状态管理
@@ -58,8 +58,41 @@
 当前测试状态：
 - `tests/unit/test_v2_enums.py`: 20个测试用例 ✅
 - `tests/unit/test_v2_cards.py`: 24个测试用例 ✅
+- `tests/unit/test_v2_evaluator.py`: 17个测试用例 ✅
+- `tests/unit/test_v2_evaluator_compatibility.py`: 3个兼容性测试 ✅
+- `tests/unit/test_v2_player.py`: 52个测试用例 ✅
 
-总计：44个测试用例，100%通过率
+总计：116个测试用例，100%通过率
+
+## 核心功能
+
+### 牌型评估器
+v2的牌型评估器提供以下功能：
+- 支持所有标准德州扑克牌型（包括皇家同花顺）
+- 从7张牌中选择最佳5张牌组合
+- 牌型比较和排名
+- 与v1评估器100%兼容
+
+支持的牌型（按强度排序）：
+1. 皇家同花顺 (Royal Flush)
+2. 同花顺 (Straight Flush)
+3. 四条 (Four of a Kind)
+4. 葫芦 (Full House)
+5. 同花 (Flush)
+6. 顺子 (Straight)
+7. 三条 (Three of a Kind)
+8. 两对 (Two Pair)
+9. 一对 (One Pair)
+10. 高牌 (High Card)
+
+### 玩家状态管理
+v2的玩家状态管理提供以下功能：
+- 完整的筹码管理（下注、扣除、增加）
+- 手牌管理（设置、获取、隐藏显示）
+- 状态管理（活跃、弃牌、全押、出局）
+- 位置标记（庄家、小盲、大盲）
+- 自动状态变更（全押时自动设置ALL_IN状态）
+- 纯数据对象，不含UI打印功能
 
 ## 文档
 
@@ -69,6 +102,8 @@
 - 核心模块: `docs/v2/v2/core.html`
 - 枚举定义: `docs/v2/v2/core/enums.html`
 - 扑克牌对象: `docs/v2/v2/core/cards.html`
+- 牌型评估器: `docs/v2/v2/core/v2/core/evaluator.html`
+- 玩家状态管理: `docs/v2/v2/core/player.html`
 
 所有模块都包含完整的Google格式docstring和类型注解。
 

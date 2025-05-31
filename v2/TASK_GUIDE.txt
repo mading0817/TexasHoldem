@@ -22,8 +22,8 @@
 
 | #      | ① 问题                  | ② 解决方案                                                                                 | ③ 测试                                                | 状态 |
 | ------ | --------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------- | ---- |
-| **7**  | 牌型评估器算法与表结构交织         | 迁入 `v2/core/evaluator.py`，保留现算法并加 `@dataclass HandResult`                              | 用旧 `tests/evaluator` 数据集跑 1e4 组随机 7 张牌，对比 v1 结果一致   | 🚧    |
-| **8**  | 玩家状态逻辑与 UI 混合         | 新建 `v2/core/player.py` 包含 `Player`, `SeatStatus`；不含任何打印                                | 单元：下注扣筹、全下自动状态变为 `ALL_IN`                           | 🚧    |
+| **7**  | 牌型评估器算法与表结构交织         | 迁入 `v2/core/evaluator.py`，保留现算法并加 `@dataclass HandResult`                              | 用旧 `tests/evaluator` 数据集跑 1e4 组随机 7 张牌，对比 v1 结果一致   | ✅    |
+| **8**  | 玩家状态逻辑与 UI 混合         | 新建 `v2/core/player.py` 包含 `Player`, `SeatStatus`；不含任何打印                                | 单元：下注扣筹、全下自动状态变为 `ALL_IN`                           | ✅    |
 | **9**  | 行动合法性散布控制器中           | `v2/core/validator.py` 纯函数 `validate_action(game_state, action)` 返回 `ValidationResult` | Parametrized 测试边界情况（小于最小加注、筹码不足等）                   | 🚧    |
 | **10** | 边池计算零散难复用             | 搬迁并精简 `PotManager` → `v2/core/pot.py`，提供 `allocate_side_pots()`                        | 用"三人不同额全押"用例断言 3 个池金额与 eligible\_players            | 🚧    |
 | **11** | GameState 与规则判断耦合     | `v2/core/state.py` 仅负责可变数据+快照 DTO，不含规则                                                 | Snapshot 比对：执行一次下注后快照金额正确且无对手手牌                     | 🚧    |
@@ -34,6 +34,24 @@
 | **16** | TASK\_GUIDE 未标记       | 在 **TASK\_GUIDE** 新增行：7-16 完成，状态✅                                                      | YAML lint                                           | ✅    |
 | **17** | 无用调试文件残留              | `scripts/cleanup.py` 自动删除 `*.log, *.tmp`                                               | 测试：运行脚本后目标目录无 `.log`                                | 🚧    |
 | **18** | 10 手牌日志验证未实现          | 编写 `tests/system/test_play_10_hands.py` 调用 CLI 驱动 v2 控制器自动对局 10 手并保存日志，断言筹码守恒、阶段顺序     | 见 CLI 适配计划                                          | 🚧    |
+
+**PLAN #7 完成备注**: 
+- ✅ 成功迁移牌型评估器到 `v2/core/evaluator.py`
+- ✅ 适配v2枚举定义，支持ROYAL_FLUSH牌型
+- ✅ 为Card类添加from_str方法支持
+- ✅ 创建17个单元测试，100%通过率
+- ✅ 创建兼容性测试，验证与v1评估器100组随机牌结果一致
+- ✅ 使用pdoc生成完整API文档
+
+**PLAN #8 完成备注**:
+- ✅ 成功创建 `v2/core/player.py` 玩家状态管理模块
+- ✅ 实现Player类，包含完整的筹码、手牌、状态管理功能
+- ✅ 使用Google格式docstring，不含任何UI打印功能
+- ✅ 创建52个单元测试，100%通过率
+- ✅ 验证下注扣筹功能：正常下注、多次下注累积
+- ✅ 验证全押状态自动变更：下注全部筹码时自动设置为ALL_IN状态
+- ✅ 更新v2/core/__init__.py导出Player类
+- ✅ 使用pdoc生成Player模块文档
 
 ---
 
