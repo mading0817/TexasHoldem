@@ -12,4 +12,8 @@ psutil>=5.9.0  # 用于性能测试中的内存监控
 
 # Development Dependencies
 black>=23.1.0
-mypy>=1.0.0 
+mypy>=1.0.0
+
+# Documentation Dependencies
+pdoc>=14.0.0
+pydocstyle>=6.3.0 
