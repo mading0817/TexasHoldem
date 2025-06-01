@@ -460,4 +460,27 @@ class GameState:
     
     def __repr__(self) -> str:
         """Return a debug representation of the game state."""
-        return f"GameState(phase={self.phase.name}, pot={self.pot}, players={len(self.players)})" 
+        return f"GameState(phase={self.phase.name}, pot={self.pot}, players={len(self.players)})"
+    
+    @property
+    def current_player_seat(self) -> Optional[int]:
+        """Adapter property for GameStateProtocol compatibility.
+        
+        Returns:
+            The seat number of the current player.
+        """
+        return self.current_player
+    
+    def get_player_current_bet(self, seat: int) -> int:
+        """Get the current bet amount for a specific player.
+        
+        Args:
+            seat: The seat number of the player.
+            
+        Returns:
+            The amount the player has bet in the current betting round.
+        """
+        player = self.get_player_by_seat(seat)
+        if player is None:
+            return 0
+        return player.current_bet 

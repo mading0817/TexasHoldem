@@ -11,6 +11,7 @@ from .player import Player
 from .validator import ActionValidator, GameStateProtocol, InvalidActionError, InsufficientChipsError
 from .pot import SidePot, PotManager, calculate_side_pots, get_pot_distribution_summary
 from .state import GameState, GameSnapshot
+from .events import EventType, GameEvent, EventBus, EventListener, get_event_bus, set_event_bus
 
 # High-level API functions
 def new_deck(shuffled: bool = True, rng=None) -> Deck:
@@ -104,6 +105,8 @@ __all__ = [
     'SidePot', 'PotManager', 'calculate_side_pots', 'get_pot_distribution_summary',
     # State management
     'GameState', 'GameSnapshot',
+    # Event system
+    'EventType', 'GameEvent', 'EventBus', 'EventListener', 'get_event_bus', 'set_event_bus',
     # Utility functions
     'get_all_suits', 'get_all_ranks', 'get_valid_actions',
     # High-level API

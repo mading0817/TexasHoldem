@@ -15,11 +15,16 @@
 
 ### 控制器层 (controller/)
 - **poker_controller.py**: 游戏控制器 ✅
-- 数据传输对象 (DTO) 🚧
-- 核心逻辑与UI的桥梁 🚧
+- **dto.py**: 数据传输对象 ✅
+- **decorators.py**: 事务装饰器 ✅
+- 核心逻辑与UI的桥梁 ✅
+
+### AI层 (ai/)
+- **base.py**: AI策略协议接口 ✅
+- **simple_ai.py**: 简单AI实现 ✅
 
 ### 用户界面层 (ui/)
-- **cli/**: 命令行界面 🚧
+- **cli/**: 命令行界面 ✅
 - **streamlit/**: Web界面 (Streamlit) 🚧
 
 ## 设计原则
@@ -29,10 +34,11 @@
 3. **类型安全**: 使用枚举和类型注解
 4. **不可变性**: 核心数据对象使用frozen dataclass
 5. **Google Docstring**: 统一的文档字符串格式
+6. **事件驱动**: 使用事件总线解耦组件通信
 
 ## 开发状态
 
-### ✅ 已完成 (PLAN #1-19)
+### ✅ 已完成 (PLAN #1-25)
 - v2目录结构建立
 - 核心枚举定义 (Suit, Rank, ActionType, Phase等)
 - 扑克牌对象 (Card, Deck)
@@ -46,19 +52,21 @@
 - **Google Docstring完善 (0个pydocstyle错误)**
 - **文档生成 (pdoc自动更新)**
 - **项目清理脚本 (cleanup.py)**
-- **游戏控制器 (PokerController, AIStrategy协议)**
-- 基础测试框架 (239个测试用例全部通过)
-- **文档生成**: 使用pdoc生成完整API文档，包含8个HTML文件
+- **游戏控制器 (PokerController)**
+- **AI策略系统 (AIStrategy协议, SimpleAI实现)**
+- **事务原子性 (atomic装饰器)**
+- **事件系统 (EventBus, EventType, GameEvent)**
+- **CLI适配 (TexasHoldemCLI)**
+- **数据传输对象 (DTO系统)**
+- **10手牌筹码守恒验证**
+- 基础测试框架 (296个测试用例全部通过)
+- **文档生成**: 使用pdoc生成完整API文档，包含12个HTML文件
 
-### 🚧 进行中 (PLAN #18, #20-25)
-- 10手牌日志验证系统
-- AI策略实现
-- 事务原子性
-- 事件系统
-- CLI适配
+### 🚧 进行中
+- Streamlit MVP (PLAN #29-37)
 
 ### 📋 计划中
-- CLI适配 (PLAN #26-28)
+- CLI适配完善 (PLAN #26-28)
 - Streamlit MVP (PLAN #29-37)
 - 测试体系完善 (PLAN #38-45)
 - 收尾与维护 (PLAN #46-50)
@@ -77,8 +85,11 @@
 - `tests/core/test_public_api.py`: 10个测试用例 ✅
 - `tests/unit/test_v2_deterministic_random.py`: 8个测试用例 ✅
 - `tests/unit/test_v2_controller.py`: 19个测试用例 ✅
+- `tests/unit/test_v2_events.py`: 18个测试用例 ✅
+- `tests/unit/test_v2_dto.py`: 20个测试用例 ✅
+- `tests/system/test_play_10_hands.py`: 筹码守恒系统测试 ✅
 
-总计：239个测试用例，100%通过率
+总计：296个测试用例，100%通过率
 
 ## 核心功能
 

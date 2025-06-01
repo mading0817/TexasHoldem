@@ -695,6 +695,12 @@
                         <li>
                                 <a class="function" href="#GameState.to_dict">to_dict</a>
                         </li>
+                        <li>
+                                <a class="variable" href="#GameState.current_player_seat">current_player_seat</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#GameState.get_player_current_bet">get_player_current_bet</a>
+                        </li>
                 </ul>
 
             </li>
@@ -762,6 +768,123 @@
 
             </li>
             <li>
+                    <a class="class" href="#EventType">EventType</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="variable" href="#EventType.GAME_STARTED">GAME_STARTED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.GAME_ENDED">GAME_ENDED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.HAND_STARTED">HAND_STARTED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.HAND_ENDED">HAND_ENDED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.PHASE_CHANGED">PHASE_CHANGED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.CARDS_DEALT">CARDS_DEALT</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.PLAYER_JOINED">PLAYER_JOINED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.PLAYER_LEFT">PLAYER_LEFT</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.PLAYER_ACTION">PLAYER_ACTION</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.PLAYER_FOLDED">PLAYER_FOLDED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.PLAYER_ALL_IN">PLAYER_ALL_IN</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.BET_PLACED">BET_PLACED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.POT_UPDATED">POT_UPDATED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.BLINDS_POSTED">BLINDS_POSTED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.ERROR_OCCURRED">ERROR_OCCURRED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#EventType.STATE_CHANGED">STATE_CHANGED</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#GameEvent">GameEvent</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#GameEvent.__init__">GameEvent</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEvent.event_type">event_type</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEvent.data">data</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEvent.timestamp">timestamp</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEvent.source">source</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#EventBus">EventBus</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#EventBus.__init__">EventBus</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#EventBus.subscribe">subscribe</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#EventBus.unsubscribe">unsubscribe</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#EventBus.emit">emit</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#EventBus.emit_simple">emit_simple</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#EventBus.get_listeners_count">get_listeners_count</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#EventBus.clear_listeners">clear_listeners</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#EventBus.get_event_history">get_event_history</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#EventBus.clear_history">clear_history</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="variable" href="#EventListener">EventListener</a>
+            </li>
+            <li>
+                    <a class="function" href="#get_event_bus">get_event_bus</a>
+            </li>
+            <li>
+                    <a class="function" href="#set_event_bus">set_event_bus</a>
+            </li>
+            <li>
                     <a class="function" href="#get_all_suits">get_all_suits</a>
             </li>
             <li>
@@ -823,104 +946,107 @@ v2<wbr>.core    </h1>
 </span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.validator</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActionValidator</span><span class="p">,</span> <span class="n">GameStateProtocol</span><span class="p">,</span> <span class="n">InvalidActionError</span><span class="p">,</span> <span class="n">InsufficientChipsError</span>
 </span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.pot</span><span class="w"> </span><span class="kn">import</span> <span class="n">SidePot</span><span class="p">,</span> <span class="n">PotManager</span><span class="p">,</span> <span class="n">calculate_side_pots</span><span class="p">,</span> <span class="n">get_pot_distribution_summary</span>
 </span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.state</span><span class="w"> </span><span class="kn">import</span> <span class="n">GameState</span><span class="p">,</span> <span class="n">GameSnapshot</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a>
-</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="c1"># High-level API functions</span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="k">def</span><span class="w"> </span><span class="nf">new_deck</span><span class="p">(</span><span class="n">shuffled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Deck</span><span class="p">:</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="sd">    Create a new deck of cards.</span>
-</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="sd">    </span>
-</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="sd">    Args:</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="sd">        shuffled: Whether to shuffle the deck after creation</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="sd">        rng: Random number generator for shuffling</span>
-</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="sd">        </span>
-</span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="sd">    Returns:</span>
-</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a><span class="sd">        Deck: A new deck of 52 cards</span>
-</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a>    <span class="n">deck</span> <span class="o">=</span> <span class="n">Deck</span><span class="p">(</span><span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">)</span>
-</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a>    <span class="k">if</span> <span class="n">shuffled</span><span class="p">:</span>
-</span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a>        <span class="n">deck</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span>
-</span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a>    <span class="k">return</span> <span class="n">deck</span>
-</span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.events</span><span class="w"> </span><span class="kn">import</span> <span class="n">EventType</span><span class="p">,</span> <span class="n">GameEvent</span><span class="p">,</span> <span class="n">EventBus</span><span class="p">,</span> <span class="n">EventListener</span><span class="p">,</span> <span class="n">get_event_bus</span><span class="p">,</span> <span class="n">set_event_bus</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="c1"># High-level API functions</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="k">def</span><span class="w"> </span><span class="nf">new_deck</span><span class="p">(</span><span class="n">shuffled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Deck</span><span class="p">:</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="sd">    Create a new deck of cards.</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="sd">    </span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="sd">    Args:</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="sd">        shuffled: Whether to shuffle the deck after creation</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="sd">        rng: Random number generator for shuffling</span>
+</span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="sd">        </span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a><span class="sd">    Returns:</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="sd">        Deck: A new deck of 52 cards</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a>    <span class="n">deck</span> <span class="o">=</span> <span class="n">Deck</span><span class="p">(</span><span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">)</span>
+</span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a>    <span class="k">if</span> <span class="n">shuffled</span><span class="p">:</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a>        <span class="n">deck</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span>
+</span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a>    <span class="k">return</span> <span class="n">deck</span>
 </span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a>
-</span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a><span class="k">def</span><span class="w"> </span><span class="nf">evaluate_hand</span><span class="p">(</span><span class="n">hole_cards</span><span class="p">,</span> <span class="n">community_cards</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HandResult</span><span class="p">:</span>
-</span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a><span class="sd">    Evaluate the best poker hand from hole cards and community cards.</span>
-</span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a><span class="sd">    </span>
-</span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a><span class="sd">    Args:</span>
-</span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a><span class="sd">        hole_cards: List of 2 hole cards</span>
-</span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a><span class="sd">        community_cards: List of community cards (up to 5)</span>
-</span><span id="L-40"><a href="#L-40"><span class="linenos"> 40</span></a><span class="sd">        </span>
-</span><span id="L-41"><a href="#L-41"><span class="linenos"> 41</span></a><span class="sd">    Returns:</span>
-</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a><span class="sd">        HandResult: The best hand evaluation result</span>
-</span><span id="L-43"><a href="#L-43"><span class="linenos"> 43</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="L-44"><a href="#L-44"><span class="linenos"> 44</span></a>    <span class="n">evaluator</span> <span class="o">=</span> <span class="n">SimpleEvaluator</span><span class="p">()</span>
-</span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a>    <span class="k">return</span> <span class="n">evaluator</span><span class="o">.</span><span class="n">evaluate_hand</span><span class="p">(</span><span class="n">hole_cards</span><span class="p">,</span> <span class="n">community_cards</span><span class="p">)</span>
-</span><span id="L-46"><a href="#L-46"><span class="linenos"> 46</span></a>
+</span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a>
+</span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a><span class="k">def</span><span class="w"> </span><span class="nf">evaluate_hand</span><span class="p">(</span><span class="n">hole_cards</span><span class="p">,</span> <span class="n">community_cards</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HandResult</span><span class="p">:</span>
+</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a><span class="sd">    Evaluate the best poker hand from hole cards and community cards.</span>
+</span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a><span class="sd">    </span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a><span class="sd">    Args:</span>
+</span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a><span class="sd">        hole_cards: List of 2 hole cards</span>
+</span><span id="L-40"><a href="#L-40"><span class="linenos"> 40</span></a><span class="sd">        community_cards: List of community cards (up to 5)</span>
+</span><span id="L-41"><a href="#L-41"><span class="linenos"> 41</span></a><span class="sd">        </span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a><span class="sd">    Returns:</span>
+</span><span id="L-43"><a href="#L-43"><span class="linenos"> 43</span></a><span class="sd">        HandResult: The best hand evaluation result</span>
+</span><span id="L-44"><a href="#L-44"><span class="linenos"> 44</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a>    <span class="n">evaluator</span> <span class="o">=</span> <span class="n">SimpleEvaluator</span><span class="p">()</span>
+</span><span id="L-46"><a href="#L-46"><span class="linenos"> 46</span></a>    <span class="k">return</span> <span class="n">evaluator</span><span class="o">.</span><span class="n">evaluate_hand</span><span class="p">(</span><span class="n">hole_cards</span><span class="p">,</span> <span class="n">community_cards</span><span class="p">)</span>
 </span><span id="L-47"><a href="#L-47"><span class="linenos"> 47</span></a>
-</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create_player</span><span class="p">(</span><span class="n">seat_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chips</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Player</span><span class="p">:</span>
-</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a><span class="sd">    Create a new player.</span>
-</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a><span class="sd">    </span>
-</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a><span class="sd">    Args:</span>
-</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a><span class="sd">        seat_id: Unique seat identifier</span>
-</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a><span class="sd">        name: Player name</span>
-</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a><span class="sd">        chips: Initial chip count</span>
-</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a><span class="sd">        </span>
-</span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a><span class="sd">    Returns:</span>
-</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a><span class="sd">        Player: A new player instance</span>
-</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a>    <span class="k">return</span> <span class="n">Player</span><span class="p">(</span><span class="n">seat_id</span><span class="o">=</span><span class="n">seat_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">chips</span><span class="o">=</span><span class="n">chips</span><span class="p">)</span>
-</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a>
+</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a>
+</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create_player</span><span class="p">(</span><span class="n">seat_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chips</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Player</span><span class="p">:</span>
+</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a><span class="sd">    Create a new player.</span>
+</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a><span class="sd">    </span>
+</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a><span class="sd">    Args:</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a><span class="sd">        seat_id: Unique seat identifier</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a><span class="sd">        name: Player name</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a><span class="sd">        chips: Initial chip count</span>
+</span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a><span class="sd">        </span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a><span class="sd">    Returns:</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a><span class="sd">        Player: A new player instance</span>
+</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a>    <span class="k">return</span> <span class="n">Player</span><span class="p">(</span><span class="n">seat_id</span><span class="o">=</span><span class="n">seat_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">chips</span><span class="o">=</span><span class="n">chips</span><span class="p">)</span>
 </span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a>
-</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_action</span><span class="p">(</span><span class="n">game_state</span><span class="p">,</span> <span class="n">player</span><span class="p">:</span> <span class="n">Player</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ValidatedAction&#39;</span><span class="p">:</span>
-</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a><span class="sd">    Validate a player action.</span>
-</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a><span class="sd">    </span>
-</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a><span class="sd">    Args:</span>
-</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a><span class="sd">        game_state: Current game state</span>
-</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a><span class="sd">        player: Player attempting the action</span>
-</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a><span class="sd">        action: Action to validate</span>
-</span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a><span class="sd">        </span>
-</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a><span class="sd">    Returns:</span>
-</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a><span class="sd">        ValidatedAction: Validation result with possible conversions</span>
-</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a>    <span class="n">validator</span> <span class="o">=</span> <span class="n">ActionValidator</span><span class="p">()</span>
-</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>    <span class="k">return</span> <span class="n">validator</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">game_state</span><span class="p">,</span> <span class="n">player</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
-</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>
+</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a>
+</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_action</span><span class="p">(</span><span class="n">game_state</span><span class="p">,</span> <span class="n">player</span><span class="p">:</span> <span class="n">Player</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ValidatedAction&#39;</span><span class="p">:</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a><span class="sd">    Validate a player action.</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a><span class="sd">    </span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a><span class="sd">    Args:</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a><span class="sd">        game_state: Current game state</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a><span class="sd">        player: Player attempting the action</span>
+</span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a><span class="sd">        action: Action to validate</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a><span class="sd">        </span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a><span class="sd">    Returns:</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a><span class="sd">        ValidatedAction: Validation result with possible conversions</span>
+</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>    <span class="n">validator</span> <span class="o">=</span> <span class="n">ActionValidator</span><span class="p">()</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>    <span class="k">return</span> <span class="n">validator</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">game_state</span><span class="p">,</span> <span class="n">player</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
 </span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a>
-</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create_pot_manager</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PotManager</span><span class="p">:</span>
-</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a><span class="sd">    Create a new pot manager.</span>
-</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a><span class="sd">    </span>
-</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a><span class="sd">    Returns:</span>
-</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a><span class="sd">        PotManager: A new pot manager instance</span>
-</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>    <span class="k">return</span> <span class="n">PotManager</span><span class="p">()</span>
-</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>
+</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a>
+</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create_pot_manager</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PotManager</span><span class="p">:</span>
+</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a><span class="sd">    Create a new pot manager.</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a><span class="sd">    </span>
+</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a><span class="sd">    Returns:</span>
+</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a><span class="sd">        PotManager: A new pot manager instance</span>
+</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>    <span class="k">return</span> <span class="n">PotManager</span><span class="p">()</span>
 </span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>
-</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>    <span class="c1"># Enums</span>
-</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>    <span class="s1">&#39;Suit&#39;</span><span class="p">,</span> <span class="s1">&#39;Rank&#39;</span><span class="p">,</span> <span class="s1">&#39;HandRank&#39;</span><span class="p">,</span> <span class="s1">&#39;ActionType&#39;</span><span class="p">,</span> <span class="s1">&#39;Phase&#39;</span><span class="p">,</span> <span class="s1">&#39;SeatStatus&#39;</span><span class="p">,</span> 
-</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>    <span class="s1">&#39;GameEventType&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidationResult&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidationResultData&#39;</span><span class="p">,</span>
-</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>    <span class="c1"># Action data classes</span>
-</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>    <span class="s1">&#39;Action&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidatedAction&#39;</span><span class="p">,</span>
-</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>    <span class="c1"># Cards</span>
-</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>    <span class="s1">&#39;Card&#39;</span><span class="p">,</span> <span class="s1">&#39;Deck&#39;</span><span class="p">,</span>
-</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>    <span class="c1"># Evaluator</span>
-</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>    <span class="s1">&#39;SimpleEvaluator&#39;</span><span class="p">,</span> <span class="s1">&#39;HandResult&#39;</span><span class="p">,</span>
-</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>    <span class="c1"># Player</span>
-</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>    <span class="s1">&#39;Player&#39;</span><span class="p">,</span>
-</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>    <span class="c1"># Validator</span>
-</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>    <span class="s1">&#39;ActionValidator&#39;</span><span class="p">,</span> <span class="s1">&#39;GameStateProtocol&#39;</span><span class="p">,</span> <span class="s1">&#39;InvalidActionError&#39;</span><span class="p">,</span> <span class="s1">&#39;InsufficientChipsError&#39;</span><span class="p">,</span>
-</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>    <span class="c1"># Pot management</span>
-</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>    <span class="s1">&#39;SidePot&#39;</span><span class="p">,</span> <span class="s1">&#39;PotManager&#39;</span><span class="p">,</span> <span class="s1">&#39;calculate_side_pots&#39;</span><span class="p">,</span> <span class="s1">&#39;get_pot_distribution_summary&#39;</span><span class="p">,</span>
-</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>    <span class="c1"># State management</span>
-</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>    <span class="s1">&#39;GameState&#39;</span><span class="p">,</span> <span class="s1">&#39;GameSnapshot&#39;</span><span class="p">,</span>
-</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>    <span class="c1"># Utility functions</span>
-</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>    <span class="s1">&#39;get_all_suits&#39;</span><span class="p">,</span> <span class="s1">&#39;get_all_ranks&#39;</span><span class="p">,</span> <span class="s1">&#39;get_valid_actions&#39;</span><span class="p">,</span>
-</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>    <span class="c1"># High-level API</span>
-</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>    <span class="s1">&#39;new_deck&#39;</span><span class="p">,</span> <span class="s1">&#39;evaluate_hand&#39;</span><span class="p">,</span> <span class="s1">&#39;create_player&#39;</span><span class="p">,</span> <span class="s1">&#39;validate_action&#39;</span><span class="p">,</span> <span class="s1">&#39;create_pot_manager&#39;</span>
-</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a><span class="p">]</span> 
+</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>
+</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>    <span class="c1"># Enums</span>
+</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>    <span class="s1">&#39;Suit&#39;</span><span class="p">,</span> <span class="s1">&#39;Rank&#39;</span><span class="p">,</span> <span class="s1">&#39;HandRank&#39;</span><span class="p">,</span> <span class="s1">&#39;ActionType&#39;</span><span class="p">,</span> <span class="s1">&#39;Phase&#39;</span><span class="p">,</span> <span class="s1">&#39;SeatStatus&#39;</span><span class="p">,</span> 
+</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>    <span class="s1">&#39;GameEventType&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidationResult&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidationResultData&#39;</span><span class="p">,</span>
+</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>    <span class="c1"># Action data classes</span>
+</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>    <span class="s1">&#39;Action&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidatedAction&#39;</span><span class="p">,</span>
+</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>    <span class="c1"># Cards</span>
+</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>    <span class="s1">&#39;Card&#39;</span><span class="p">,</span> <span class="s1">&#39;Deck&#39;</span><span class="p">,</span>
+</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>    <span class="c1"># Evaluator</span>
+</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>    <span class="s1">&#39;SimpleEvaluator&#39;</span><span class="p">,</span> <span class="s1">&#39;HandResult&#39;</span><span class="p">,</span>
+</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>    <span class="c1"># Player</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>    <span class="s1">&#39;Player&#39;</span><span class="p">,</span>
+</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>    <span class="c1"># Validator</span>
+</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>    <span class="s1">&#39;ActionValidator&#39;</span><span class="p">,</span> <span class="s1">&#39;GameStateProtocol&#39;</span><span class="p">,</span> <span class="s1">&#39;InvalidActionError&#39;</span><span class="p">,</span> <span class="s1">&#39;InsufficientChipsError&#39;</span><span class="p">,</span>
+</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>    <span class="c1"># Pot management</span>
+</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>    <span class="s1">&#39;SidePot&#39;</span><span class="p">,</span> <span class="s1">&#39;PotManager&#39;</span><span class="p">,</span> <span class="s1">&#39;calculate_side_pots&#39;</span><span class="p">,</span> <span class="s1">&#39;get_pot_distribution_summary&#39;</span><span class="p">,</span>
+</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>    <span class="c1"># State management</span>
+</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>    <span class="s1">&#39;GameState&#39;</span><span class="p">,</span> <span class="s1">&#39;GameSnapshot&#39;</span><span class="p">,</span>
+</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>    <span class="c1"># Event system</span>
+</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>    <span class="s1">&#39;EventType&#39;</span><span class="p">,</span> <span class="s1">&#39;GameEvent&#39;</span><span class="p">,</span> <span class="s1">&#39;EventBus&#39;</span><span class="p">,</span> <span class="s1">&#39;EventListener&#39;</span><span class="p">,</span> <span class="s1">&#39;get_event_bus&#39;</span><span class="p">,</span> <span class="s1">&#39;set_event_bus&#39;</span><span class="p">,</span>
+</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>    <span class="c1"># Utility functions</span>
+</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>    <span class="s1">&#39;get_all_suits&#39;</span><span class="p">,</span> <span class="s1">&#39;get_all_ranks&#39;</span><span class="p">,</span> <span class="s1">&#39;get_valid_actions&#39;</span><span class="p">,</span>
+</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>    <span class="c1"># High-level API</span>
+</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>    <span class="s1">&#39;new_deck&#39;</span><span class="p">,</span> <span class="s1">&#39;evaluate_hand&#39;</span><span class="p">,</span> <span class="s1">&#39;create_player&#39;</span><span class="p">,</span> <span class="s1">&#39;validate_action&#39;</span><span class="p">,</span> <span class="s1">&#39;create_pot_manager&#39;</span>
+</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a><span class="p">]</span> 
 </span></pre></div>
 
 
@@ -6763,7 +6889,30 @@ pot_index=0表示主池，pot_index>0表示边池</li>
 </span><span id="GameState-461"><a href="#GameState-461"><span class="linenos">461</span></a>    
 </span><span id="GameState-462"><a href="#GameState-462"><span class="linenos">462</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 </span><span id="GameState-463"><a href="#GameState-463"><span class="linenos">463</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a debug representation of the game state.&quot;&quot;&quot;</span>
-</span><span id="GameState-464"><a href="#GameState-464"><span class="linenos">464</span></a>        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;GameState(phase=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, pot=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">pot</span><span class="si">}</span><span class="s2">, players=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">players</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span> 
+</span><span id="GameState-464"><a href="#GameState-464"><span class="linenos">464</span></a>        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;GameState(phase=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, pot=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">pot</span><span class="si">}</span><span class="s2">, players=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">players</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+</span><span id="GameState-465"><a href="#GameState-465"><span class="linenos">465</span></a>    
+</span><span id="GameState-466"><a href="#GameState-466"><span class="linenos">466</span></a>    <span class="nd">@property</span>
+</span><span id="GameState-467"><a href="#GameState-467"><span class="linenos">467</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">current_player_seat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+</span><span id="GameState-468"><a href="#GameState-468"><span class="linenos">468</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Adapter property for GameStateProtocol compatibility.</span>
+</span><span id="GameState-469"><a href="#GameState-469"><span class="linenos">469</span></a><span class="sd">        </span>
+</span><span id="GameState-470"><a href="#GameState-470"><span class="linenos">470</span></a><span class="sd">        Returns:</span>
+</span><span id="GameState-471"><a href="#GameState-471"><span class="linenos">471</span></a><span class="sd">            The seat number of the current player.</span>
+</span><span id="GameState-472"><a href="#GameState-472"><span class="linenos">472</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="GameState-473"><a href="#GameState-473"><span class="linenos">473</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_player</span>
+</span><span id="GameState-474"><a href="#GameState-474"><span class="linenos">474</span></a>    
+</span><span id="GameState-475"><a href="#GameState-475"><span class="linenos">475</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_player_current_bet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seat</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="GameState-476"><a href="#GameState-476"><span class="linenos">476</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the current bet amount for a specific player.</span>
+</span><span id="GameState-477"><a href="#GameState-477"><span class="linenos">477</span></a><span class="sd">        </span>
+</span><span id="GameState-478"><a href="#GameState-478"><span class="linenos">478</span></a><span class="sd">        Args:</span>
+</span><span id="GameState-479"><a href="#GameState-479"><span class="linenos">479</span></a><span class="sd">            seat: The seat number of the player.</span>
+</span><span id="GameState-480"><a href="#GameState-480"><span class="linenos">480</span></a><span class="sd">            </span>
+</span><span id="GameState-481"><a href="#GameState-481"><span class="linenos">481</span></a><span class="sd">        Returns:</span>
+</span><span id="GameState-482"><a href="#GameState-482"><span class="linenos">482</span></a><span class="sd">            The amount the player has bet in the current betting round.</span>
+</span><span id="GameState-483"><a href="#GameState-483"><span class="linenos">483</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="GameState-484"><a href="#GameState-484"><span class="linenos">484</span></a>        <span class="n">player</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_player_by_seat</span><span class="p">(</span><span class="n">seat</span><span class="p">)</span>
+</span><span id="GameState-485"><a href="#GameState-485"><span class="linenos">485</span></a>        <span class="k">if</span> <span class="n">player</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="GameState-486"><a href="#GameState-486"><span class="linenos">486</span></a>            <span class="k">return</span> <span class="mi">0</span>
+</span><span id="GameState-487"><a href="#GameState-487"><span class="linenos">487</span></a>        <span class="k">return</span> <span class="n">player</span><span class="o">.</span><span class="n">current_bet</span> 
 </span></pre></div>
 
 
@@ -7670,6 +7819,81 @@ controlled randomness for testing.</p>
 
 
                             </div>
+                            <div id="GameState.current_player_seat" class="classattr">
+                                        <input id="GameState.current_player_seat-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr variable">
+            <span class="name">current_player_seat</span><span class="annotation">: Optional[int]</span>
+
+                <label class="view-source-button" for="GameState.current_player_seat-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#GameState.current_player_seat"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="GameState.current_player_seat-466"><a href="#GameState.current_player_seat-466"><span class="linenos">466</span></a>    <span class="nd">@property</span>
+</span><span id="GameState.current_player_seat-467"><a href="#GameState.current_player_seat-467"><span class="linenos">467</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">current_player_seat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+</span><span id="GameState.current_player_seat-468"><a href="#GameState.current_player_seat-468"><span class="linenos">468</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Adapter property for GameStateProtocol compatibility.</span>
+</span><span id="GameState.current_player_seat-469"><a href="#GameState.current_player_seat-469"><span class="linenos">469</span></a><span class="sd">        </span>
+</span><span id="GameState.current_player_seat-470"><a href="#GameState.current_player_seat-470"><span class="linenos">470</span></a><span class="sd">        Returns:</span>
+</span><span id="GameState.current_player_seat-471"><a href="#GameState.current_player_seat-471"><span class="linenos">471</span></a><span class="sd">            The seat number of the current player.</span>
+</span><span id="GameState.current_player_seat-472"><a href="#GameState.current_player_seat-472"><span class="linenos">472</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="GameState.current_player_seat-473"><a href="#GameState.current_player_seat-473"><span class="linenos">473</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_player</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Adapter property for GameStateProtocol compatibility.</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>The seat number of the current player.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="GameState.get_player_current_bet" class="classattr">
+                                        <input id="GameState.get_player_current_bet-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_player_current_bet</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">seat</span><span class="p">:</span> <span class="nb">int</span></span><span class="return-annotation">) -> <span class="nb">int</span>:</span></span>
+
+                <label class="view-source-button" for="GameState.get_player_current_bet-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#GameState.get_player_current_bet"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="GameState.get_player_current_bet-475"><a href="#GameState.get_player_current_bet-475"><span class="linenos">475</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_player_current_bet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seat</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="GameState.get_player_current_bet-476"><a href="#GameState.get_player_current_bet-476"><span class="linenos">476</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the current bet amount for a specific player.</span>
+</span><span id="GameState.get_player_current_bet-477"><a href="#GameState.get_player_current_bet-477"><span class="linenos">477</span></a><span class="sd">        </span>
+</span><span id="GameState.get_player_current_bet-478"><a href="#GameState.get_player_current_bet-478"><span class="linenos">478</span></a><span class="sd">        Args:</span>
+</span><span id="GameState.get_player_current_bet-479"><a href="#GameState.get_player_current_bet-479"><span class="linenos">479</span></a><span class="sd">            seat: The seat number of the player.</span>
+</span><span id="GameState.get_player_current_bet-480"><a href="#GameState.get_player_current_bet-480"><span class="linenos">480</span></a><span class="sd">            </span>
+</span><span id="GameState.get_player_current_bet-481"><a href="#GameState.get_player_current_bet-481"><span class="linenos">481</span></a><span class="sd">        Returns:</span>
+</span><span id="GameState.get_player_current_bet-482"><a href="#GameState.get_player_current_bet-482"><span class="linenos">482</span></a><span class="sd">            The amount the player has bet in the current betting round.</span>
+</span><span id="GameState.get_player_current_bet-483"><a href="#GameState.get_player_current_bet-483"><span class="linenos">483</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="GameState.get_player_current_bet-484"><a href="#GameState.get_player_current_bet-484"><span class="linenos">484</span></a>        <span class="n">player</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_player_by_seat</span><span class="p">(</span><span class="n">seat</span><span class="p">)</span>
+</span><span id="GameState.get_player_current_bet-485"><a href="#GameState.get_player_current_bet-485"><span class="linenos">485</span></a>        <span class="k">if</span> <span class="n">player</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="GameState.get_player_current_bet-486"><a href="#GameState.get_player_current_bet-486"><span class="linenos">486</span></a>            <span class="k">return</span> <span class="mi">0</span>
+</span><span id="GameState.get_player_current_bet-487"><a href="#GameState.get_player_current_bet-487"><span class="linenos">487</span></a>        <span class="k">return</span> <span class="n">player</span><span class="o">.</span><span class="n">current_bet</span> 
+</span></pre></div>
+
+
+            <div class="docstring"><p>Get the current bet amount for a specific player.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>seat:</strong>  The seat number of the player.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>The amount the player has bet in the current betting round.</p>
+</blockquote>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="GameSnapshot">
                             <input id="GameSnapshot-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
@@ -8178,6 +8402,944 @@ safely shared with UI components, AI players, and other external systems.</p>
 
                             </div>
                 </section>
+                <section id="EventType">
+                            <input id="EventType-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">EventType</span><wbr>(<span class="base">enum.Enum</span>):
+
+                <label class="view-source-button" for="EventType-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventType"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventType-15"><a href="#EventType-15"><span class="linenos">15</span></a><span class="k">class</span><span class="w"> </span><span class="nc">EventType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+</span><span id="EventType-16"><a href="#EventType-16"><span class="linenos">16</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Types of events that can be emitted by the game.&quot;&quot;&quot;</span>
+</span><span id="EventType-17"><a href="#EventType-17"><span class="linenos">17</span></a>    
+</span><span id="EventType-18"><a href="#EventType-18"><span class="linenos">18</span></a>    <span class="c1"># Game lifecycle events</span>
+</span><span id="EventType-19"><a href="#EventType-19"><span class="linenos">19</span></a>    <span class="n">GAME_STARTED</span> <span class="o">=</span> <span class="s2">&quot;game_started&quot;</span>
+</span><span id="EventType-20"><a href="#EventType-20"><span class="linenos">20</span></a>    <span class="n">GAME_ENDED</span> <span class="o">=</span> <span class="s2">&quot;game_ended&quot;</span>
+</span><span id="EventType-21"><a href="#EventType-21"><span class="linenos">21</span></a>    <span class="n">HAND_STARTED</span> <span class="o">=</span> <span class="s2">&quot;hand_started&quot;</span>
+</span><span id="EventType-22"><a href="#EventType-22"><span class="linenos">22</span></a>    <span class="n">HAND_ENDED</span> <span class="o">=</span> <span class="s2">&quot;hand_ended&quot;</span>
+</span><span id="EventType-23"><a href="#EventType-23"><span class="linenos">23</span></a>    
+</span><span id="EventType-24"><a href="#EventType-24"><span class="linenos">24</span></a>    <span class="c1"># Phase events</span>
+</span><span id="EventType-25"><a href="#EventType-25"><span class="linenos">25</span></a>    <span class="n">PHASE_CHANGED</span> <span class="o">=</span> <span class="s2">&quot;phase_changed&quot;</span>
+</span><span id="EventType-26"><a href="#EventType-26"><span class="linenos">26</span></a>    <span class="n">CARDS_DEALT</span> <span class="o">=</span> <span class="s2">&quot;cards_dealt&quot;</span>
+</span><span id="EventType-27"><a href="#EventType-27"><span class="linenos">27</span></a>    
+</span><span id="EventType-28"><a href="#EventType-28"><span class="linenos">28</span></a>    <span class="c1"># Player action events</span>
+</span><span id="EventType-29"><a href="#EventType-29"><span class="linenos">29</span></a>    <span class="n">PLAYER_JOINED</span> <span class="o">=</span> <span class="s2">&quot;player_joined&quot;</span>
+</span><span id="EventType-30"><a href="#EventType-30"><span class="linenos">30</span></a>    <span class="n">PLAYER_LEFT</span> <span class="o">=</span> <span class="s2">&quot;player_left&quot;</span>
+</span><span id="EventType-31"><a href="#EventType-31"><span class="linenos">31</span></a>    <span class="n">PLAYER_ACTION</span> <span class="o">=</span> <span class="s2">&quot;player_action&quot;</span>
+</span><span id="EventType-32"><a href="#EventType-32"><span class="linenos">32</span></a>    <span class="n">PLAYER_FOLDED</span> <span class="o">=</span> <span class="s2">&quot;player_folded&quot;</span>
+</span><span id="EventType-33"><a href="#EventType-33"><span class="linenos">33</span></a>    <span class="n">PLAYER_ALL_IN</span> <span class="o">=</span> <span class="s2">&quot;player_all_in&quot;</span>
+</span><span id="EventType-34"><a href="#EventType-34"><span class="linenos">34</span></a>    
+</span><span id="EventType-35"><a href="#EventType-35"><span class="linenos">35</span></a>    <span class="c1"># Betting events</span>
+</span><span id="EventType-36"><a href="#EventType-36"><span class="linenos">36</span></a>    <span class="n">BET_PLACED</span> <span class="o">=</span> <span class="s2">&quot;bet_placed&quot;</span>
+</span><span id="EventType-37"><a href="#EventType-37"><span class="linenos">37</span></a>    <span class="n">POT_UPDATED</span> <span class="o">=</span> <span class="s2">&quot;pot_updated&quot;</span>
+</span><span id="EventType-38"><a href="#EventType-38"><span class="linenos">38</span></a>    <span class="n">BLINDS_POSTED</span> <span class="o">=</span> <span class="s2">&quot;blinds_posted&quot;</span>
+</span><span id="EventType-39"><a href="#EventType-39"><span class="linenos">39</span></a>    
+</span><span id="EventType-40"><a href="#EventType-40"><span class="linenos">40</span></a>    <span class="c1"># System events</span>
+</span><span id="EventType-41"><a href="#EventType-41"><span class="linenos">41</span></a>    <span class="n">ERROR_OCCURRED</span> <span class="o">=</span> <span class="s2">&quot;error_occurred&quot;</span>
+</span><span id="EventType-42"><a href="#EventType-42"><span class="linenos">42</span></a>    <span class="n">STATE_CHANGED</span> <span class="o">=</span> <span class="s2">&quot;state_changed&quot;</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Types of events that can be emitted by the game.</p>
+</div>
+
+
+                            <div id="EventType.GAME_STARTED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">GAME_STARTED</span>        =
+<span class="default_value">&lt;<a href="#EventType.GAME_STARTED">EventType.GAME_STARTED</a>: &#39;game_started&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.GAME_STARTED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.GAME_ENDED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">GAME_ENDED</span>        =
+<span class="default_value">&lt;<a href="#EventType.GAME_ENDED">EventType.GAME_ENDED</a>: &#39;game_ended&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.GAME_ENDED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.HAND_STARTED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">HAND_STARTED</span>        =
+<span class="default_value">&lt;<a href="#EventType.HAND_STARTED">EventType.HAND_STARTED</a>: &#39;hand_started&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.HAND_STARTED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.HAND_ENDED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">HAND_ENDED</span>        =
+<span class="default_value">&lt;<a href="#EventType.HAND_ENDED">EventType.HAND_ENDED</a>: &#39;hand_ended&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.HAND_ENDED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.PHASE_CHANGED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">PHASE_CHANGED</span>        =
+<span class="default_value">&lt;<a href="#EventType.PHASE_CHANGED">EventType.PHASE_CHANGED</a>: &#39;phase_changed&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.PHASE_CHANGED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.CARDS_DEALT" class="classattr">
+                                <div class="attr variable">
+            <span class="name">CARDS_DEALT</span>        =
+<span class="default_value">&lt;<a href="#EventType.CARDS_DEALT">EventType.CARDS_DEALT</a>: &#39;cards_dealt&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.CARDS_DEALT"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.PLAYER_JOINED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">PLAYER_JOINED</span>        =
+<span class="default_value">&lt;<a href="#EventType.PLAYER_JOINED">EventType.PLAYER_JOINED</a>: &#39;player_joined&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.PLAYER_JOINED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.PLAYER_LEFT" class="classattr">
+                                <div class="attr variable">
+            <span class="name">PLAYER_LEFT</span>        =
+<span class="default_value">&lt;<a href="#EventType.PLAYER_LEFT">EventType.PLAYER_LEFT</a>: &#39;player_left&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.PLAYER_LEFT"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.PLAYER_ACTION" class="classattr">
+                                <div class="attr variable">
+            <span class="name">PLAYER_ACTION</span>        =
+<span class="default_value">&lt;<a href="#EventType.PLAYER_ACTION">EventType.PLAYER_ACTION</a>: &#39;player_action&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.PLAYER_ACTION"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.PLAYER_FOLDED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">PLAYER_FOLDED</span>        =
+<span class="default_value">&lt;<a href="#EventType.PLAYER_FOLDED">EventType.PLAYER_FOLDED</a>: &#39;player_folded&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.PLAYER_FOLDED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.PLAYER_ALL_IN" class="classattr">
+                                <div class="attr variable">
+            <span class="name">PLAYER_ALL_IN</span>        =
+<span class="default_value">&lt;<a href="#EventType.PLAYER_ALL_IN">EventType.PLAYER_ALL_IN</a>: &#39;player_all_in&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.PLAYER_ALL_IN"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.BET_PLACED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">BET_PLACED</span>        =
+<span class="default_value">&lt;<a href="#EventType.BET_PLACED">EventType.BET_PLACED</a>: &#39;bet_placed&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.BET_PLACED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.POT_UPDATED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">POT_UPDATED</span>        =
+<span class="default_value">&lt;<a href="#EventType.POT_UPDATED">EventType.POT_UPDATED</a>: &#39;pot_updated&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.POT_UPDATED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.BLINDS_POSTED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">BLINDS_POSTED</span>        =
+<span class="default_value">&lt;<a href="#EventType.BLINDS_POSTED">EventType.BLINDS_POSTED</a>: &#39;blinds_posted&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.BLINDS_POSTED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.ERROR_OCCURRED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">ERROR_OCCURRED</span>        =
+<span class="default_value">&lt;<a href="#EventType.ERROR_OCCURRED">EventType.ERROR_OCCURRED</a>: &#39;error_occurred&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.ERROR_OCCURRED"></a>
+    
+    
+
+                            </div>
+                            <div id="EventType.STATE_CHANGED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">STATE_CHANGED</span>        =
+<span class="default_value">&lt;<a href="#EventType.STATE_CHANGED">EventType.STATE_CHANGED</a>: &#39;state_changed&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventType.STATE_CHANGED"></a>
+    
+    
+
+                            </div>
+                </section>
+                <section id="GameEvent">
+                            <input id="GameEvent-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr class">
+                    <div class="decorator decorator-dataclass">@dataclass</div>
+
+    <span class="def">class</span>
+    <span class="name">GameEvent</span>:
+
+                <label class="view-source-button" for="GameEvent-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#GameEvent"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="GameEvent-45"><a href="#GameEvent-45"><span class="linenos">45</span></a><span class="nd">@dataclass</span>
+</span><span id="GameEvent-46"><a href="#GameEvent-46"><span class="linenos">46</span></a><span class="k">class</span><span class="w"> </span><span class="nc">GameEvent</span><span class="p">:</span>
+</span><span id="GameEvent-47"><a href="#GameEvent-47"><span class="linenos">47</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents a game event with associated data.</span>
+</span><span id="GameEvent-48"><a href="#GameEvent-48"><span class="linenos">48</span></a><span class="sd">    </span>
+</span><span id="GameEvent-49"><a href="#GameEvent-49"><span class="linenos">49</span></a><span class="sd">    Attributes:</span>
+</span><span id="GameEvent-50"><a href="#GameEvent-50"><span class="linenos">50</span></a><span class="sd">        event_type: The type of event</span>
+</span><span id="GameEvent-51"><a href="#GameEvent-51"><span class="linenos">51</span></a><span class="sd">        data: Event-specific data</span>
+</span><span id="GameEvent-52"><a href="#GameEvent-52"><span class="linenos">52</span></a><span class="sd">        timestamp: When the event occurred (optional)</span>
+</span><span id="GameEvent-53"><a href="#GameEvent-53"><span class="linenos">53</span></a><span class="sd">        source: Source of the event (optional)</span>
+</span><span id="GameEvent-54"><a href="#GameEvent-54"><span class="linenos">54</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="GameEvent-55"><a href="#GameEvent-55"><span class="linenos">55</span></a>    
+</span><span id="GameEvent-56"><a href="#GameEvent-56"><span class="linenos">56</span></a>    <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span>
+</span><span id="GameEvent-57"><a href="#GameEvent-57"><span class="linenos">57</span></a>    <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+</span><span id="GameEvent-58"><a href="#GameEvent-58"><span class="linenos">58</span></a>    <span class="n">timestamp</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="GameEvent-59"><a href="#GameEvent-59"><span class="linenos">59</span></a>    <span class="n">source</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="GameEvent-60"><a href="#GameEvent-60"><span class="linenos">60</span></a>    
+</span><span id="GameEvent-61"><a href="#GameEvent-61"><span class="linenos">61</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="GameEvent-62"><a href="#GameEvent-62"><span class="linenos">62</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Set timestamp if not provided.&quot;&quot;&quot;</span>
+</span><span id="GameEvent-63"><a href="#GameEvent-63"><span class="linenos">63</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="GameEvent-64"><a href="#GameEvent-64"><span class="linenos">64</span></a>            <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+</span><span id="GameEvent-65"><a href="#GameEvent-65"><span class="linenos">65</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Represents a game event with associated data.</p>
+
+<h6 id="attributes">Attributes:</h6>
+
+<ul>
+<li><strong>event_type:</strong>  The type of event</li>
+<li><strong>data:</strong>  Event-specific data</li>
+<li><strong>timestamp:</strong>  When the event occurred (optional)</li>
+<li><strong>source:</strong>  Source of the event (optional)</li>
+</ul>
+</div>
+
+
+                            <div id="GameEvent.__init__" class="classattr">
+                                <div class="attr function">
+            
+        <span class="name">GameEvent</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">event_type</span><span class="p">:</span> <span class="n"><a href="#EventType">EventType</a></span>,</span><span class="param">	<span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>,</span><span class="param">	<span class="n">timestamp</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">source</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEvent.__init__"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEvent.event_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">event_type</span><span class="annotation">: <a href="#EventType">EventType</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEvent.event_type"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEvent.data" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data</span><span class="annotation">: Dict[str, Any]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEvent.data"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEvent.timestamp" class="classattr">
+                                <div class="attr variable">
+            <span class="name">timestamp</span><span class="annotation">: Optional[float]</span>        =
+<span class="default_value">None</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEvent.timestamp"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEvent.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span><span class="annotation">: Optional[str]</span>        =
+<span class="default_value">None</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEvent.source"></a>
+    
+    
+
+                            </div>
+                </section>
+                <section id="EventBus">
+                            <input id="EventBus-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">EventBus</span>:
+
+                <label class="view-source-button" for="EventBus-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus-72"><a href="#EventBus-72"><span class="linenos"> 72</span></a><span class="k">class</span><span class="w"> </span><span class="nc">EventBus</span><span class="p">:</span>
+</span><span id="EventBus-73"><a href="#EventBus-73"><span class="linenos"> 73</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Event bus for managing game events and listeners.</span>
+</span><span id="EventBus-74"><a href="#EventBus-74"><span class="linenos"> 74</span></a><span class="sd">    </span>
+</span><span id="EventBus-75"><a href="#EventBus-75"><span class="linenos"> 75</span></a><span class="sd">    This class implements the observer pattern, allowing components</span>
+</span><span id="EventBus-76"><a href="#EventBus-76"><span class="linenos"> 76</span></a><span class="sd">    to subscribe to specific event types and receive notifications</span>
+</span><span id="EventBus-77"><a href="#EventBus-77"><span class="linenos"> 77</span></a><span class="sd">    when those events occur.</span>
+</span><span id="EventBus-78"><a href="#EventBus-78"><span class="linenos"> 78</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="EventBus-79"><a href="#EventBus-79"><span class="linenos"> 79</span></a>    
+</span><span id="EventBus-80"><a href="#EventBus-80"><span class="linenos"> 80</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+</span><span id="EventBus-81"><a href="#EventBus-81"><span class="linenos"> 81</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the event bus.</span>
+</span><span id="EventBus-82"><a href="#EventBus-82"><span class="linenos"> 82</span></a><span class="sd">        </span>
+</span><span id="EventBus-83"><a href="#EventBus-83"><span class="linenos"> 83</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus-84"><a href="#EventBus-84"><span class="linenos"> 84</span></a><span class="sd">            logger: Optional logger for debugging events</span>
+</span><span id="EventBus-85"><a href="#EventBus-85"><span class="linenos"> 85</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus-86"><a href="#EventBus-86"><span class="linenos"> 86</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">EventType</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">EventListener</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="EventBus-87"><a href="#EventBus-87"><span class="linenos"> 87</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span> <span class="o">=</span> <span class="n">logger</span> <span class="ow">or</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+</span><span id="EventBus-88"><a href="#EventBus-88"><span class="linenos"> 88</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">GameEvent</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="EventBus-89"><a href="#EventBus-89"><span class="linenos"> 89</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_max_history</span> <span class="o">=</span> <span class="mi">1000</span>  <span class="c1"># Limit history to prevent memory leaks</span>
+</span><span id="EventBus-90"><a href="#EventBus-90"><span class="linenos"> 90</span></a>        
+</span><span id="EventBus-91"><a href="#EventBus-91"><span class="linenos"> 91</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span><span class="p">,</span> <span class="n">listener</span><span class="p">:</span> <span class="n">EventListener</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus-92"><a href="#EventBus-92"><span class="linenos"> 92</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Subscribe a listener to an event type.</span>
+</span><span id="EventBus-93"><a href="#EventBus-93"><span class="linenos"> 93</span></a><span class="sd">        </span>
+</span><span id="EventBus-94"><a href="#EventBus-94"><span class="linenos"> 94</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus-95"><a href="#EventBus-95"><span class="linenos"> 95</span></a><span class="sd">            event_type: The type of event to listen for</span>
+</span><span id="EventBus-96"><a href="#EventBus-96"><span class="linenos"> 96</span></a><span class="sd">            listener: The callback function to call when the event occurs</span>
+</span><span id="EventBus-97"><a href="#EventBus-97"><span class="linenos"> 97</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus-98"><a href="#EventBus-98"><span class="linenos"> 98</span></a>        <span class="k">if</span> <span class="n">event_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">:</span>
+</span><span id="EventBus-99"><a href="#EventBus-99"><span class="linenos"> 99</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">[</span><span class="n">event_type</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="EventBus-100"><a href="#EventBus-100"><span class="linenos">100</span></a>        
+</span><span id="EventBus-101"><a href="#EventBus-101"><span class="linenos">101</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">[</span><span class="n">event_type</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">listener</span><span class="p">)</span>
+</span><span id="EventBus-102"><a href="#EventBus-102"><span class="linenos">102</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Subscribed listener to </span><span class="si">{</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="EventBus-103"><a href="#EventBus-103"><span class="linenos">103</span></a>        
+</span><span id="EventBus-104"><a href="#EventBus-104"><span class="linenos">104</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">unsubscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span><span class="p">,</span> <span class="n">listener</span><span class="p">:</span> <span class="n">EventListener</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="EventBus-105"><a href="#EventBus-105"><span class="linenos">105</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Unsubscribe a listener from an event type.</span>
+</span><span id="EventBus-106"><a href="#EventBus-106"><span class="linenos">106</span></a><span class="sd">        </span>
+</span><span id="EventBus-107"><a href="#EventBus-107"><span class="linenos">107</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus-108"><a href="#EventBus-108"><span class="linenos">108</span></a><span class="sd">            event_type: The type of event to stop listening for</span>
+</span><span id="EventBus-109"><a href="#EventBus-109"><span class="linenos">109</span></a><span class="sd">            listener: The callback function to remove</span>
+</span><span id="EventBus-110"><a href="#EventBus-110"><span class="linenos">110</span></a><span class="sd">            </span>
+</span><span id="EventBus-111"><a href="#EventBus-111"><span class="linenos">111</span></a><span class="sd">        Returns:</span>
+</span><span id="EventBus-112"><a href="#EventBus-112"><span class="linenos">112</span></a><span class="sd">            True if the listener was found and removed, False otherwise</span>
+</span><span id="EventBus-113"><a href="#EventBus-113"><span class="linenos">113</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus-114"><a href="#EventBus-114"><span class="linenos">114</span></a>        <span class="k">if</span> <span class="n">event_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">:</span>
+</span><span id="EventBus-115"><a href="#EventBus-115"><span class="linenos">115</span></a>            <span class="k">return</span> <span class="kc">False</span>
+</span><span id="EventBus-116"><a href="#EventBus-116"><span class="linenos">116</span></a>            
+</span><span id="EventBus-117"><a href="#EventBus-117"><span class="linenos">117</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="EventBus-118"><a href="#EventBus-118"><span class="linenos">118</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">[</span><span class="n">event_type</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">listener</span><span class="p">)</span>
+</span><span id="EventBus-119"><a href="#EventBus-119"><span class="linenos">119</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsubscribed listener from </span><span class="si">{</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="EventBus-120"><a href="#EventBus-120"><span class="linenos">120</span></a>            <span class="k">return</span> <span class="kc">True</span>
+</span><span id="EventBus-121"><a href="#EventBus-121"><span class="linenos">121</span></a>        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+</span><span id="EventBus-122"><a href="#EventBus-122"><span class="linenos">122</span></a>            <span class="k">return</span> <span class="kc">False</span>
+</span><span id="EventBus-123"><a href="#EventBus-123"><span class="linenos">123</span></a>            
+</span><span id="EventBus-124"><a href="#EventBus-124"><span class="linenos">124</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">emit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="n">GameEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus-125"><a href="#EventBus-125"><span class="linenos">125</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit an event to all subscribed listeners.</span>
+</span><span id="EventBus-126"><a href="#EventBus-126"><span class="linenos">126</span></a><span class="sd">        </span>
+</span><span id="EventBus-127"><a href="#EventBus-127"><span class="linenos">127</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus-128"><a href="#EventBus-128"><span class="linenos">128</span></a><span class="sd">            event: The event to emit</span>
+</span><span id="EventBus-129"><a href="#EventBus-129"><span class="linenos">129</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus-130"><a href="#EventBus-130"><span class="linenos">130</span></a>        <span class="c1"># Add to history</span>
+</span><span id="EventBus-131"><a href="#EventBus-131"><span class="linenos">131</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</span><span id="EventBus-132"><a href="#EventBus-132"><span class="linenos">132</span></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_history</span><span class="p">:</span>
+</span><span id="EventBus-133"><a href="#EventBus-133"><span class="linenos">133</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="EventBus-134"><a href="#EventBus-134"><span class="linenos">134</span></a>            
+</span><span id="EventBus-135"><a href="#EventBus-135"><span class="linenos">135</span></a>        <span class="c1"># Notify listeners</span>
+</span><span id="EventBus-136"><a href="#EventBus-136"><span class="linenos">136</span></a>        <span class="n">listeners</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">event_type</span><span class="p">,</span> <span class="p">[])</span>
+</span><span id="EventBus-137"><a href="#EventBus-137"><span class="linenos">137</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Emitting </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">listeners</span><span class="p">)</span><span class="si">}</span><span class="s2"> listeners&quot;</span><span class="p">)</span>
+</span><span id="EventBus-138"><a href="#EventBus-138"><span class="linenos">138</span></a>        
+</span><span id="EventBus-139"><a href="#EventBus-139"><span class="linenos">139</span></a>        <span class="k">for</span> <span class="n">listener</span> <span class="ow">in</span> <span class="n">listeners</span><span class="p">:</span>
+</span><span id="EventBus-140"><a href="#EventBus-140"><span class="linenos">140</span></a>            <span class="k">try</span><span class="p">:</span>
+</span><span id="EventBus-141"><a href="#EventBus-141"><span class="linenos">141</span></a>                <span class="n">listener</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</span><span id="EventBus-142"><a href="#EventBus-142"><span class="linenos">142</span></a>            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="EventBus-143"><a href="#EventBus-143"><span class="linenos">143</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in event listener: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="EventBus-144"><a href="#EventBus-144"><span class="linenos">144</span></a>                
+</span><span id="EventBus-145"><a href="#EventBus-145"><span class="linenos">145</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">emit_simple</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus-146"><a href="#EventBus-146"><span class="linenos">146</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit a simple event with data as keyword arguments.</span>
+</span><span id="EventBus-147"><a href="#EventBus-147"><span class="linenos">147</span></a><span class="sd">        </span>
+</span><span id="EventBus-148"><a href="#EventBus-148"><span class="linenos">148</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus-149"><a href="#EventBus-149"><span class="linenos">149</span></a><span class="sd">            event_type: The type of event to emit</span>
+</span><span id="EventBus-150"><a href="#EventBus-150"><span class="linenos">150</span></a><span class="sd">            **data: Event data as keyword arguments</span>
+</span><span id="EventBus-151"><a href="#EventBus-151"><span class="linenos">151</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus-152"><a href="#EventBus-152"><span class="linenos">152</span></a>        <span class="n">event</span> <span class="o">=</span> <span class="n">GameEvent</span><span class="p">(</span><span class="n">event_type</span><span class="o">=</span><span class="n">event_type</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+</span><span id="EventBus-153"><a href="#EventBus-153"><span class="linenos">153</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</span><span id="EventBus-154"><a href="#EventBus-154"><span class="linenos">154</span></a>        
+</span><span id="EventBus-155"><a href="#EventBus-155"><span class="linenos">155</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_listeners_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="EventBus-156"><a href="#EventBus-156"><span class="linenos">156</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of listeners for an event type.</span>
+</span><span id="EventBus-157"><a href="#EventBus-157"><span class="linenos">157</span></a><span class="sd">        </span>
+</span><span id="EventBus-158"><a href="#EventBus-158"><span class="linenos">158</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus-159"><a href="#EventBus-159"><span class="linenos">159</span></a><span class="sd">            event_type: The event type to check</span>
+</span><span id="EventBus-160"><a href="#EventBus-160"><span class="linenos">160</span></a><span class="sd">            </span>
+</span><span id="EventBus-161"><a href="#EventBus-161"><span class="linenos">161</span></a><span class="sd">        Returns:</span>
+</span><span id="EventBus-162"><a href="#EventBus-162"><span class="linenos">162</span></a><span class="sd">            Number of listeners subscribed to the event type</span>
+</span><span id="EventBus-163"><a href="#EventBus-163"><span class="linenos">163</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus-164"><a href="#EventBus-164"><span class="linenos">164</span></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">event_type</span><span class="p">,</span> <span class="p">[]))</span>
+</span><span id="EventBus-165"><a href="#EventBus-165"><span class="linenos">165</span></a>        
+</span><span id="EventBus-166"><a href="#EventBus-166"><span class="linenos">166</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clear_listeners</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EventType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus-167"><a href="#EventBus-167"><span class="linenos">167</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear listeners for a specific event type or all event types.</span>
+</span><span id="EventBus-168"><a href="#EventBus-168"><span class="linenos">168</span></a><span class="sd">        </span>
+</span><span id="EventBus-169"><a href="#EventBus-169"><span class="linenos">169</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus-170"><a href="#EventBus-170"><span class="linenos">170</span></a><span class="sd">            event_type: The event type to clear, or None to clear all</span>
+</span><span id="EventBus-171"><a href="#EventBus-171"><span class="linenos">171</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus-172"><a href="#EventBus-172"><span class="linenos">172</span></a>        <span class="k">if</span> <span class="n">event_type</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus-173"><a href="#EventBus-173"><span class="linenos">173</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</span><span id="EventBus-174"><a href="#EventBus-174"><span class="linenos">174</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Cleared all event listeners&quot;</span><span class="p">)</span>
+</span><span id="EventBus-175"><a href="#EventBus-175"><span class="linenos">175</span></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="EventBus-176"><a href="#EventBus-176"><span class="linenos">176</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">[</span><span class="n">event_type</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="EventBus-177"><a href="#EventBus-177"><span class="linenos">177</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cleared listeners for </span><span class="si">{</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="EventBus-178"><a href="#EventBus-178"><span class="linenos">178</span></a>            
+</span><span id="EventBus-179"><a href="#EventBus-179"><span class="linenos">179</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_event_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EventType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+</span><span id="EventBus-180"><a href="#EventBus-180"><span class="linenos">180</span></a>                         <span class="n">limit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">GameEvent</span><span class="p">]:</span>
+</span><span id="EventBus-181"><a href="#EventBus-181"><span class="linenos">181</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get event history, optionally filtered by type and limited.</span>
+</span><span id="EventBus-182"><a href="#EventBus-182"><span class="linenos">182</span></a><span class="sd">        </span>
+</span><span id="EventBus-183"><a href="#EventBus-183"><span class="linenos">183</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus-184"><a href="#EventBus-184"><span class="linenos">184</span></a><span class="sd">            event_type: Optional event type to filter by</span>
+</span><span id="EventBus-185"><a href="#EventBus-185"><span class="linenos">185</span></a><span class="sd">            limit: Optional limit on number of events to return</span>
+</span><span id="EventBus-186"><a href="#EventBus-186"><span class="linenos">186</span></a><span class="sd">            </span>
+</span><span id="EventBus-187"><a href="#EventBus-187"><span class="linenos">187</span></a><span class="sd">        Returns:</span>
+</span><span id="EventBus-188"><a href="#EventBus-188"><span class="linenos">188</span></a><span class="sd">            List of events from history</span>
+</span><span id="EventBus-189"><a href="#EventBus-189"><span class="linenos">189</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus-190"><a href="#EventBus-190"><span class="linenos">190</span></a>        <span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span>
+</span><span id="EventBus-191"><a href="#EventBus-191"><span class="linenos">191</span></a>        
+</span><span id="EventBus-192"><a href="#EventBus-192"><span class="linenos">192</span></a>        <span class="k">if</span> <span class="n">event_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus-193"><a href="#EventBus-193"><span class="linenos">193</span></a>            <span class="n">events</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">event_type</span><span class="p">]</span>
+</span><span id="EventBus-194"><a href="#EventBus-194"><span class="linenos">194</span></a>            
+</span><span id="EventBus-195"><a href="#EventBus-195"><span class="linenos">195</span></a>        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus-196"><a href="#EventBus-196"><span class="linenos">196</span></a>            <span class="n">events</span> <span class="o">=</span> <span class="n">events</span><span class="p">[</span><span class="o">-</span><span class="n">limit</span><span class="p">:]</span>
+</span><span id="EventBus-197"><a href="#EventBus-197"><span class="linenos">197</span></a>            
+</span><span id="EventBus-198"><a href="#EventBus-198"><span class="linenos">198</span></a>        <span class="k">return</span> <span class="n">events</span>
+</span><span id="EventBus-199"><a href="#EventBus-199"><span class="linenos">199</span></a>        
+</span><span id="EventBus-200"><a href="#EventBus-200"><span class="linenos">200</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clear_history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus-201"><a href="#EventBus-201"><span class="linenos">201</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear the event history.&quot;&quot;&quot;</span>
+</span><span id="EventBus-202"><a href="#EventBus-202"><span class="linenos">202</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</span><span id="EventBus-203"><a href="#EventBus-203"><span class="linenos">203</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Cleared event history&quot;</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Event bus for managing game events and listeners.</p>
+
+<p>This class implements the observer pattern, allowing components
+to subscribe to specific event types and receive notifications
+when those events occur.</p>
+</div>
+
+
+                            <div id="EventBus.__init__" class="classattr">
+                                        <input id="EventBus.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="name">EventBus</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">logger</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
+
+                <label class="view-source-button" for="EventBus.__init__-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus.__init__"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus.__init__-80"><a href="#EventBus.__init__-80"><span class="linenos">80</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+</span><span id="EventBus.__init__-81"><a href="#EventBus.__init__-81"><span class="linenos">81</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the event bus.</span>
+</span><span id="EventBus.__init__-82"><a href="#EventBus.__init__-82"><span class="linenos">82</span></a><span class="sd">        </span>
+</span><span id="EventBus.__init__-83"><a href="#EventBus.__init__-83"><span class="linenos">83</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus.__init__-84"><a href="#EventBus.__init__-84"><span class="linenos">84</span></a><span class="sd">            logger: Optional logger for debugging events</span>
+</span><span id="EventBus.__init__-85"><a href="#EventBus.__init__-85"><span class="linenos">85</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus.__init__-86"><a href="#EventBus.__init__-86"><span class="linenos">86</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">EventType</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">EventListener</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="EventBus.__init__-87"><a href="#EventBus.__init__-87"><span class="linenos">87</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span> <span class="o">=</span> <span class="n">logger</span> <span class="ow">or</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+</span><span id="EventBus.__init__-88"><a href="#EventBus.__init__-88"><span class="linenos">88</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">GameEvent</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="EventBus.__init__-89"><a href="#EventBus.__init__-89"><span class="linenos">89</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_max_history</span> <span class="o">=</span> <span class="mi">1000</span>  <span class="c1"># Limit history to prevent memory leaks</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Initialize the event bus.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>logger:</strong>  Optional logger for debugging events</li>
+</ul>
+</div>
+
+
+                            </div>
+                            <div id="EventBus.subscribe" class="classattr">
+                                        <input id="EventBus.subscribe-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">subscribe</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">event_type</span><span class="p">:</span> <span class="n"><a href="#EventType">EventType</a></span>,</span><span class="param">	<span class="n">listener</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n"><a href="#GameEvent">GameEvent</a></span><span class="p">],</span> <span class="n">NoneType</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+                <label class="view-source-button" for="EventBus.subscribe-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus.subscribe"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus.subscribe-91"><a href="#EventBus.subscribe-91"><span class="linenos"> 91</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span><span class="p">,</span> <span class="n">listener</span><span class="p">:</span> <span class="n">EventListener</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus.subscribe-92"><a href="#EventBus.subscribe-92"><span class="linenos"> 92</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Subscribe a listener to an event type.</span>
+</span><span id="EventBus.subscribe-93"><a href="#EventBus.subscribe-93"><span class="linenos"> 93</span></a><span class="sd">        </span>
+</span><span id="EventBus.subscribe-94"><a href="#EventBus.subscribe-94"><span class="linenos"> 94</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus.subscribe-95"><a href="#EventBus.subscribe-95"><span class="linenos"> 95</span></a><span class="sd">            event_type: The type of event to listen for</span>
+</span><span id="EventBus.subscribe-96"><a href="#EventBus.subscribe-96"><span class="linenos"> 96</span></a><span class="sd">            listener: The callback function to call when the event occurs</span>
+</span><span id="EventBus.subscribe-97"><a href="#EventBus.subscribe-97"><span class="linenos"> 97</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus.subscribe-98"><a href="#EventBus.subscribe-98"><span class="linenos"> 98</span></a>        <span class="k">if</span> <span class="n">event_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">:</span>
+</span><span id="EventBus.subscribe-99"><a href="#EventBus.subscribe-99"><span class="linenos"> 99</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">[</span><span class="n">event_type</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="EventBus.subscribe-100"><a href="#EventBus.subscribe-100"><span class="linenos">100</span></a>        
+</span><span id="EventBus.subscribe-101"><a href="#EventBus.subscribe-101"><span class="linenos">101</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">[</span><span class="n">event_type</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">listener</span><span class="p">)</span>
+</span><span id="EventBus.subscribe-102"><a href="#EventBus.subscribe-102"><span class="linenos">102</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Subscribed listener to </span><span class="si">{</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Subscribe a listener to an event type.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>event_type:</strong>  The type of event to listen for</li>
+<li><strong>listener:</strong>  The callback function to call when the event occurs</li>
+</ul>
+</div>
+
+
+                            </div>
+                            <div id="EventBus.unsubscribe" class="classattr">
+                                        <input id="EventBus.unsubscribe-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">unsubscribe</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">event_type</span><span class="p">:</span> <span class="n"><a href="#EventType">EventType</a></span>,</span><span class="param">	<span class="n">listener</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n"><a href="#GameEvent">GameEvent</a></span><span class="p">],</span> <span class="n">NoneType</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
+
+                <label class="view-source-button" for="EventBus.unsubscribe-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus.unsubscribe"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus.unsubscribe-104"><a href="#EventBus.unsubscribe-104"><span class="linenos">104</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">unsubscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span><span class="p">,</span> <span class="n">listener</span><span class="p">:</span> <span class="n">EventListener</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="EventBus.unsubscribe-105"><a href="#EventBus.unsubscribe-105"><span class="linenos">105</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Unsubscribe a listener from an event type.</span>
+</span><span id="EventBus.unsubscribe-106"><a href="#EventBus.unsubscribe-106"><span class="linenos">106</span></a><span class="sd">        </span>
+</span><span id="EventBus.unsubscribe-107"><a href="#EventBus.unsubscribe-107"><span class="linenos">107</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus.unsubscribe-108"><a href="#EventBus.unsubscribe-108"><span class="linenos">108</span></a><span class="sd">            event_type: The type of event to stop listening for</span>
+</span><span id="EventBus.unsubscribe-109"><a href="#EventBus.unsubscribe-109"><span class="linenos">109</span></a><span class="sd">            listener: The callback function to remove</span>
+</span><span id="EventBus.unsubscribe-110"><a href="#EventBus.unsubscribe-110"><span class="linenos">110</span></a><span class="sd">            </span>
+</span><span id="EventBus.unsubscribe-111"><a href="#EventBus.unsubscribe-111"><span class="linenos">111</span></a><span class="sd">        Returns:</span>
+</span><span id="EventBus.unsubscribe-112"><a href="#EventBus.unsubscribe-112"><span class="linenos">112</span></a><span class="sd">            True if the listener was found and removed, False otherwise</span>
+</span><span id="EventBus.unsubscribe-113"><a href="#EventBus.unsubscribe-113"><span class="linenos">113</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus.unsubscribe-114"><a href="#EventBus.unsubscribe-114"><span class="linenos">114</span></a>        <span class="k">if</span> <span class="n">event_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">:</span>
+</span><span id="EventBus.unsubscribe-115"><a href="#EventBus.unsubscribe-115"><span class="linenos">115</span></a>            <span class="k">return</span> <span class="kc">False</span>
+</span><span id="EventBus.unsubscribe-116"><a href="#EventBus.unsubscribe-116"><span class="linenos">116</span></a>            
+</span><span id="EventBus.unsubscribe-117"><a href="#EventBus.unsubscribe-117"><span class="linenos">117</span></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="EventBus.unsubscribe-118"><a href="#EventBus.unsubscribe-118"><span class="linenos">118</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">[</span><span class="n">event_type</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">listener</span><span class="p">)</span>
+</span><span id="EventBus.unsubscribe-119"><a href="#EventBus.unsubscribe-119"><span class="linenos">119</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsubscribed listener from </span><span class="si">{</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="EventBus.unsubscribe-120"><a href="#EventBus.unsubscribe-120"><span class="linenos">120</span></a>            <span class="k">return</span> <span class="kc">True</span>
+</span><span id="EventBus.unsubscribe-121"><a href="#EventBus.unsubscribe-121"><span class="linenos">121</span></a>        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+</span><span id="EventBus.unsubscribe-122"><a href="#EventBus.unsubscribe-122"><span class="linenos">122</span></a>            <span class="k">return</span> <span class="kc">False</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Unsubscribe a listener from an event type.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>event_type:</strong>  The type of event to stop listening for</li>
+<li><strong>listener:</strong>  The callback function to remove</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>True if the listener was found and removed, False otherwise</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="EventBus.emit" class="classattr">
+                                        <input id="EventBus.emit-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">emit</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">event</span><span class="p">:</span> <span class="n"><a href="#GameEvent">GameEvent</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+                <label class="view-source-button" for="EventBus.emit-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus.emit"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus.emit-124"><a href="#EventBus.emit-124"><span class="linenos">124</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">emit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="n">GameEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus.emit-125"><a href="#EventBus.emit-125"><span class="linenos">125</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit an event to all subscribed listeners.</span>
+</span><span id="EventBus.emit-126"><a href="#EventBus.emit-126"><span class="linenos">126</span></a><span class="sd">        </span>
+</span><span id="EventBus.emit-127"><a href="#EventBus.emit-127"><span class="linenos">127</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus.emit-128"><a href="#EventBus.emit-128"><span class="linenos">128</span></a><span class="sd">            event: The event to emit</span>
+</span><span id="EventBus.emit-129"><a href="#EventBus.emit-129"><span class="linenos">129</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus.emit-130"><a href="#EventBus.emit-130"><span class="linenos">130</span></a>        <span class="c1"># Add to history</span>
+</span><span id="EventBus.emit-131"><a href="#EventBus.emit-131"><span class="linenos">131</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</span><span id="EventBus.emit-132"><a href="#EventBus.emit-132"><span class="linenos">132</span></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_history</span><span class="p">:</span>
+</span><span id="EventBus.emit-133"><a href="#EventBus.emit-133"><span class="linenos">133</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="EventBus.emit-134"><a href="#EventBus.emit-134"><span class="linenos">134</span></a>            
+</span><span id="EventBus.emit-135"><a href="#EventBus.emit-135"><span class="linenos">135</span></a>        <span class="c1"># Notify listeners</span>
+</span><span id="EventBus.emit-136"><a href="#EventBus.emit-136"><span class="linenos">136</span></a>        <span class="n">listeners</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">event_type</span><span class="p">,</span> <span class="p">[])</span>
+</span><span id="EventBus.emit-137"><a href="#EventBus.emit-137"><span class="linenos">137</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Emitting </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">listeners</span><span class="p">)</span><span class="si">}</span><span class="s2"> listeners&quot;</span><span class="p">)</span>
+</span><span id="EventBus.emit-138"><a href="#EventBus.emit-138"><span class="linenos">138</span></a>        
+</span><span id="EventBus.emit-139"><a href="#EventBus.emit-139"><span class="linenos">139</span></a>        <span class="k">for</span> <span class="n">listener</span> <span class="ow">in</span> <span class="n">listeners</span><span class="p">:</span>
+</span><span id="EventBus.emit-140"><a href="#EventBus.emit-140"><span class="linenos">140</span></a>            <span class="k">try</span><span class="p">:</span>
+</span><span id="EventBus.emit-141"><a href="#EventBus.emit-141"><span class="linenos">141</span></a>                <span class="n">listener</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</span><span id="EventBus.emit-142"><a href="#EventBus.emit-142"><span class="linenos">142</span></a>            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="EventBus.emit-143"><a href="#EventBus.emit-143"><span class="linenos">143</span></a>                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in event listener: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Emit an event to all subscribed listeners.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>event:</strong>  The event to emit</li>
+</ul>
+</div>
+
+
+                            </div>
+                            <div id="EventBus.emit_simple" class="classattr">
+                                        <input id="EventBus.emit_simple-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">emit_simple</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">event_type</span><span class="p">:</span> <span class="n"><a href="#EventType">EventType</a></span>, </span><span class="param"><span class="o">**</span><span class="n">data</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+                <label class="view-source-button" for="EventBus.emit_simple-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus.emit_simple"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus.emit_simple-145"><a href="#EventBus.emit_simple-145"><span class="linenos">145</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">emit_simple</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus.emit_simple-146"><a href="#EventBus.emit_simple-146"><span class="linenos">146</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit a simple event with data as keyword arguments.</span>
+</span><span id="EventBus.emit_simple-147"><a href="#EventBus.emit_simple-147"><span class="linenos">147</span></a><span class="sd">        </span>
+</span><span id="EventBus.emit_simple-148"><a href="#EventBus.emit_simple-148"><span class="linenos">148</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus.emit_simple-149"><a href="#EventBus.emit_simple-149"><span class="linenos">149</span></a><span class="sd">            event_type: The type of event to emit</span>
+</span><span id="EventBus.emit_simple-150"><a href="#EventBus.emit_simple-150"><span class="linenos">150</span></a><span class="sd">            **data: Event data as keyword arguments</span>
+</span><span id="EventBus.emit_simple-151"><a href="#EventBus.emit_simple-151"><span class="linenos">151</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus.emit_simple-152"><a href="#EventBus.emit_simple-152"><span class="linenos">152</span></a>        <span class="n">event</span> <span class="o">=</span> <span class="n">GameEvent</span><span class="p">(</span><span class="n">event_type</span><span class="o">=</span><span class="n">event_type</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+</span><span id="EventBus.emit_simple-153"><a href="#EventBus.emit_simple-153"><span class="linenos">153</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Emit a simple event with data as keyword arguments.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>event_type:</strong>  The type of event to emit</li>
+<li><strong>**data:</strong>  Event data as keyword arguments</li>
+</ul>
+</div>
+
+
+                            </div>
+                            <div id="EventBus.get_listeners_count" class="classattr">
+                                        <input id="EventBus.get_listeners_count-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_listeners_count</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">event_type</span><span class="p">:</span> <span class="n"><a href="#EventType">EventType</a></span></span><span class="return-annotation">) -> <span class="nb">int</span>:</span></span>
+
+                <label class="view-source-button" for="EventBus.get_listeners_count-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus.get_listeners_count"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus.get_listeners_count-155"><a href="#EventBus.get_listeners_count-155"><span class="linenos">155</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_listeners_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">EventType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="EventBus.get_listeners_count-156"><a href="#EventBus.get_listeners_count-156"><span class="linenos">156</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of listeners for an event type.</span>
+</span><span id="EventBus.get_listeners_count-157"><a href="#EventBus.get_listeners_count-157"><span class="linenos">157</span></a><span class="sd">        </span>
+</span><span id="EventBus.get_listeners_count-158"><a href="#EventBus.get_listeners_count-158"><span class="linenos">158</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus.get_listeners_count-159"><a href="#EventBus.get_listeners_count-159"><span class="linenos">159</span></a><span class="sd">            event_type: The event type to check</span>
+</span><span id="EventBus.get_listeners_count-160"><a href="#EventBus.get_listeners_count-160"><span class="linenos">160</span></a><span class="sd">            </span>
+</span><span id="EventBus.get_listeners_count-161"><a href="#EventBus.get_listeners_count-161"><span class="linenos">161</span></a><span class="sd">        Returns:</span>
+</span><span id="EventBus.get_listeners_count-162"><a href="#EventBus.get_listeners_count-162"><span class="linenos">162</span></a><span class="sd">            Number of listeners subscribed to the event type</span>
+</span><span id="EventBus.get_listeners_count-163"><a href="#EventBus.get_listeners_count-163"><span class="linenos">163</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus.get_listeners_count-164"><a href="#EventBus.get_listeners_count-164"><span class="linenos">164</span></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">event_type</span><span class="p">,</span> <span class="p">[]))</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Get the number of listeners for an event type.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>event_type:</strong>  The event type to check</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Number of listeners subscribed to the event type</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="EventBus.clear_listeners" class="classattr">
+                                        <input id="EventBus.clear_listeners-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">clear_listeners</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">event_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n"><a href="#EventType">EventType</a></span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+                <label class="view-source-button" for="EventBus.clear_listeners-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus.clear_listeners"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus.clear_listeners-166"><a href="#EventBus.clear_listeners-166"><span class="linenos">166</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clear_listeners</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EventType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus.clear_listeners-167"><a href="#EventBus.clear_listeners-167"><span class="linenos">167</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear listeners for a specific event type or all event types.</span>
+</span><span id="EventBus.clear_listeners-168"><a href="#EventBus.clear_listeners-168"><span class="linenos">168</span></a><span class="sd">        </span>
+</span><span id="EventBus.clear_listeners-169"><a href="#EventBus.clear_listeners-169"><span class="linenos">169</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus.clear_listeners-170"><a href="#EventBus.clear_listeners-170"><span class="linenos">170</span></a><span class="sd">            event_type: The event type to clear, or None to clear all</span>
+</span><span id="EventBus.clear_listeners-171"><a href="#EventBus.clear_listeners-171"><span class="linenos">171</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus.clear_listeners-172"><a href="#EventBus.clear_listeners-172"><span class="linenos">172</span></a>        <span class="k">if</span> <span class="n">event_type</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus.clear_listeners-173"><a href="#EventBus.clear_listeners-173"><span class="linenos">173</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</span><span id="EventBus.clear_listeners-174"><a href="#EventBus.clear_listeners-174"><span class="linenos">174</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Cleared all event listeners&quot;</span><span class="p">)</span>
+</span><span id="EventBus.clear_listeners-175"><a href="#EventBus.clear_listeners-175"><span class="linenos">175</span></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="EventBus.clear_listeners-176"><a href="#EventBus.clear_listeners-176"><span class="linenos">176</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">[</span><span class="n">event_type</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="EventBus.clear_listeners-177"><a href="#EventBus.clear_listeners-177"><span class="linenos">177</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cleared listeners for </span><span class="si">{</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Clear listeners for a specific event type or all event types.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>event_type:</strong>  The event type to clear, or None to clear all</li>
+</ul>
+</div>
+
+
+                            </div>
+                            <div id="EventBus.get_event_history" class="classattr">
+                                        <input id="EventBus.get_event_history-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_event_history</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">event_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n"><a href="#EventType">EventType</a></span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">limit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n">List</span><span class="p">[</span><span class="n"><a href="#GameEvent">GameEvent</a></span><span class="p">]</span>:</span></span>
+
+                <label class="view-source-button" for="EventBus.get_event_history-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus.get_event_history"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus.get_event_history-179"><a href="#EventBus.get_event_history-179"><span class="linenos">179</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_event_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EventType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+</span><span id="EventBus.get_event_history-180"><a href="#EventBus.get_event_history-180"><span class="linenos">180</span></a>                         <span class="n">limit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">GameEvent</span><span class="p">]:</span>
+</span><span id="EventBus.get_event_history-181"><a href="#EventBus.get_event_history-181"><span class="linenos">181</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get event history, optionally filtered by type and limited.</span>
+</span><span id="EventBus.get_event_history-182"><a href="#EventBus.get_event_history-182"><span class="linenos">182</span></a><span class="sd">        </span>
+</span><span id="EventBus.get_event_history-183"><a href="#EventBus.get_event_history-183"><span class="linenos">183</span></a><span class="sd">        Args:</span>
+</span><span id="EventBus.get_event_history-184"><a href="#EventBus.get_event_history-184"><span class="linenos">184</span></a><span class="sd">            event_type: Optional event type to filter by</span>
+</span><span id="EventBus.get_event_history-185"><a href="#EventBus.get_event_history-185"><span class="linenos">185</span></a><span class="sd">            limit: Optional limit on number of events to return</span>
+</span><span id="EventBus.get_event_history-186"><a href="#EventBus.get_event_history-186"><span class="linenos">186</span></a><span class="sd">            </span>
+</span><span id="EventBus.get_event_history-187"><a href="#EventBus.get_event_history-187"><span class="linenos">187</span></a><span class="sd">        Returns:</span>
+</span><span id="EventBus.get_event_history-188"><a href="#EventBus.get_event_history-188"><span class="linenos">188</span></a><span class="sd">            List of events from history</span>
+</span><span id="EventBus.get_event_history-189"><a href="#EventBus.get_event_history-189"><span class="linenos">189</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="EventBus.get_event_history-190"><a href="#EventBus.get_event_history-190"><span class="linenos">190</span></a>        <span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span>
+</span><span id="EventBus.get_event_history-191"><a href="#EventBus.get_event_history-191"><span class="linenos">191</span></a>        
+</span><span id="EventBus.get_event_history-192"><a href="#EventBus.get_event_history-192"><span class="linenos">192</span></a>        <span class="k">if</span> <span class="n">event_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus.get_event_history-193"><a href="#EventBus.get_event_history-193"><span class="linenos">193</span></a>            <span class="n">events</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">event_type</span><span class="p">]</span>
+</span><span id="EventBus.get_event_history-194"><a href="#EventBus.get_event_history-194"><span class="linenos">194</span></a>            
+</span><span id="EventBus.get_event_history-195"><a href="#EventBus.get_event_history-195"><span class="linenos">195</span></a>        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus.get_event_history-196"><a href="#EventBus.get_event_history-196"><span class="linenos">196</span></a>            <span class="n">events</span> <span class="o">=</span> <span class="n">events</span><span class="p">[</span><span class="o">-</span><span class="n">limit</span><span class="p">:]</span>
+</span><span id="EventBus.get_event_history-197"><a href="#EventBus.get_event_history-197"><span class="linenos">197</span></a>            
+</span><span id="EventBus.get_event_history-198"><a href="#EventBus.get_event_history-198"><span class="linenos">198</span></a>        <span class="k">return</span> <span class="n">events</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Get event history, optionally filtered by type and limited.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>event_type:</strong>  Optional event type to filter by</li>
+<li><strong>limit:</strong>  Optional limit on number of events to return</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>List of events from history</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="EventBus.clear_history" class="classattr">
+                                        <input id="EventBus.clear_history-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">clear_history</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+                <label class="view-source-button" for="EventBus.clear_history-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#EventBus.clear_history"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="EventBus.clear_history-200"><a href="#EventBus.clear_history-200"><span class="linenos">200</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">clear_history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="EventBus.clear_history-201"><a href="#EventBus.clear_history-201"><span class="linenos">201</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear the event history.&quot;&quot;&quot;</span>
+</span><span id="EventBus.clear_history-202"><a href="#EventBus.clear_history-202"><span class="linenos">202</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_event_history</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</span><span id="EventBus.clear_history-203"><a href="#EventBus.clear_history-203"><span class="linenos">203</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Cleared event history&quot;</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Clear the event history.</p>
+</div>
+
+
+                            </div>
+                </section>
+                <section id="EventListener">
+                    <div class="attr variable">
+            <span class="name">EventListener</span>        =
+<span class="default_value">typing.Callable[[<a href="#GameEvent">GameEvent</a>], NoneType]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EventListener"></a>
+    
+    
+
+                </section>
+                <section id="get_event_bus">
+                            <input id="get_event_bus-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_event_bus</span><span class="signature pdoc-code condensed">(<span class="return-annotation">) -> <span class="n"><a href="#EventBus">EventBus</a></span>:</span></span>
+
+                <label class="view-source-button" for="get_event_bus-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#get_event_bus"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="get_event_bus-210"><a href="#get_event_bus-210"><span class="linenos">210</span></a><span class="k">def</span><span class="w"> </span><span class="nf">get_event_bus</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">EventBus</span><span class="p">:</span>
+</span><span id="get_event_bus-211"><a href="#get_event_bus-211"><span class="linenos">211</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the global event bus instance.</span>
+</span><span id="get_event_bus-212"><a href="#get_event_bus-212"><span class="linenos">212</span></a><span class="sd">    </span>
+</span><span id="get_event_bus-213"><a href="#get_event_bus-213"><span class="linenos">213</span></a><span class="sd">    Returns:</span>
+</span><span id="get_event_bus-214"><a href="#get_event_bus-214"><span class="linenos">214</span></a><span class="sd">        The global EventBus instance</span>
+</span><span id="get_event_bus-215"><a href="#get_event_bus-215"><span class="linenos">215</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="get_event_bus-216"><a href="#get_event_bus-216"><span class="linenos">216</span></a>    <span class="k">global</span> <span class="n">_global_event_bus</span>
+</span><span id="get_event_bus-217"><a href="#get_event_bus-217"><span class="linenos">217</span></a>    <span class="k">if</span> <span class="n">_global_event_bus</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="get_event_bus-218"><a href="#get_event_bus-218"><span class="linenos">218</span></a>        <span class="n">_global_event_bus</span> <span class="o">=</span> <span class="n">EventBus</span><span class="p">()</span>
+</span><span id="get_event_bus-219"><a href="#get_event_bus-219"><span class="linenos">219</span></a>    <span class="k">return</span> <span class="n">_global_event_bus</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Get the global event bus instance.</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>The global EventBus instance</p>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="set_event_bus">
+                            <input id="set_event_bus-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">set_event_bus</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">event_bus</span><span class="p">:</span> <span class="n"><a href="#EventBus">EventBus</a></span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+                <label class="view-source-button" for="set_event_bus-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#set_event_bus"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="set_event_bus-222"><a href="#set_event_bus-222"><span class="linenos">222</span></a><span class="k">def</span><span class="w"> </span><span class="nf">set_event_bus</span><span class="p">(</span><span class="n">event_bus</span><span class="p">:</span> <span class="n">EventBus</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="set_event_bus-223"><a href="#set_event_bus-223"><span class="linenos">223</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Set the global event bus instance.</span>
+</span><span id="set_event_bus-224"><a href="#set_event_bus-224"><span class="linenos">224</span></a><span class="sd">    </span>
+</span><span id="set_event_bus-225"><a href="#set_event_bus-225"><span class="linenos">225</span></a><span class="sd">    Args:</span>
+</span><span id="set_event_bus-226"><a href="#set_event_bus-226"><span class="linenos">226</span></a><span class="sd">        event_bus: The EventBus instance to use globally</span>
+</span><span id="set_event_bus-227"><a href="#set_event_bus-227"><span class="linenos">227</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="set_event_bus-228"><a href="#set_event_bus-228"><span class="linenos">228</span></a>    <span class="k">global</span> <span class="n">_global_event_bus</span>
+</span><span id="set_event_bus-229"><a href="#set_event_bus-229"><span class="linenos">229</span></a>    <span class="n">_global_event_bus</span> <span class="o">=</span> <span class="n">event_bus</span> 
+</span></pre></div>
+
+
+            <div class="docstring"><p>Set the global event bus instance.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>event_bus:</strong>  The EventBus instance to use globally</li>
+</ul>
+</div>
+
+
+                </section>
                 <section id="get_all_suits">
                             <input id="get_all_suits-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
@@ -8285,21 +9447,21 @@ safely shared with UI components, AI players, and other external systems.</p>
 
     </div>
     <a class="headerlink" href="#new_deck"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="new_deck-17"><a href="#new_deck-17"><span class="linenos">17</span></a><span class="k">def</span><span class="w"> </span><span class="nf">new_deck</span><span class="p">(</span><span class="n">shuffled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Deck</span><span class="p">:</span>
-</span><span id="new_deck-18"><a href="#new_deck-18"><span class="linenos">18</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="new_deck-19"><a href="#new_deck-19"><span class="linenos">19</span></a><span class="sd">    Create a new deck of cards.</span>
-</span><span id="new_deck-20"><a href="#new_deck-20"><span class="linenos">20</span></a><span class="sd">    </span>
-</span><span id="new_deck-21"><a href="#new_deck-21"><span class="linenos">21</span></a><span class="sd">    Args:</span>
-</span><span id="new_deck-22"><a href="#new_deck-22"><span class="linenos">22</span></a><span class="sd">        shuffled: Whether to shuffle the deck after creation</span>
-</span><span id="new_deck-23"><a href="#new_deck-23"><span class="linenos">23</span></a><span class="sd">        rng: Random number generator for shuffling</span>
-</span><span id="new_deck-24"><a href="#new_deck-24"><span class="linenos">24</span></a><span class="sd">        </span>
-</span><span id="new_deck-25"><a href="#new_deck-25"><span class="linenos">25</span></a><span class="sd">    Returns:</span>
-</span><span id="new_deck-26"><a href="#new_deck-26"><span class="linenos">26</span></a><span class="sd">        Deck: A new deck of 52 cards</span>
-</span><span id="new_deck-27"><a href="#new_deck-27"><span class="linenos">27</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="new_deck-28"><a href="#new_deck-28"><span class="linenos">28</span></a>    <span class="n">deck</span> <span class="o">=</span> <span class="n">Deck</span><span class="p">(</span><span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">)</span>
-</span><span id="new_deck-29"><a href="#new_deck-29"><span class="linenos">29</span></a>    <span class="k">if</span> <span class="n">shuffled</span><span class="p">:</span>
-</span><span id="new_deck-30"><a href="#new_deck-30"><span class="linenos">30</span></a>        <span class="n">deck</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span>
-</span><span id="new_deck-31"><a href="#new_deck-31"><span class="linenos">31</span></a>    <span class="k">return</span> <span class="n">deck</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="new_deck-18"><a href="#new_deck-18"><span class="linenos">18</span></a><span class="k">def</span><span class="w"> </span><span class="nf">new_deck</span><span class="p">(</span><span class="n">shuffled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">rng</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Deck</span><span class="p">:</span>
+</span><span id="new_deck-19"><a href="#new_deck-19"><span class="linenos">19</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="new_deck-20"><a href="#new_deck-20"><span class="linenos">20</span></a><span class="sd">    Create a new deck of cards.</span>
+</span><span id="new_deck-21"><a href="#new_deck-21"><span class="linenos">21</span></a><span class="sd">    </span>
+</span><span id="new_deck-22"><a href="#new_deck-22"><span class="linenos">22</span></a><span class="sd">    Args:</span>
+</span><span id="new_deck-23"><a href="#new_deck-23"><span class="linenos">23</span></a><span class="sd">        shuffled: Whether to shuffle the deck after creation</span>
+</span><span id="new_deck-24"><a href="#new_deck-24"><span class="linenos">24</span></a><span class="sd">        rng: Random number generator for shuffling</span>
+</span><span id="new_deck-25"><a href="#new_deck-25"><span class="linenos">25</span></a><span class="sd">        </span>
+</span><span id="new_deck-26"><a href="#new_deck-26"><span class="linenos">26</span></a><span class="sd">    Returns:</span>
+</span><span id="new_deck-27"><a href="#new_deck-27"><span class="linenos">27</span></a><span class="sd">        Deck: A new deck of 52 cards</span>
+</span><span id="new_deck-28"><a href="#new_deck-28"><span class="linenos">28</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="new_deck-29"><a href="#new_deck-29"><span class="linenos">29</span></a>    <span class="n">deck</span> <span class="o">=</span> <span class="n">Deck</span><span class="p">(</span><span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">)</span>
+</span><span id="new_deck-30"><a href="#new_deck-30"><span class="linenos">30</span></a>    <span class="k">if</span> <span class="n">shuffled</span><span class="p">:</span>
+</span><span id="new_deck-31"><a href="#new_deck-31"><span class="linenos">31</span></a>        <span class="n">deck</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span>
+</span><span id="new_deck-32"><a href="#new_deck-32"><span class="linenos">32</span></a>    <span class="k">return</span> <span class="n">deck</span>
 </span></pre></div>
 
 
@@ -8332,19 +9494,19 @@ safely shared with UI components, AI players, and other external systems.</p>
 
     </div>
     <a class="headerlink" href="#evaluate_hand"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="evaluate_hand-34"><a href="#evaluate_hand-34"><span class="linenos">34</span></a><span class="k">def</span><span class="w"> </span><span class="nf">evaluate_hand</span><span class="p">(</span><span class="n">hole_cards</span><span class="p">,</span> <span class="n">community_cards</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HandResult</span><span class="p">:</span>
-</span><span id="evaluate_hand-35"><a href="#evaluate_hand-35"><span class="linenos">35</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="evaluate_hand-36"><a href="#evaluate_hand-36"><span class="linenos">36</span></a><span class="sd">    Evaluate the best poker hand from hole cards and community cards.</span>
-</span><span id="evaluate_hand-37"><a href="#evaluate_hand-37"><span class="linenos">37</span></a><span class="sd">    </span>
-</span><span id="evaluate_hand-38"><a href="#evaluate_hand-38"><span class="linenos">38</span></a><span class="sd">    Args:</span>
-</span><span id="evaluate_hand-39"><a href="#evaluate_hand-39"><span class="linenos">39</span></a><span class="sd">        hole_cards: List of 2 hole cards</span>
-</span><span id="evaluate_hand-40"><a href="#evaluate_hand-40"><span class="linenos">40</span></a><span class="sd">        community_cards: List of community cards (up to 5)</span>
-</span><span id="evaluate_hand-41"><a href="#evaluate_hand-41"><span class="linenos">41</span></a><span class="sd">        </span>
-</span><span id="evaluate_hand-42"><a href="#evaluate_hand-42"><span class="linenos">42</span></a><span class="sd">    Returns:</span>
-</span><span id="evaluate_hand-43"><a href="#evaluate_hand-43"><span class="linenos">43</span></a><span class="sd">        HandResult: The best hand evaluation result</span>
-</span><span id="evaluate_hand-44"><a href="#evaluate_hand-44"><span class="linenos">44</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="evaluate_hand-45"><a href="#evaluate_hand-45"><span class="linenos">45</span></a>    <span class="n">evaluator</span> <span class="o">=</span> <span class="n">SimpleEvaluator</span><span class="p">()</span>
-</span><span id="evaluate_hand-46"><a href="#evaluate_hand-46"><span class="linenos">46</span></a>    <span class="k">return</span> <span class="n">evaluator</span><span class="o">.</span><span class="n">evaluate_hand</span><span class="p">(</span><span class="n">hole_cards</span><span class="p">,</span> <span class="n">community_cards</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="evaluate_hand-35"><a href="#evaluate_hand-35"><span class="linenos">35</span></a><span class="k">def</span><span class="w"> </span><span class="nf">evaluate_hand</span><span class="p">(</span><span class="n">hole_cards</span><span class="p">,</span> <span class="n">community_cards</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HandResult</span><span class="p">:</span>
+</span><span id="evaluate_hand-36"><a href="#evaluate_hand-36"><span class="linenos">36</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="evaluate_hand-37"><a href="#evaluate_hand-37"><span class="linenos">37</span></a><span class="sd">    Evaluate the best poker hand from hole cards and community cards.</span>
+</span><span id="evaluate_hand-38"><a href="#evaluate_hand-38"><span class="linenos">38</span></a><span class="sd">    </span>
+</span><span id="evaluate_hand-39"><a href="#evaluate_hand-39"><span class="linenos">39</span></a><span class="sd">    Args:</span>
+</span><span id="evaluate_hand-40"><a href="#evaluate_hand-40"><span class="linenos">40</span></a><span class="sd">        hole_cards: List of 2 hole cards</span>
+</span><span id="evaluate_hand-41"><a href="#evaluate_hand-41"><span class="linenos">41</span></a><span class="sd">        community_cards: List of community cards (up to 5)</span>
+</span><span id="evaluate_hand-42"><a href="#evaluate_hand-42"><span class="linenos">42</span></a><span class="sd">        </span>
+</span><span id="evaluate_hand-43"><a href="#evaluate_hand-43"><span class="linenos">43</span></a><span class="sd">    Returns:</span>
+</span><span id="evaluate_hand-44"><a href="#evaluate_hand-44"><span class="linenos">44</span></a><span class="sd">        HandResult: The best hand evaluation result</span>
+</span><span id="evaluate_hand-45"><a href="#evaluate_hand-45"><span class="linenos">45</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="evaluate_hand-46"><a href="#evaluate_hand-46"><span class="linenos">46</span></a>    <span class="n">evaluator</span> <span class="o">=</span> <span class="n">SimpleEvaluator</span><span class="p">()</span>
+</span><span id="evaluate_hand-47"><a href="#evaluate_hand-47"><span class="linenos">47</span></a>    <span class="k">return</span> <span class="n">evaluator</span><span class="o">.</span><span class="n">evaluate_hand</span><span class="p">(</span><span class="n">hole_cards</span><span class="p">,</span> <span class="n">community_cards</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -8377,19 +9539,19 @@ safely shared with UI components, AI players, and other external systems.</p>
 
     </div>
     <a class="headerlink" href="#create_player"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="create_player-49"><a href="#create_player-49"><span class="linenos">49</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create_player</span><span class="p">(</span><span class="n">seat_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chips</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Player</span><span class="p">:</span>
-</span><span id="create_player-50"><a href="#create_player-50"><span class="linenos">50</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="create_player-51"><a href="#create_player-51"><span class="linenos">51</span></a><span class="sd">    Create a new player.</span>
-</span><span id="create_player-52"><a href="#create_player-52"><span class="linenos">52</span></a><span class="sd">    </span>
-</span><span id="create_player-53"><a href="#create_player-53"><span class="linenos">53</span></a><span class="sd">    Args:</span>
-</span><span id="create_player-54"><a href="#create_player-54"><span class="linenos">54</span></a><span class="sd">        seat_id: Unique seat identifier</span>
-</span><span id="create_player-55"><a href="#create_player-55"><span class="linenos">55</span></a><span class="sd">        name: Player name</span>
-</span><span id="create_player-56"><a href="#create_player-56"><span class="linenos">56</span></a><span class="sd">        chips: Initial chip count</span>
-</span><span id="create_player-57"><a href="#create_player-57"><span class="linenos">57</span></a><span class="sd">        </span>
-</span><span id="create_player-58"><a href="#create_player-58"><span class="linenos">58</span></a><span class="sd">    Returns:</span>
-</span><span id="create_player-59"><a href="#create_player-59"><span class="linenos">59</span></a><span class="sd">        Player: A new player instance</span>
-</span><span id="create_player-60"><a href="#create_player-60"><span class="linenos">60</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="create_player-61"><a href="#create_player-61"><span class="linenos">61</span></a>    <span class="k">return</span> <span class="n">Player</span><span class="p">(</span><span class="n">seat_id</span><span class="o">=</span><span class="n">seat_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">chips</span><span class="o">=</span><span class="n">chips</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="create_player-50"><a href="#create_player-50"><span class="linenos">50</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create_player</span><span class="p">(</span><span class="n">seat_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chips</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Player</span><span class="p">:</span>
+</span><span id="create_player-51"><a href="#create_player-51"><span class="linenos">51</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="create_player-52"><a href="#create_player-52"><span class="linenos">52</span></a><span class="sd">    Create a new player.</span>
+</span><span id="create_player-53"><a href="#create_player-53"><span class="linenos">53</span></a><span class="sd">    </span>
+</span><span id="create_player-54"><a href="#create_player-54"><span class="linenos">54</span></a><span class="sd">    Args:</span>
+</span><span id="create_player-55"><a href="#create_player-55"><span class="linenos">55</span></a><span class="sd">        seat_id: Unique seat identifier</span>
+</span><span id="create_player-56"><a href="#create_player-56"><span class="linenos">56</span></a><span class="sd">        name: Player name</span>
+</span><span id="create_player-57"><a href="#create_player-57"><span class="linenos">57</span></a><span class="sd">        chips: Initial chip count</span>
+</span><span id="create_player-58"><a href="#create_player-58"><span class="linenos">58</span></a><span class="sd">        </span>
+</span><span id="create_player-59"><a href="#create_player-59"><span class="linenos">59</span></a><span class="sd">    Returns:</span>
+</span><span id="create_player-60"><a href="#create_player-60"><span class="linenos">60</span></a><span class="sd">        Player: A new player instance</span>
+</span><span id="create_player-61"><a href="#create_player-61"><span class="linenos">61</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="create_player-62"><a href="#create_player-62"><span class="linenos">62</span></a>    <span class="k">return</span> <span class="n">Player</span><span class="p">(</span><span class="n">seat_id</span><span class="o">=</span><span class="n">seat_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">chips</span><span class="o">=</span><span class="n">chips</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -8423,20 +9585,20 @@ safely shared with UI components, AI players, and other external systems.</p>
 
     </div>
     <a class="headerlink" href="#validate_action"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="validate_action-64"><a href="#validate_action-64"><span class="linenos">64</span></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_action</span><span class="p">(</span><span class="n">game_state</span><span class="p">,</span> <span class="n">player</span><span class="p">:</span> <span class="n">Player</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ValidatedAction&#39;</span><span class="p">:</span>
-</span><span id="validate_action-65"><a href="#validate_action-65"><span class="linenos">65</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="validate_action-66"><a href="#validate_action-66"><span class="linenos">66</span></a><span class="sd">    Validate a player action.</span>
-</span><span id="validate_action-67"><a href="#validate_action-67"><span class="linenos">67</span></a><span class="sd">    </span>
-</span><span id="validate_action-68"><a href="#validate_action-68"><span class="linenos">68</span></a><span class="sd">    Args:</span>
-</span><span id="validate_action-69"><a href="#validate_action-69"><span class="linenos">69</span></a><span class="sd">        game_state: Current game state</span>
-</span><span id="validate_action-70"><a href="#validate_action-70"><span class="linenos">70</span></a><span class="sd">        player: Player attempting the action</span>
-</span><span id="validate_action-71"><a href="#validate_action-71"><span class="linenos">71</span></a><span class="sd">        action: Action to validate</span>
-</span><span id="validate_action-72"><a href="#validate_action-72"><span class="linenos">72</span></a><span class="sd">        </span>
-</span><span id="validate_action-73"><a href="#validate_action-73"><span class="linenos">73</span></a><span class="sd">    Returns:</span>
-</span><span id="validate_action-74"><a href="#validate_action-74"><span class="linenos">74</span></a><span class="sd">        ValidatedAction: Validation result with possible conversions</span>
-</span><span id="validate_action-75"><a href="#validate_action-75"><span class="linenos">75</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="validate_action-76"><a href="#validate_action-76"><span class="linenos">76</span></a>    <span class="n">validator</span> <span class="o">=</span> <span class="n">ActionValidator</span><span class="p">()</span>
-</span><span id="validate_action-77"><a href="#validate_action-77"><span class="linenos">77</span></a>    <span class="k">return</span> <span class="n">validator</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">game_state</span><span class="p">,</span> <span class="n">player</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="validate_action-65"><a href="#validate_action-65"><span class="linenos">65</span></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_action</span><span class="p">(</span><span class="n">game_state</span><span class="p">,</span> <span class="n">player</span><span class="p">:</span> <span class="n">Player</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ValidatedAction&#39;</span><span class="p">:</span>
+</span><span id="validate_action-66"><a href="#validate_action-66"><span class="linenos">66</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="validate_action-67"><a href="#validate_action-67"><span class="linenos">67</span></a><span class="sd">    Validate a player action.</span>
+</span><span id="validate_action-68"><a href="#validate_action-68"><span class="linenos">68</span></a><span class="sd">    </span>
+</span><span id="validate_action-69"><a href="#validate_action-69"><span class="linenos">69</span></a><span class="sd">    Args:</span>
+</span><span id="validate_action-70"><a href="#validate_action-70"><span class="linenos">70</span></a><span class="sd">        game_state: Current game state</span>
+</span><span id="validate_action-71"><a href="#validate_action-71"><span class="linenos">71</span></a><span class="sd">        player: Player attempting the action</span>
+</span><span id="validate_action-72"><a href="#validate_action-72"><span class="linenos">72</span></a><span class="sd">        action: Action to validate</span>
+</span><span id="validate_action-73"><a href="#validate_action-73"><span class="linenos">73</span></a><span class="sd">        </span>
+</span><span id="validate_action-74"><a href="#validate_action-74"><span class="linenos">74</span></a><span class="sd">    Returns:</span>
+</span><span id="validate_action-75"><a href="#validate_action-75"><span class="linenos">75</span></a><span class="sd">        ValidatedAction: Validation result with possible conversions</span>
+</span><span id="validate_action-76"><a href="#validate_action-76"><span class="linenos">76</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="validate_action-77"><a href="#validate_action-77"><span class="linenos">77</span></a>    <span class="n">validator</span> <span class="o">=</span> <span class="n">ActionValidator</span><span class="p">()</span>
+</span><span id="validate_action-78"><a href="#validate_action-78"><span class="linenos">78</span></a>    <span class="k">return</span> <span class="n">validator</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">game_state</span><span class="p">,</span> <span class="n">player</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -8470,14 +9632,14 @@ safely shared with UI components, AI players, and other external systems.</p>
 
     </div>
     <a class="headerlink" href="#create_pot_manager"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="create_pot_manager-80"><a href="#create_pot_manager-80"><span class="linenos">80</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create_pot_manager</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PotManager</span><span class="p">:</span>
-</span><span id="create_pot_manager-81"><a href="#create_pot_manager-81"><span class="linenos">81</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="create_pot_manager-82"><a href="#create_pot_manager-82"><span class="linenos">82</span></a><span class="sd">    Create a new pot manager.</span>
-</span><span id="create_pot_manager-83"><a href="#create_pot_manager-83"><span class="linenos">83</span></a><span class="sd">    </span>
-</span><span id="create_pot_manager-84"><a href="#create_pot_manager-84"><span class="linenos">84</span></a><span class="sd">    Returns:</span>
-</span><span id="create_pot_manager-85"><a href="#create_pot_manager-85"><span class="linenos">85</span></a><span class="sd">        PotManager: A new pot manager instance</span>
-</span><span id="create_pot_manager-86"><a href="#create_pot_manager-86"><span class="linenos">86</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="create_pot_manager-87"><a href="#create_pot_manager-87"><span class="linenos">87</span></a>    <span class="k">return</span> <span class="n">PotManager</span><span class="p">()</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="create_pot_manager-81"><a href="#create_pot_manager-81"><span class="linenos">81</span></a><span class="k">def</span><span class="w"> </span><span class="nf">create_pot_manager</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PotManager</span><span class="p">:</span>
+</span><span id="create_pot_manager-82"><a href="#create_pot_manager-82"><span class="linenos">82</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="create_pot_manager-83"><a href="#create_pot_manager-83"><span class="linenos">83</span></a><span class="sd">    Create a new pot manager.</span>
+</span><span id="create_pot_manager-84"><a href="#create_pot_manager-84"><span class="linenos">84</span></a><span class="sd">    </span>
+</span><span id="create_pot_manager-85"><a href="#create_pot_manager-85"><span class="linenos">85</span></a><span class="sd">    Returns:</span>
+</span><span id="create_pot_manager-86"><a href="#create_pot_manager-86"><span class="linenos">86</span></a><span class="sd">        PotManager: A new pot manager instance</span>
+</span><span id="create_pot_manager-87"><a href="#create_pot_manager-87"><span class="linenos">87</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="create_pot_manager-88"><a href="#create_pot_manager-88"><span class="linenos">88</span></a>    <span class="k">return</span> <span class="n">PotManager</span><span class="p">()</span>
 </span></pre></div>
 
 

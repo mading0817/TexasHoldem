@@ -6,36 +6,16 @@
 """
 
 import logging
-from typing import Optional, Protocol, runtime_checkable
+from typing import Optional
 from dataclasses import dataclass
 
 from ..core import (
     GameState, GameSnapshot, Player, Action, ActionType, 
-    ActionValidator, ValidationResultData, Phase, SeatStatus
+    ActionValidator, ValidationResultData, Phase, SeatStatus,
+    EventType, EventBus, get_event_bus
 )
-
-
-@runtime_checkable
-class AIStrategy(Protocol):
-    """AI策略接口协议.
-    
-    定义AI玩家决策的标准接口，所有AI实现都应该遵循这个协议。
-    """
-    
-    def decide(self, game_snapshot: GameSnapshot, player_id: int) -> Action:
-        """根据游戏状态快照决定下一步行动.
-        
-        Args:
-            game_snapshot: 当前游戏状态的不可变快照
-            player_id: 需要做决策的玩家ID
-            
-        Returns:
-            玩家决定的行动
-            
-        Raises:
-            ValueError: 如果玩家ID无效或游戏状态不允许该玩家行动
-        """
-        ...
+from ..ai import AIStrategy
+from .decorators import atomic
 
 
 @dataclass(frozen=True)
@@ -74,7 +54,8 @@ class PokerController:
         self, 
         game_state: Optional[GameState] = None,
         ai_strategy: Optional[AIStrategy] = None,
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
+        event_bus: Optional[EventBus] = None
     ):
         """初始化控制器.
         
@@ -82,10 +63,12 @@ class PokerController:
             game_state: 游戏状态对象，如果为None则创建默认状态
             ai_strategy: AI策略实现，如果为None则使用默认策略
             logger: 日志记录器，如果为None则创建默认记录器
+            event_bus: 事件总线，如果为None则使用全局事件总线
         """
         self._game_state = game_state or GameState()
         self._ai_strategy = ai_strategy
         self._logger = logger or logging.getLogger(__name__)
+        self._event_bus = event_bus or get_event_bus()
         self._validator = ActionValidator()
         self._hand_in_progress = False
         
@@ -113,6 +96,13 @@ class PokerController:
             self._logger.info("活跃玩家不足2人，无法开始新手牌")
             return False
             
+        # 发射手牌开始事件（在重置之前发射，确保顺序正确）
+        self._event_bus.emit_simple(
+            EventType.HAND_STARTED,
+            active_players=len(active_players),
+            dealer_position=self._game_state.dealer_position
+        )
+        
         # 重置游戏状态为新手牌
         self._reset_for_new_hand()
         self._hand_in_progress = True
@@ -120,6 +110,7 @@ class PokerController:
         self._logger.info(f"开始新手牌，活跃玩家数: {len(active_players)}")
         return True
         
+    @atomic
     def execute_action(self, action: Action) -> bool:
         """执行玩家行动.
         
@@ -138,7 +129,11 @@ class PokerController:
             raise RuntimeError("当前没有手牌在进行中")
             
         # 验证行动
-        validated_action = self._validator.validate_action(self._game_state, action)
+        player = self._game_state.get_player_by_seat(action.player_id)
+        if player is None:
+            raise ValueError(f"找不到玩家 {action.player_id}")
+            
+        validated_action = self._validator.validate(self._game_state, player, action)
         
         if not validated_action.validation_result.is_valid:
             error_msg = validated_action.validation_result.error_message or "行动无效"
@@ -233,19 +228,127 @@ class PokerController:
         if not self._hand_in_progress:
             return None
             
-        # TODO: 实现手牌结算逻辑
-        # 这里需要实现牌型比较、边池分配等逻辑
+        # 收集所有下注到底池
+        self._game_state.collect_bets_to_pot()
         
-        self._hand_in_progress = False
-        self._logger.info("手牌结束")
+        # 获取所有未弃牌的玩家
+        active_players = [
+            p for p in self._game_state.players 
+            if p.status in [SeatStatus.ACTIVE, SeatStatus.ALL_IN]
+        ]
         
-        # 临时返回空结果
-        return HandResult(
-            winner_ids=[],
+        if len(active_players) == 0:
+            # 没有活跃玩家，这种情况不应该发生
+            self._hand_in_progress = False
+            self._logger.warning("手牌结束时没有活跃玩家")
+            return HandResult(
+                winner_ids=[],
+                pot_amount=self._game_state.pot,
+                winning_hand_description="无活跃玩家",
+                side_pots=[]
+            )
+        
+        if len(active_players) == 1:
+            # 只有一个玩家，直接获胜
+            winner = active_players[0]
+            winner.chips += self._game_state.pot
+            
+            result = HandResult(
+                winner_ids=[winner.seat_id],
+                pot_amount=self._game_state.pot,
+                winning_hand_description=f"{winner.name} 获胜（其他玩家弃牌）",
+                side_pots=[]
+            )
+            
+            self._game_state.pot = 0  # 清空底池
+            self._hand_in_progress = False
+            self._logger.info(f"{winner.name} 获胜，获得底池 {result.pot_amount}")
+            
+            # 发射手牌结束事件
+            self._event_bus.emit_simple(
+                EventType.HAND_ENDED,
+                winner_ids=result.winner_ids,
+                pot_amount=result.pot_amount,
+                winning_hand_description=result.winning_hand_description,
+                side_pots=result.side_pots
+            )
+            
+            return result
+        
+        # 多个玩家，需要比较牌型
+        from v2.core.evaluator import SimpleEvaluator
+        evaluator = SimpleEvaluator()
+        
+        # 评估每个玩家的牌型
+        player_hands = []
+        for player in active_players:
+            try:
+                hand_result = evaluator.evaluate_hand(
+                    player.hole_cards, 
+                    self._game_state.community_cards
+                )
+                player_hands.append((player, hand_result))
+                self._logger.info(f"{player.name} 的牌型: {hand_result}")
+            except Exception as e:
+                self._logger.error(f"评估玩家 {player.name} 牌型失败: {e}")
+                # 如果评估失败，给予最低牌型
+                from v2.core.evaluator import HandResult as EvalHandResult
+                from v2.core.enums import HandRank
+                hand_result = EvalHandResult(HandRank.HIGH_CARD, 2)
+                player_hands.append((player, hand_result))
+        
+        # 找出最佳牌型
+        best_hand = max(player_hands, key=lambda x: (x[1].rank.value, x[1].primary_value, x[1].secondary_value, x[1].kickers))
+        best_hand_result = best_hand[1]
+        
+        # 找出所有拥有最佳牌型的玩家（可能平局）
+        winners = []
+        for player, hand_result in player_hands:
+            if hand_result.compare_to(best_hand_result) == 0:
+                winners.append(player)
+        
+        # 分配底池
+        pot_per_winner = self._game_state.pot // len(winners)
+        remainder = self._game_state.pot % len(winners)
+        
+        winner_ids = []
+        for i, winner in enumerate(winners):
+            share = pot_per_winner
+            if i < remainder:  # 余数分配给前几个获胜者
+                share += 1
+            winner.chips += share
+            winner_ids.append(winner.seat_id)
+            self._logger.info(f"{winner.name} 获得 {share} 筹码")
+        
+        # 构建获胜描述
+        if len(winners) == 1:
+            winning_description = f"{winners[0].name} 获胜 - {best_hand_result}"
+        else:
+            winner_names = [w.name for w in winners]
+            winning_description = f"平局: {', '.join(winner_names)} - {best_hand_result}"
+        
+        result = HandResult(
+            winner_ids=winner_ids,
             pot_amount=self._game_state.pot,
-            winning_hand_description="",
-            side_pots=[]
+            winning_hand_description=winning_description,
+            side_pots=[]  # TODO: 实现边池逻辑
         )
+        
+        # 清空底池
+        self._game_state.pot = 0
+        self._hand_in_progress = False
+        self._logger.info(f"手牌结束: {winning_description}")
+        
+        # 发射手牌结束事件
+        self._event_bus.emit_simple(
+            EventType.HAND_ENDED,
+            winner_ids=result.winner_ids,
+            pot_amount=result.pot_amount,
+            winning_hand_description=result.winning_hand_description,
+            side_pots=result.side_pots
+        )
+        
+        return result
         
     def _reset_for_new_hand(self) -> None:
         """重置游戏状态为新手牌."""
@@ -294,6 +397,15 @@ class PokerController:
             self._game_state.current_bet = self._game_state.big_blind
             self._game_state.add_event(f"{big_blind_player.name} 下大盲注 {self._game_state.big_blind}")
             
+        # 发射盲注事件
+        self._event_bus.emit_simple(
+            EventType.BLINDS_POSTED,
+            small_blind_player_id=small_blind_pos,
+            small_blind_amount=self._game_state.small_blind,
+            big_blind_player_id=big_blind_pos,
+            big_blind_amount=self._game_state.big_blind
+        )
+        
     def _set_first_player(self) -> None:
         """设置第一个行动玩家."""
         players = self._game_state.players
@@ -313,23 +425,62 @@ class PokerController:
         if action.action_type == ActionType.FOLD:
             player.status = SeatStatus.FOLDED
             self._game_state.add_event(f"{player.name} 弃牌")
+            # 发射玩家弃牌事件
+            self._event_bus.emit_simple(
+                EventType.PLAYER_FOLDED,
+                player_id=action.player_id,
+                player_name=player.name
+            )
             
         elif action.action_type == ActionType.CHECK:
             self._game_state.add_event(f"{player.name} 过牌")
+            # 发射玩家行动事件
+            self._event_bus.emit_simple(
+                EventType.PLAYER_ACTION,
+                player_id=action.player_id,
+                player_name=player.name,
+                action_type="check",
+                amount=0
+            )
             
         elif action.action_type == ActionType.CALL:
             call_amount = self._game_state.current_bet - player.current_bet
             if call_amount > 0:
                 player.bet(call_amount)
                 self._game_state.add_event(f"{player.name} 跟注 {call_amount}")
+                # 发射玩家行动事件
+                self._event_bus.emit_simple(
+                    EventType.PLAYER_ACTION,
+                    player_id=action.player_id,
+                    player_name=player.name,
+                    action_type="call",
+                    amount=call_amount
+                )
             else:
                 self._game_state.add_event(f"{player.name} 过牌")
+                # 发射玩家行动事件
+                self._event_bus.emit_simple(
+                    EventType.PLAYER_ACTION,
+                    player_id=action.player_id,
+                    player_name=player.name,
+                    action_type="check",
+                    amount=0
+                )
                 
         elif action.action_type == ActionType.BET:
             player.bet(action.amount)
             self._game_state.current_bet = action.amount
             self._game_state.last_raiser = action.player_id
             self._game_state.add_event(f"{player.name} 下注 {action.amount}")
+            # 发射下注事件
+            self._event_bus.emit_simple(
+                EventType.BET_PLACED,
+                player_id=action.player_id,
+                player_name=player.name,
+                action_type="bet",
+                amount=action.amount,
+                new_current_bet=self._game_state.current_bet
+            )
             
         elif action.action_type == ActionType.RAISE:
             total_bet = self._game_state.current_bet + action.amount
@@ -339,6 +490,16 @@ class PokerController:
             self._game_state.last_raiser = action.player_id
             self._game_state.last_raise_amount = action.amount
             self._game_state.add_event(f"{player.name} 加注到 {total_bet}")
+            # 发射下注事件
+            self._event_bus.emit_simple(
+                EventType.BET_PLACED,
+                player_id=action.player_id,
+                player_name=player.name,
+                action_type="raise",
+                amount=bet_amount,
+                raise_amount=action.amount,
+                new_current_bet=self._game_state.current_bet
+            )
             
         elif action.action_type == ActionType.ALL_IN:
             all_in_amount = player.chips
@@ -348,9 +509,24 @@ class PokerController:
                 self._game_state.current_bet = player.current_bet
                 self._game_state.last_raiser = action.player_id
             self._game_state.add_event(f"{player.name} 全押 {all_in_amount}")
+            # 发射全押事件
+            self._event_bus.emit_simple(
+                EventType.PLAYER_ALL_IN,
+                player_id=action.player_id,
+                player_name=player.name,
+                amount=all_in_amount,
+                new_current_bet=self._game_state.current_bet
+            )
             
         # 移动到下一个玩家
         self._advance_to_next_player()
+        
+        # 发射底池更新事件
+        self._event_bus.emit_simple(
+            EventType.POT_UPDATED,
+            pot_amount=self._game_state.pot,
+            current_bet=self._game_state.current_bet
+        )
         
     def _advance_to_next_player(self) -> None:
         """移动到下一个需要行动的玩家."""
@@ -397,24 +573,72 @@ class PokerController:
         # 收集当前轮的下注到底池
         self._game_state.collect_bets_to_pot()
         
+        # 记录当前阶段
+        old_phase = self._game_state.phase
+        
         # 推进阶段
         if self._game_state.phase == Phase.PRE_FLOP:
             self._game_state.advance_phase()  # 到FLOP
             self._game_state.deal_community_cards(3)
+            # 发射阶段转换事件
+            self._event_bus.emit_simple(
+                EventType.PHASE_CHANGED,
+                from_phase=old_phase.value,
+                to_phase=self._game_state.phase.value
+            )
+            # 发射发牌事件
+            self._event_bus.emit_simple(
+                EventType.CARDS_DEALT,
+                phase=self._game_state.phase.value,
+                cards_count=3,
+                community_cards_count=len(self._game_state.community_cards)
+            )
         elif self._game_state.phase == Phase.FLOP:
             self._game_state.advance_phase()  # 到TURN
             self._game_state.deal_community_cards(1)
+            # 发射阶段转换事件
+            self._event_bus.emit_simple(
+                EventType.PHASE_CHANGED,
+                from_phase=old_phase.value,
+                to_phase=self._game_state.phase.value
+            )
+            # 发射发牌事件
+            self._event_bus.emit_simple(
+                EventType.CARDS_DEALT,
+                phase=self._game_state.phase.value,
+                cards_count=1,
+                community_cards_count=len(self._game_state.community_cards)
+            )
         elif self._game_state.phase == Phase.TURN:
             self._game_state.advance_phase()  # 到RIVER
             self._game_state.deal_community_cards(1)
+            # 发射阶段转换事件
+            self._event_bus.emit_simple(
+                EventType.PHASE_CHANGED,
+                from_phase=old_phase.value,
+                to_phase=self._game_state.phase.value
+            )
+            # 发射发牌事件
+            self._event_bus.emit_simple(
+                EventType.CARDS_DEALT,
+                phase=self._game_state.phase.value,
+                cards_count=1,
+                community_cards_count=len(self._game_state.community_cards)
+            )
         elif self._game_state.phase == Phase.RIVER:
             self._game_state.advance_phase()  # 到SHOWDOWN
+            # 发射阶段转换事件
+            self._event_bus.emit_simple(
+                EventType.PHASE_CHANGED,
+                from_phase=old_phase.value,
+                to_phase=self._game_state.phase.value
+            )
             
         # 重置下注轮并设置第一个行动玩家
         if self._game_state.phase != Phase.SHOWDOWN:
             self._game_state.reset_betting_round()
             self._set_first_player_for_new_round()
-            
+        
     def _set_first_player_for_new_round(self) -> None:
         """为新的下注轮设置第一个行动玩家."""
         # 从庄家后面开始找第一个活跃玩家

@@ -1,15 +1,17 @@
 """
-Tests for v2.controller.poker_controller module.
+德州扑克控制器单元测试.
 
-This module tests the PokerController class and related functionality.
+测试控制器的核心功能，包括游戏流程控制、行动处理、状态管理等。
 """
 
 import pytest
 import logging
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
-from v2.controller import PokerController, AIStrategy, HandResult
+from v2.controller import PokerController, HandResult
+from v2.ai import AIStrategy, SimpleAI
 from v2.core import GameState, Player, Action, ActionType, SeatStatus, Phase
+from v2.core.events import EventBus, EventType
 
 
 class TestPokerController:
