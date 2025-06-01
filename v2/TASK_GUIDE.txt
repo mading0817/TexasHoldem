@@ -30,7 +30,7 @@
 | **12** | 逻辑层缺统一入口              | 在 `v2/core/__init__.py` 暴露高层 API (`new_deck`, `evaluate`) 供外层调用                        | `tests/core/test_public_api.py` import API 并跑 smoke | ✅    |
 | **13** | 随机性不可控，测试不稳定          | 在 `state.py` 中注入 `rng: random.Random`，构造时可传固定种子                                        | 在任何需要洗牌的测试用 `Random(42)`，保证 deterministic           | ✅    |
 | **14** | 逻辑层缺 Google-Docstring | 为 **cards/evaluator/player/validator/pot/state** 全面补注释                                 | `pydocstyle` 保持 0 error                             | ✅    |
-| **15** | 文档脱节                  | 运行 `pdoc v2.core -o docs/v2` 自动更新                                                      | CI job: `git diff --exit-code docs/v2` 应为空          | ✅    |
+| **15** | 文档脱节                  | 运行 `pdoc -o docs -d google v2.core v2.controller v2.ui` 自动更新（消除双层v2目录）                | CI job: `git diff --exit-code docs/` 应为空            | ✅    |
 | **16** | TASK\_GUIDE 未标记       | 在 **TASK\_GUIDE** 新增行：7-16 完成，状态✅                                                      | YAML lint                                           | ✅    |
 | **17** | 无用调试文件残留              | `scripts/cleanup.py` 自动删除 `*.log, *.tmp`                                               | 测试：运行脚本后目标目录无 `.log`                                | ✅    |
 | **18** | 10 手牌日志验证未实现          | 编写 `tests/system/test_play_10_hands.py` 调用 CLI 驱动 v2 控制器自动对局 10 手并保存日志，断言筹码守恒、阶段顺序     | 依赖PLAN #19-28 (控制器+CLI实现)                        | ⏸️    |
@@ -110,9 +110,11 @@
 
 **PLAN #15 完成备注**:
 - ✅ 使用pdoc成功生成v2核心模块文档
-- ✅ 生成7个HTML文档文件，包含完整API文档
-- ✅ 文档包含所有模块：cards、enums、evaluator、player、validator、pot、state
+- ✅ 生成优化的文档结构：docs/v2/（单层，无双层v2/v2/结构）
+- ✅ 文档包含所有模块：core、controller、ui及其子模块
 - ✅ 文档结构清晰，包含详细的类和方法说明
+- ✅ 添加.nojekyll文件，优化GitHub Pages支持
+- ✅ 更新docs/conf.py，反映新的模块化生成方式
 
 **PLAN #17 完成备注**:
 - ✅ 清理脚本 `scripts/cleanup.py` 已存在并正常工作
@@ -170,7 +172,7 @@
 | **34** | 10 手回归检测 Streamlit 未覆盖 | 提供隐藏`debug_auto_play`按钮：自动跑 10 手后 alert 汇总                                 | 断言筹码守恒                                        |
 | **35** | 再开新手牌流程丢状态             | `Next Hand`按钮调用 `controller.start_new_hand` 并 `st.session_state.events=[]` | 手动：连打 3 手无异常                                  |
 | **36** | 事件日志未展示                | 侧边栏 `st.sidebar` 滚动显示 `EventBus` 收到的日志                                     | 日志行数随事件递增                                     |
-| **37** | 文档 & guide             | 运行 `pdoc v2/ui/streamlit -o docs/v2`; 更新 TASK\_GUIDE, Readme               | CI diff docs must be empty                    |
+| **37** | 文档 & guide             | 运行 `pdoc -o docs -d google v2.core v2.controller v2.ui`; 更新 TASK\_GUIDE, Readme        | CI diff docs must be empty                    |
 
 ---
 
@@ -183,7 +185,7 @@
 | **40** | 覆盖率未知             | 配置 `pytest-cov`; 阈值 85%                                                                   | CI fail if coverage < 85 |
 | **41** | 功能回归跨层测试          | 编写 `tests/integration/test_full_hand.py`：完整流程多边池场景                                        | 全断言                      |
 | **42** | 负载/性能未知           | `tests/perf/test_evaluator_benchmark.py` 跑 100 万评估 < 阈值 2 s                               | fail if 超时               |
-| **43** | 文档同步难             | CI 阶段运行 `pdoc` 与 `git diff --exit-code` 保证 docs up-to-date                                | 若失败提醒补文档                 |
+| **43** | 文档同步难             | CI 阶段运行 `pdoc -o docs -d google v2.core v2.controller v2.ui` 与 `git diff --exit-code docs/` 保证 docs up-to-date | 若失败提醒补文档                 |
 | **44** | 临时文件残留            | 在 CI 最末执行 `scripts/cleanup.py --check` 报告无残留                                              | fail if 残留               |
 | **45** | TASK\_GUIDE 未自动校验 | YAML schema 校验 TASK\_GUIDE，确保每条状态 ✅ / 🚧 / ❌                                              | fail if 不符合              |
 

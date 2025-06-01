@@ -9,6 +9,8 @@ import random
 from v2.core.cards import Card, Deck
 from v2.core.enums import Suit, Rank
 
+pytestmark = pytest.mark.v2
+
 
 class TestCard:
     """测试Card类的功能。"""
