@@ -16,8 +16,17 @@
     <nav class="pdoc">
         <label id="navtoggle" for="togglestate" class="pdoc-button"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><path stroke-linecap='round' stroke="currentColor" stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/></svg></label>
         <input id="togglestate" type="checkbox" aria-hidden="true" tabindex="-1">
-        <div>
+        <div>            <a class="pdoc-button module-list-button" href="../index.html">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z"/>
+  <path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/>
+</svg>                &nbsp;
+                Module Index
+            </a>
 
+
+            <input type="search" placeholder="Search..." role="searchbox" aria-label="search"
+                   pattern=".+" required>
 
 
 
@@ -536,7 +545,7 @@ the core game logic with the user interface layers.</p>
                                         <input id="PokerController.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
             
-        <span class="name">PokerController</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">game_state</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">v2</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">GameState</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">ai_strategy</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n"><a href="#AIStrategy">AIStrategy</a></span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">logger</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
+        <span class="name">PokerController</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">game_state</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n"><a href="core.html#GameState">v2.core.GameState</a></span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">ai_strategy</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n"><a href="#AIStrategy">AIStrategy</a></span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">logger</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
                 <label class="view-source-button" for="PokerController.__init__-view-source"><span>View Source</span></label>
 
@@ -565,10 +574,13 @@ the core game logic with the user interface layers.</p>
 
             <div class="docstring"><p>初始化控制器.</p>
 
-<p>Args:
-    game_state: 游戏状态对象，如果为None则创建默认状态
-    ai_strategy: AI策略实现，如果为None则使用默认策略
-    logger: 日志记录器，如果为None则创建默认记录器</p>
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>game_state:</strong>  游戏状态对象，如果为None则创建默认状态</li>
+<li><strong>ai_strategy:</strong>  AI策略实现，如果为None则使用默认策略</li>
+<li><strong>logger:</strong>  日志记录器，如果为None则创建默认记录器</li>
+</ul>
 </div>
 
 
@@ -628,11 +640,17 @@ the core game logic with the user interface layers.</p>
 <li>设置第一个行动玩家</li>
 </ul>
 
-<p>Returns:
-    是否成功开始新手牌</p>
+<h6 id="returns">Returns:</h6>
 
-<p>Raises:
-    RuntimeError: 如果当前已有手牌在进行中</p>
+<blockquote>
+  <p>是否成功开始新手牌</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>RuntimeError:</strong>  如果当前已有手牌在进行中</li>
+</ul>
 </div>
 
 
@@ -642,7 +660,7 @@ the core game logic with the user interface layers.</p>
 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">execute_action</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">action</span><span class="p">:</span> <span class="n">v2</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">enums</span><span class="o">.</span><span class="n">Action</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
+        <span class="name">execute_action</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">action</span><span class="p">:</span> <span class="n"><a href="core.html#Action">v2.core.Action</a></span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
 
                 <label class="view-source-button" for="PokerController.execute_action-view-source"><span>View Source</span></label>
 
@@ -690,14 +708,23 @@ the core game logic with the user interface layers.</p>
 
 <p>验证并执行玩家的行动，更新游戏状态。</p>
 
-<p>Args:
-    action: 玩家要执行的行动</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    是否成功执行行动</p>
+<ul>
+<li><strong>action:</strong>  玩家要执行的行动</li>
+</ul>
 
-<p>Raises:
-    ValueError: 如果行动无效</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>是否成功执行行动</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  如果行动无效</li>
+</ul>
 </div>
 
 
@@ -707,7 +734,7 @@ the core game logic with the user interface layers.</p>
 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">get_snapshot</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n">v2</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">GameSnapshot</span>:</span></span>
+        <span class="name">get_snapshot</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n"><a href="core.html#GameSnapshot">v2.core.GameSnapshot</a></span>:</span></span>
 
                 <label class="view-source-button" for="PokerController.get_snapshot-view-source"><span>View Source</span></label>
 
@@ -725,8 +752,11 @@ the core game logic with the user interface layers.</p>
 
             <div class="docstring"><p>获取当前游戏状态的不可变快照.</p>
 
-<p>Returns:
-    当前游戏状态的快照，可以安全地传递给UI层</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>当前游戏状态的快照，可以安全地传递给UI层</p>
+</blockquote>
 </div>
 
 
@@ -771,8 +801,11 @@ the core game logic with the user interface layers.</p>
 
             <div class="docstring"><p>检查当前手牌是否已结束.</p>
 
-<p>Returns:
-    当前手牌是否已结束</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>当前手牌是否已结束</p>
+</blockquote>
 </div>
 
 
@@ -803,8 +836,11 @@ the core game logic with the user interface layers.</p>
 
             <div class="docstring"><p>获取当前需要行动的玩家ID.</p>
 
-<p>Returns:
-    当前玩家ID，如果没有玩家需要行动则返回None</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>当前玩家ID，如果没有玩家需要行动则返回None</p>
+</blockquote>
 </div>
 
 
@@ -850,8 +886,11 @@ the core game logic with the user interface layers.</p>
 
 <p>如果当前玩家是AI，则自动获取AI决策并执行。</p>
 
-<p>Returns:
-    是否成功处理AI行动</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>是否成功处理AI行动</p>
+</blockquote>
 </div>
 
 
@@ -894,8 +933,11 @@ the core game logic with the user interface layers.</p>
 
             <div class="docstring"><p>结束当前手牌并计算结果.</p>
 
-<p>Returns:
-    手牌结果，如果没有手牌在进行中则返回None</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>手牌结果，如果没有手牌在进行中则返回None</p>
+</blockquote>
 </div>
 
 
@@ -991,7 +1033,7 @@ the core game logic with the user interface layers.</p>
 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">decide</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">game_snapshot</span><span class="p">:</span> <span class="n">v2</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">GameSnapshot</span>,</span><span class="param">	<span class="n">player_id</span><span class="p">:</span> <span class="nb">int</span></span><span class="return-annotation">) -> <span class="n">v2</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">enums</span><span class="o">.</span><span class="n">Action</span>:</span></span>
+        <span class="name">decide</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">game_snapshot</span><span class="p">:</span> <span class="n"><a href="core.html#GameSnapshot">v2.core.GameSnapshot</a></span>,</span><span class="param">	<span class="n">player_id</span><span class="p">:</span> <span class="nb">int</span></span><span class="return-annotation">) -> <span class="n"><a href="core.html#Action">v2.core.Action</a></span>:</span></span>
 
                 <label class="view-source-button" for="AIStrategy.decide-view-source"><span>View Source</span></label>
 
@@ -1016,15 +1058,24 @@ the core game logic with the user interface layers.</p>
 
             <div class="docstring"><p>根据游戏状态快照决定下一步行动.</p>
 
-<p>Args:
-    game_snapshot: 当前游戏状态的不可变快照
-    player_id: 需要做决策的玩家ID</p>
+<h6 id="arguments">Arguments:</h6>
 
-<p>Returns:
-    玩家决定的行动</p>
+<ul>
+<li><strong>game_snapshot:</strong>  当前游戏状态的不可变快照</li>
+<li><strong>player_id:</strong>  需要做决策的玩家ID</li>
+</ul>
 
-<p>Raises:
-    ValueError: 如果玩家ID无效或游戏状态不允许该玩家行动</p>
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>玩家决定的行动</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  如果玩家ID无效或游戏状态不允许该玩家行动</li>
+</ul>
 </div>
 
 
@@ -1066,11 +1117,14 @@ the core game logic with the user interface layers.</p>
 
 <p>包含一手牌结束后的所有相关信息，用于统计和显示。</p>
 
-<p>Attributes:
-    winner_ids: 获胜玩家ID列表
-    pot_amount: 底池总金额
-    winning_hand_description: 获胜牌型描述
-    side_pots: 边池分配信息</p>
+<h6 id="attributes">Attributes:</h6>
+
+<ul>
+<li><strong>winner_ids:</strong>  获胜玩家ID列表</li>
+<li><strong>pot_amount:</strong>  底池总金额</li>
+<li><strong>winning_hand_description:</strong>  获胜牌型描述</li>
+<li><strong>side_pots:</strong>  边池分配信息</li>
+</ul>
 </div>
 
 
@@ -1132,5 +1186,186 @@ the core game logic with the user interface layers.</p>
                             </div>
                 </section>
     </main>
-</body>
+<script>
+    function escapeHTML(html) {
+        return document.createElement('div').appendChild(document.createTextNode(html)).parentNode.innerHTML;
+    }
+
+    const originalContent = document.querySelector("main.pdoc");
+    let currentContent = originalContent;
+
+    function setContent(innerHTML) {
+        let elem;
+        if (innerHTML) {
+            elem = document.createElement("main");
+            elem.classList.add("pdoc");
+            elem.innerHTML = innerHTML;
+        } else {
+            elem = originalContent;
+        }
+        if (currentContent !== elem) {
+            currentContent.replaceWith(elem);
+            currentContent = elem;
+        }
+    }
+
+    function getSearchTerm() {
+        return (new URL(window.location)).searchParams.get("search");
+    }
+
+    const searchBox = document.querySelector(".pdoc input[type=search]");
+    searchBox.addEventListener("input", function () {
+        let url = new URL(window.location);
+        if (searchBox.value.trim()) {
+            url.hash = "";
+            url.searchParams.set("search", searchBox.value);
+        } else {
+            url.searchParams.delete("search");
+        }
+        history.replaceState("", "", url.toString());
+        onInput();
+    });
+    window.addEventListener("popstate", onInput);
+
+
+    let search, searchErr;
+
+    async function initialize() {
+        try {
+            search = await new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.type = "text/javascript";
+                script.async = true;
+                script.onload = () => resolve(window.pdocSearch);
+                script.onerror = (e) => reject(e);
+                script.src = "../search.js";
+                document.getElementsByTagName("head")[0].appendChild(script);
+            });
+        } catch (e) {
+            console.error("Cannot fetch pdoc search index");
+            searchErr = "Cannot fetch search index.";
+        }
+        onInput();
+
+        document.querySelector("nav.pdoc").addEventListener("click", e => {
+            if (e.target.hash) {
+                searchBox.value = "";
+                searchBox.dispatchEvent(new Event("input"));
+            }
+        });
+    }
+
+    function onInput() {
+        setContent((() => {
+            const term = getSearchTerm();
+            if (!term) {
+                return null
+            }
+            if (searchErr) {
+                return `<h3>Error: ${searchErr}</h3>`
+            }
+            if (!search) {
+                return "<h3>Searching...</h3>"
+            }
+
+            window.scrollTo({top: 0, left: 0, behavior: 'auto'});
+
+            const results = search(term);
+
+            let html;
+            if (results.length === 0) {
+                html = `No search results for '${escapeHTML(term)}'.`
+            } else {
+                html = `<h4>${results.length} search result${results.length > 1 ? "s" : ""} for '${escapeHTML(term)}'.</h4>`;
+            }
+            for (let result of results.slice(0, 10)) {
+                let doc = result.doc;
+                let url = `../${doc.modulename.replaceAll(".", "/")}.html`;
+                if (doc.qualname) {
+                    url += `#${doc.qualname}`;
+                }
+
+                let heading;
+                switch (result.doc.kind) {
+                    case "function":
+                        if (doc.fullname.endsWith(".__init__")) {
+                            heading = `<span class="name">${doc.fullname.replace(/\.__init__$/, "")}</span>${doc.signature}`;
+                        } else {
+                            heading = `<span class="def">${doc.funcdef}</span> <span class="name">${doc.fullname}</span>${doc.signature}`;
+                        }
+                        break;
+                    case "class":
+                        heading = `<span class="def">class</span> <span class="name">${doc.fullname}</span>`;
+                        if (doc.bases)
+                            heading += `<wbr>(<span class="base">${doc.bases}</span>)`;
+                        heading += `:`;
+                        break;
+                    case "variable":
+                        heading = `<span class="name">${doc.fullname}</span>`;
+                        if (doc.annotation)
+                            heading += `<span class="annotation">${doc.annotation}</span>`;
+                        if (doc.default_value)
+                            heading += `<span class="default_value"> = ${doc.default_value}</span>`;
+                        break;
+                    default:
+                        heading = `<span class="name">${doc.fullname}</span>`;
+                        break;
+                }
+                html += `
+                        <section class="search-result">
+                        <a href="${url}" class="attr ${doc.kind}">${heading}</a>
+                        <div class="docstring">${doc.doc}</div>
+                        </section>
+                    `;
+
+            }
+            return html;
+        })());
+    }
+
+    if (getSearchTerm()) {
+        initialize();
+        searchBox.value = getSearchTerm();
+        onInput();
+    } else {
+        searchBox.addEventListener("focus", initialize, {once: true});
+    }
+
+    searchBox.addEventListener("keydown", e => {
+        if (["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) {
+            let focused = currentContent.querySelector(".search-result.focused");
+            if (!focused) {
+                currentContent.querySelector(".search-result").classList.add("focused");
+            } else if (
+                e.key === "ArrowDown"
+                && focused.nextElementSibling
+                && focused.nextElementSibling.classList.contains("search-result")
+            ) {
+                focused.classList.remove("focused");
+                focused.nextElementSibling.classList.add("focused");
+                focused.nextElementSibling.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "nearest"
+                });
+            } else if (
+                e.key === "ArrowUp"
+                && focused.previousElementSibling
+                && focused.previousElementSibling.classList.contains("search-result")
+            ) {
+                focused.classList.remove("focused");
+                focused.previousElementSibling.classList.add("focused");
+                focused.previousElementSibling.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "nearest"
+                });
+            } else if (
+                e.key === "Enter"
+            ) {
+                focused.querySelector("a").click();
+            }
+        }
+    });
+</script></body>
 </html>
