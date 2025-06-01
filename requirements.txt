@@ -17,4 +17,8 @@ mypy>=1.0.0
 
 # Documentation Dependencies
 pdoc>=14.0.0
-pydocstyle>=6.3.0 
+pydocstyle>=6.3.0
+
+# Web Interface Dependencies
+streamlit>=1.28.0
+click>=8.0.0  # 用于CLI输入处理 

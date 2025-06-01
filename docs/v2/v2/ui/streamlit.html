@@ -28,6 +28,13 @@
 
 
 
+            <h2>API Documentation</h2>
+                <ul class="memberlist">
+            <li>
+                    <a class="function" href="#main">main</a>
+            </li>
+    </ul>
+
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -51,11 +58,80 @@ v2<wbr>.<a href="./../ui.html">ui</a><wbr>.streamlit    </h1>
 
                         <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">1</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-2"><a href="#L-2"><span class="linenos">2</span></a><span class="sd">Streamlit web interface for Texas Hold&#39;em poker game.</span>
-</span><span id="L-3"><a href="#L-3"><span class="linenos">3</span></a><span class="sd">&quot;&quot;&quot;</span> 
+</span><span id="L-3"><a href="#L-3"><span class="linenos">3</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos">4</span></a>
+</span><span id="L-5"><a href="#L-5"><span class="linenos">5</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.app</span><span class="w"> </span><span class="kn">import</span> <span class="n">main</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos">6</span></a>
+</span><span id="L-7"><a href="#L-7"><span class="linenos">7</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;main&#39;</span><span class="p">]</span> 
 </span></pre></div>
 
 
             </section>
+                <section id="main">
+                            <input id="main-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">main</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="main-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#main"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="main-394"><a href="#main-394"><span class="linenos">394</span></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="main-395"><a href="#main-395"><span class="linenos">395</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;主函数.&quot;&quot;&quot;</span>
+</span><span id="main-396"><a href="#main-396"><span class="linenos">396</span></a>    <span class="n">st</span><span class="o">.</span><span class="n">set_page_config</span><span class="p">(</span>
+</span><span id="main-397"><a href="#main-397"><span class="linenos">397</span></a>        <span class="n">page_title</span><span class="o">=</span><span class="s2">&quot;德州扑克&quot;</span><span class="p">,</span>
+</span><span id="main-398"><a href="#main-398"><span class="linenos">398</span></a>        <span class="n">page_icon</span><span class="o">=</span><span class="s2">&quot;🃏&quot;</span><span class="p">,</span>
+</span><span id="main-399"><a href="#main-399"><span class="linenos">399</span></a>        <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;wide&quot;</span>
+</span><span id="main-400"><a href="#main-400"><span class="linenos">400</span></a>    <span class="p">)</span>
+</span><span id="main-401"><a href="#main-401"><span class="linenos">401</span></a>    
+</span><span id="main-402"><a href="#main-402"><span class="linenos">402</span></a>    <span class="c1"># 初始化session state</span>
+</span><span id="main-403"><a href="#main-403"><span class="linenos">403</span></a>    <span class="n">initialize_session_state</span><span class="p">()</span>
+</span><span id="main-404"><a href="#main-404"><span class="linenos">404</span></a>    
+</span><span id="main-405"><a href="#main-405"><span class="linenos">405</span></a>    <span class="c1"># 渲染页面</span>
+</span><span id="main-406"><a href="#main-406"><span class="linenos">406</span></a>    <span class="n">render_header</span><span class="p">()</span>
+</span><span id="main-407"><a href="#main-407"><span class="linenos">407</span></a>    <span class="n">render_sidebar</span><span class="p">()</span>
+</span><span id="main-408"><a href="#main-408"><span class="linenos">408</span></a>    
+</span><span id="main-409"><a href="#main-409"><span class="linenos">409</span></a>    <span class="c1"># 获取游戏状态</span>
+</span><span id="main-410"><a href="#main-410"><span class="linenos">410</span></a>    <span class="n">controller</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">controller</span>
+</span><span id="main-411"><a href="#main-411"><span class="linenos">411</span></a>    <span class="n">snapshot</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">()</span> <span class="k">if</span> <span class="n">st</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">game_started</span> <span class="k">else</span> <span class="kc">None</span>
+</span><span id="main-412"><a href="#main-412"><span class="linenos">412</span></a>    
+</span><span id="main-413"><a href="#main-413"><span class="linenos">413</span></a>    <span class="c1"># 渲染游戏状态</span>
+</span><span id="main-414"><a href="#main-414"><span class="linenos">414</span></a>    <span class="n">render_game_state</span><span class="p">(</span><span class="n">snapshot</span><span class="p">)</span>
+</span><span id="main-415"><a href="#main-415"><span class="linenos">415</span></a>    
+</span><span id="main-416"><a href="#main-416"><span class="linenos">416</span></a>    <span class="c1"># 渲染行动按钮</span>
+</span><span id="main-417"><a href="#main-417"><span class="linenos">417</span></a>    <span class="k">if</span> <span class="n">st</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">game_started</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">controller</span><span class="o">.</span><span class="n">is_hand_over</span><span class="p">():</span>
+</span><span id="main-418"><a href="#main-418"><span class="linenos">418</span></a>        <span class="n">render_action_buttons</span><span class="p">(</span><span class="n">controller</span><span class="p">)</span>
+</span><span id="main-419"><a href="#main-419"><span class="linenos">419</span></a>    <span class="k">elif</span> <span class="n">st</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">game_started</span> <span class="ow">and</span> <span class="n">controller</span><span class="o">.</span><span class="n">is_hand_over</span><span class="p">():</span>
+</span><span id="main-420"><a href="#main-420"><span class="linenos">420</span></a>        <span class="n">st</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="s2">&quot;🎉 手牌结束！&quot;</span><span class="p">)</span>
+</span><span id="main-421"><a href="#main-421"><span class="linenos">421</span></a>        
+</span><span id="main-422"><a href="#main-422"><span class="linenos">422</span></a>        <span class="n">col1</span><span class="p">,</span> <span class="n">col2</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">columns</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span><span id="main-423"><a href="#main-423"><span class="linenos">423</span></a>        <span class="k">with</span> <span class="n">col1</span><span class="p">:</span>
+</span><span id="main-424"><a href="#main-424"><span class="linenos">424</span></a>            <span class="k">if</span> <span class="n">st</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="s2">&quot;📊 查看结果&quot;</span><span class="p">):</span>
+</span><span id="main-425"><a href="#main-425"><span class="linenos">425</span></a>                <span class="n">result</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">end_hand</span><span class="p">()</span>
+</span><span id="main-426"><a href="#main-426"><span class="linenos">426</span></a>                <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
+</span><span id="main-427"><a href="#main-427"><span class="linenos">427</span></a>                    <span class="n">st</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;🏆 获胜者: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">winner_ids</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="main-428"><a href="#main-428"><span class="linenos">428</span></a>                    <span class="n">st</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;💰 底池金额: $</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">pot_amount</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="main-429"><a href="#main-429"><span class="linenos">429</span></a>                    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">winning_hand_description</span><span class="p">:</span>
+</span><span id="main-430"><a href="#main-430"><span class="linenos">430</span></a>                        <span class="n">st</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;🃏 获胜牌型: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">winning_hand_description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="main-431"><a href="#main-431"><span class="linenos">431</span></a>        
+</span><span id="main-432"><a href="#main-432"><span class="linenos">432</span></a>        <span class="k">with</span> <span class="n">col2</span><span class="p">:</span>
+</span><span id="main-433"><a href="#main-433"><span class="linenos">433</span></a>            <span class="k">if</span> <span class="n">st</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="s2">&quot;🔄 下一手牌&quot;</span><span class="p">):</span>
+</span><span id="main-434"><a href="#main-434"><span class="linenos">434</span></a>                <span class="n">success</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">start_new_hand</span><span class="p">()</span>
+</span><span id="main-435"><a href="#main-435"><span class="linenos">435</span></a>                <span class="k">if</span> <span class="n">success</span><span class="p">:</span>
+</span><span id="main-436"><a href="#main-436"><span class="linenos">436</span></a>                    <span class="n">st</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">events</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="main-437"><a href="#main-437"><span class="linenos">437</span></a>                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">session_state</span><span class="p">,</span> <span class="s1">&#39;show_raise_input&#39;</span><span class="p">):</span>
+</span><span id="main-438"><a href="#main-438"><span class="linenos">438</span></a>                        <span class="n">st</span><span class="o">.</span><span class="n">session_state</span><span class="o">.</span><span class="n">show_raise_input</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="main-439"><a href="#main-439"><span class="linenos">439</span></a>                    <span class="n">st</span><span class="o">.</span><span class="n">rerun</span><span class="p">()</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>主函数.</p>
+</div>
+
+
+                </section>
     </main>
 <script>
     function escapeHTML(html) {
