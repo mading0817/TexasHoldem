@@ -88,8 +88,8 @@ class TestDeck:
         """测试Deck的创建。"""
         deck = Deck()
         assert len(deck) == 52
-        assert deck.cards_remaining() == 52
-        assert not deck.is_empty()
+        assert deck.cards_remaining == 52
+        assert not deck.is_empty
     
     def test_deck_with_custom_rng(self):
         """测试使用自定义随机数生成器的Deck。"""
@@ -121,7 +121,7 @@ class TestDeck:
         card = deck.deal_card()
         assert isinstance(card, Card)
         assert len(deck) == initial_count - 1
-        assert deck.cards_remaining() == initial_count - 1
+        assert deck.cards_remaining == initial_count - 1
     
     def test_deal_multiple_cards(self):
         """测试发多张牌。"""
@@ -140,7 +140,7 @@ class TestDeck:
         deck = Deck()
         deck.deal_cards(52)  # 发完所有牌
         
-        assert deck.is_empty()
+        assert deck.is_empty
         
         with pytest.raises(IndexError, match="Cannot deal from empty deck"):
             deck.deal_card()
@@ -216,23 +216,26 @@ class TestDeck:
         # 重置
         deck.reset()
         assert len(deck) == 52
-        assert not deck.is_empty()
+        assert not deck.is_empty
     
     def test_deck_string_representation(self):
         """测试Deck的字符串表示。"""
         deck = Deck()
-        assert str(deck) == "Deck(52 cards)"
+        assert str(deck) == "Deck(52 cards remaining)"
         
         deck.deal_cards(10)
-        assert str(deck) == "Deck(42 cards)"
+        assert str(deck) == "Deck(42 cards remaining)"
     
     def test_deck_repr(self):
         """测试Deck的详细表示。"""
         deck = Deck()
-        assert repr(deck) == "Deck(cards_remaining=52)"
+        # 由于RNG对象的字符串表示包含内存地址，我们只检查开头部分
+        repr_str = repr(deck)
+        assert repr_str.startswith("Deck(cards_remaining=52, rng=")
         
         deck.deal_cards(5)
-        assert repr(deck) == "Deck(cards_remaining=47)"
+        repr_str = repr(deck)
+        assert repr_str.startswith("Deck(cards_remaining=47, rng=")
 
 
 class TestCardDeckIntegration:

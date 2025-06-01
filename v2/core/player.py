@@ -1,8 +1,7 @@
 """
-玩家状态管理模块。
+德州扑克玩家状态管理.
 
-包含Player类的实现，管理玩家的筹码、手牌、状态等信息。
-该模块保持纯数据对象特性，不包含任何UI相关的打印功能。
+包含玩家的基本信息、筹码管理、手牌管理和状态控制功能.
 """
 
 from dataclasses import dataclass, field
@@ -15,24 +14,11 @@ from .enums import SeatStatus, ActionType
 @dataclass
 class Player:
     """
-    德州扑克玩家类。
+    德州扑克玩家类.
     
-    管理玩家的筹码、手牌、状态等信息。该类为纯数据对象，
-    不包含任何UI相关的打印或显示功能。
-    
-    Attributes:
-        seat_id: 座位号，用于标识玩家位置
-        name: 玩家名称
-        chips: 当前筹码数量
-        hole_cards: 手牌列表，最多2张
-        current_bet: 本轮已投入的筹码
-        status: 座位状态
-        is_dealer: 是否为庄家
-        is_small_blind: 是否为小盲注
-        is_big_blind: 是否为大盲注
-        last_action_type: 最后一次行动类型
-        is_human: 是否为人类玩家
+    管理玩家的基本信息、筹码、手牌和游戏状态.
     """
+
     seat_id: int
     name: str
     chips: int
@@ -44,9 +30,11 @@ class Player:
     is_big_blind: bool = False
     last_action_type: Optional[ActionType] = None
     is_human: bool = False
+    total_bet_this_hand: int = 0
 
     def __post_init__(self) -> None:
-        """验证玩家数据的有效性。
+        """
+        验证玩家数据的有效性.
         
         Raises:
             ValueError: 当玩家数据无效时
@@ -64,21 +52,23 @@ class Player:
             raise ValueError(f"手牌不能超过2张: {len(self.hole_cards)}")
 
     def __hash__(self) -> int:
-        """使Player对象可hash，基于seat_id。
+        """
+        返回玩家的哈希值.
         
         Returns:
-            基于座位号的哈希值
+            int: 基于座位号的哈希值
         """
         return hash(self.seat_id)
 
     def __eq__(self, other: object) -> bool:
-        """基于seat_id比较Player对象。
+        """
+        判断两个玩家是否相等.
         
         Args:
             other: 另一个对象
             
         Returns:
-            如果是相同座位的玩家则返回True
+            bool: 如果座位号相同则返回True
         """
         if not isinstance(other, Player):
             return False
@@ -86,85 +76,85 @@ class Player:
 
     def can_act(self) -> bool:
         """
-        检查玩家是否可以行动。
+        检查玩家是否可以行动.
         
         Returns:
-            如果玩家可以行动则返回True，否则返回False
+            bool: 如果玩家状态为ACTIVE则返回True
         """
         return self.status == SeatStatus.ACTIVE and self.chips > 0
 
     def is_all_in(self) -> bool:
         """
-        检查玩家是否已全押。
+        检查玩家是否全押.
         
         Returns:
-            如果玩家已全押则返回True，否则返回False
+            bool: 如果玩家状态为ALL_IN则返回True
         """
         return self.status == SeatStatus.ALL_IN or (self.chips == 0 and self.current_bet > 0)
 
     def is_folded(self) -> bool:
         """
-        检查玩家是否已弃牌。
+        检查玩家是否已弃牌.
         
         Returns:
-            如果玩家已弃牌则返回True，否则返回False
+            bool: 如果玩家状态为FOLDED则返回True
         """
         return self.status == SeatStatus.FOLDED
 
     def is_out(self) -> bool:
         """
-        检查玩家是否已出局。
+        检查玩家是否已出局.
         
         Returns:
-            如果玩家已出局则返回True，否则返回False
+            bool: 如果玩家状态为OUT则返回True
         """
         return self.status == SeatStatus.OUT
 
     def get_effective_stack(self) -> int:
         """
-        获取有效筹码数（当前筹码 + 本轮已投入）。
+        获取玩家的有效筹码数.
         
         Returns:
-            有效筹码总数
+            int: 玩家当前可用的筹码数
         """
         return self.chips + self.current_bet
 
     def can_bet(self, amount: int) -> bool:
         """
-        检查玩家是否可以下注指定金额。
+        检查玩家是否可以下注指定金额.
         
         Args:
             amount: 要下注的金额
             
         Returns:
-            如果可以下注则返回True，否则返回False
+            bool: 如果玩家有足够筹码则返回True
         """
         return self.can_act() and self.chips >= amount
 
     def can_call(self, call_amount: int) -> bool:
         """
-        检查玩家是否可以跟注。
+        检查玩家是否可以跟注指定金额.
         
         Args:
-            call_amount: 需要跟注的金额
+            call_amount: 要跟注的金额
             
         Returns:
-            如果可以跟注则返回True，否则返回False
+            bool: 如果玩家有足够筹码则返回True
         """
         return self.can_act() and (self.chips >= call_amount or self.chips > 0)
 
     def bet(self, amount: int) -> int:
         """
-        玩家下注。
+        执行下注操作.
         
         Args:
             amount: 下注金额
             
         Returns:
-            实际下注金额
+            int: 实际下注的金额
             
         Raises:
-            ValueError: 当下注金额无效或玩家无法行动时
+            ValueError: 当下注金额无效或筹码不足时
         """
         if not self.can_act():
             raise ValueError(f"玩家{self.seat_id}无法行动")
@@ -186,10 +176,9 @@ class Player:
 
     def fold(self) -> None:
         """
-        玩家弃牌。
+        执行弃牌操作.
         
-        Raises:
-            ValueError: 当玩家无法弃牌时
+        将玩家状态设置为FOLDED.
         """
         if not self.can_act() and self.status != SeatStatus.ALL_IN:
             raise ValueError(f"玩家{self.seat_id}无法弃牌")
@@ -198,13 +187,13 @@ class Player:
 
     def set_hole_cards(self, cards: List[Card]) -> None:
         """
-        设置玩家手牌。
+        设置玩家的手牌.
         
         Args:
-            cards: 手牌列表，最多2张
+            cards: 手牌列表，通常为2张牌
             
         Raises:
-            ValueError: 当手牌数量无效时
+            ValueError: 当手牌数量不正确时
         """
         if len(cards) > 2:
             raise ValueError(f"手牌不能超过2张: {len(cards)}")
@@ -213,13 +202,10 @@ class Player:
 
     def get_hole_cards_str(self, hidden: bool = False) -> str:
         """
-        获取手牌的字符串表示。
+        获取手牌的字符串表示.
         
-        Args:
-            hidden: 是否隐藏手牌（显示为XX）
-            
         Returns:
-            手牌的字符串表示
+            str: 手牌的字符串表示，如"AH KS"
         """
         if hidden:
             return "XX XX" if len(self.hole_cards) == 2 else "XX" * len(self.hole_cards)
@@ -228,10 +214,9 @@ class Player:
 
     def reset_for_new_hand(self) -> None:
         """
-        为新手牌重置玩家状态。
+        为新一手牌重置玩家状态.
         
-        保留筹码，清空手牌和当前下注。
-        注意：位置标记(is_dealer, is_small_blind, is_big_blind)由游戏状态管理，不在此重置。
+        清空手牌，重置下注金额和状态.
         """
         self.hole_cards.clear()
         self.current_bet = 0
@@ -246,24 +231,22 @@ class Player:
 
     def reset_current_bet(self) -> None:
         """
-        重置当前下注。
+        重置当前轮次的下注金额.
         
-        通常在下注轮结束时调用，同时重置最后行动类型，为新的下注轮做准备。
+        通常在新的下注轮开始时调用.
         """
         self.current_bet = 0
         self.last_action_type = None
 
     def add_chips(self, amount: int) -> None:
         """
-        增加筹码。
-        
-        用于赢得底池时增加玩家筹码。
+        增加玩家的筹码.
         
         Args:
             amount: 要增加的筹码数量
             
         Raises:
-            ValueError: 当增加的筹码数量为负数时
+            ValueError: 当金额为负数时
         """
         if amount < 0:
             raise ValueError(f"增加的筹码数量不能为负数: {amount}")
@@ -276,10 +259,10 @@ class Player:
 
     def __str__(self) -> str:
         """
-        返回玩家的可读表示。
+        返回玩家的字符串表示.
         
         Returns:
-            包含玩家基本信息的字符串
+            str: 包含玩家基本信息的字符串
         """
         status_str = self.status.name
         cards_str = self.get_hole_cards_str()
@@ -298,10 +281,10 @@ class Player:
 
     def __repr__(self) -> str:
         """
-        返回玩家的调试表示。
+        返回玩家的详细字符串表示.
         
         Returns:
-            Player对象的详细字符串表示
+            str: 包含所有玩家信息的详细字符串
         """
         return f"Player(seat={self.seat_id}, name='{self.name}', chips={self.chips}, status={self.status.name})"
     
@@ -309,7 +292,7 @@ class Player:
     
     def get_hand_cards(self) -> List[Card]:
         """
-        获取玩家手牌（测试兼容性方法）。
+        获取玩家手牌（测试兼容性方法）.
         
         Returns:
             玩家的手牌列表副本
@@ -319,9 +302,9 @@ class Player:
     @property
     def is_active(self) -> bool:
         """
-        检查玩家是否处于活跃状态（测试兼容性属性）。
+        检查玩家是否处于活跃状态（测试兼容性属性）.
         
         Returns:
             如果玩家处于活跃状态则返回True
         """
-        return self.status == SeatStatus.ACTIVE 
+        return self.status == SeatStatus.ACTIVE

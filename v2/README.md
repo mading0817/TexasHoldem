@@ -9,12 +9,12 @@
 - **cards.py**: 扑克牌和牌堆对象 ✅
 - **evaluator.py**: 牌型评估器 ✅
 - **player.py**: 玩家状态管理 ✅
-- **validator.py**: 行动验证器 🚧
-- **pot.py**: 边池管理器 🚧
-- **state.py**: 游戏状态管理 🚧
+- **validator.py**: 行动验证器 ✅
+- **pot.py**: 边池管理器 ✅
+- **state.py**: 游戏状态管理 ✅
 
 ### 控制器层 (controller/)
-- 应用控制逻辑 🚧
+- **poker_controller.py**: 游戏控制器 ✅
 - 数据传输对象 (DTO) 🚧
 - 核心逻辑与UI的桥梁 🚧
 
@@ -32,22 +32,32 @@
 
 ## 开发状态
 
-### ✅ 已完成 (PLAN #1-8)
+### ✅ 已完成 (PLAN #1-19)
 - v2目录结构建立
 - 核心枚举定义 (Suit, Rank, ActionType, Phase等)
 - 扑克牌对象 (Card, Deck)
 - **牌型评估器 (SimpleEvaluator, HandResult)**
 - **玩家状态管理 (Player)**
-- 基础测试框架 (116个测试用例全部通过)
-- **文档生成**: 使用pdoc生成完整API文档，包含5个HTML文件
+- **行动验证器 (ActionValidator)**
+- **边池管理器 (PotManager, SidePot)**
+- **游戏状态管理 (GameState, GameSnapshot)**
+- **核心API统一入口 (v2.core公共API)**
+- **确定性随机数控制 (固定种子测试)**
+- **Google Docstring完善 (0个pydocstyle错误)**
+- **文档生成 (pdoc自动更新)**
+- **项目清理脚本 (cleanup.py)**
+- **游戏控制器 (PokerController, AIStrategy协议)**
+- 基础测试框架 (239个测试用例全部通过)
+- **文档生成**: 使用pdoc生成完整API文档，包含8个HTML文件
 
-### 🚧 进行中 (PLAN #9-18)
-- 行动验证器
-- 边池计算
-- 游戏状态管理
+### 🚧 进行中 (PLAN #18, #20-25)
+- 10手牌日志验证系统
+- AI策略实现
+- 事务原子性
+- 事件系统
+- CLI适配
 
 ### 📋 计划中
-- 控制器层重构 (PLAN #19-25)
 - CLI适配 (PLAN #26-28)
 - Streamlit MVP (PLAN #29-37)
 - 测试体系完善 (PLAN #38-45)
@@ -61,8 +71,14 @@
 - `tests/unit/test_v2_evaluator.py`: 17个测试用例 ✅
 - `tests/unit/test_v2_evaluator_compatibility.py`: 3个兼容性测试 ✅
 - `tests/unit/test_v2_player.py`: 52个测试用例 ✅
+- `tests/unit/test_v2_validator.py`: 34个测试用例 ✅
+- `tests/unit/test_v2_pot.py`: 28个测试用例 ✅
+- `tests/unit/test_v2_state.py`: 24个测试用例 ✅
+- `tests/core/test_public_api.py`: 10个测试用例 ✅
+- `tests/unit/test_v2_deterministic_random.py`: 8个测试用例 ✅
+- `tests/unit/test_v2_controller.py`: 19个测试用例 ✅
 
-总计：116个测试用例，100%通过率
+总计：239个测试用例，100%通过率
 
 ## 核心功能
 
@@ -94,16 +110,44 @@ v2的玩家状态管理提供以下功能：
 - 自动状态变更（全押时自动设置ALL_IN状态）
 - 纯数据对象，不含UI打印功能
 
+### 边池管理器
+v2的边池管理器提供以下功能：
+- 支持复杂的多边池场景（全押、不同金额）
+- 自动计算边池分配和玩家资格
+- 筹码完整性验证，确保筹码守恒
+- 支持多个获胜者的奖金分配
+- 边界情况处理（空贡献、单人场景等）
+
+### 行动验证器
+v2的行动验证器提供以下功能：
+- 支持所有行动类型的验证（FOLD、CHECK、CALL、BET、RAISE、ALL_IN）
+- 智能转换功能（筹码不足时自动转为ALL_IN，无下注时CALL转为CHECK）
+- 详细的验证错误信息和建议
+- 协议接口设计，支持不同的游戏状态实现
+
+### 游戏控制器
+v2的游戏控制器提供以下功能：
+- 完整的游戏流程控制（开始新手牌、执行行动、阶段转换）
+- AI策略协议接口，支持依赖注入设计
+- 游戏状态快照功能，支持UI显示和调试
+- 手牌结果统计和分析
+- 原子API设计，确保操作的一致性
+- 支持多种游戏模式和配置
+
 ## 文档
 
 ### API文档
 完整的API文档已使用pdoc生成，位于 `docs/v2/` 目录：
 - 主页: `docs/v2/index.html`
 - 核心模块: `docs/v2/v2/core.html`
+- 控制器模块: `docs/v2/v2/controller.html`
 - 枚举定义: `docs/v2/v2/core/enums.html`
 - 扑克牌对象: `docs/v2/v2/core/cards.html`
-- 牌型评估器: `docs/v2/v2/core/v2/core/evaluator.html`
+- 牌型评估器: `docs/v2/v2/core/evaluator.html`
 - 玩家状态管理: `docs/v2/v2/core/player.html`
+- 行动验证器: `docs/v2/v2/core/validator.html`
+- 边池管理器: `docs/v2/v2/core/pot.html`
+- 游戏状态管理: `docs/v2/v2/core/state.html`
 
 所有模块都包含完整的Google格式docstring和类型注解。
 

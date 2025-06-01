@@ -1,7 +1,7 @@
 """
-德州扑克牌型评估器。
+德州扑克牌型评估器.
 
-提供牌型识别、比较和评估功能，使用直观的算法实现。
+提供牌型识别、比较和评估功能，支持标准的德州扑克规则.
 """
 
 from dataclasses import dataclass
@@ -16,26 +16,22 @@ from .enums import Rank, Suit, HandRank
 @dataclass(frozen=True)
 class HandResult:
     """
-    牌型评估结果。
+    牌型评估结果.
     
-    包含牌型等级和用于比较的关键牌值。
-    
-    Attributes:
-        rank: 牌型等级
-        primary_value: 主要牌值（如对子的点数）
-        secondary_value: 次要牌值（如两对中较小的对子）
-        kickers: 踢脚牌（按大小降序排列）
+    包含牌型等级、关键牌和踢脚牌信息.
     """
+
     rank: HandRank
     primary_value: int
     secondary_value: int = 0
     kickers: Tuple[int, ...] = ()
 
     def __post_init__(self):
-        """验证结果数据的有效性。
+        """
+        验证评估结果的有效性.
         
         Raises:
-            ValueError: 如果牌型等级或牌值无效
+            ValueError: 当评估结果数据无效时
         """
         if not isinstance(self.rank, HandRank):
             raise ValueError(f"无效的牌型等级: {self.rank}")
@@ -45,13 +41,13 @@ class HandResult:
 
     def compare_to(self, other: 'HandResult') -> int:
         """
-        比较两个牌型结果。
+        比较两个牌型的强弱.
         
         Args:
-            other: 另一个牌型结果
+            other: 另一个牌型评估结果
             
         Returns:
-            1 if self > other, -1 if self < other, 0 if equal
+            int: 1表示当前牌型更强，-1表示更弱，0表示相等
         """
         # 首先比较牌型等级
         if self.rank != other.rank:
@@ -74,10 +70,11 @@ class HandResult:
         return 0
 
     def __str__(self) -> str:
-        """返回牌型的可读描述。
+        """
+        返回牌型的字符串描述.
         
         Returns:
-            牌型的中文描述字符串
+            str: 包含牌型名称和关键牌的描述
         """
         rank_names = {
             HandRank.HIGH_CARD: "高牌",
@@ -110,24 +107,24 @@ class HandResult:
 
 class SimpleEvaluator:
     """
-    简单牌型评估器。
+    简单的德州扑克牌型评估器.
     
-    使用直观的算法实现所有牌型识别，易于理解和调试。
+    实现标准的德州扑克牌型识别和比较算法.
     """
 
     def evaluate_hand(self, hole_cards: List[Card], community_cards: List[Card]) -> HandResult:
         """
-        评估7张牌中的最佳5张牌组合。
+        评估给定牌的最佳牌型.
         
         Args:
             hole_cards: 玩家手牌（2张）
             community_cards: 公共牌（最多5张）
             
         Returns:
-            最佳牌型结果
+            HandResult: 最佳牌型的评估结果
             
         Raises:
-            ValueError: 如果输入牌数不符合要求
+            ValueError: 当牌数不足或无效时
         """
         if len(hole_cards) != 2:
             raise ValueError(f"手牌必须是2张，实际: {len(hole_cards)}")
@@ -144,13 +141,13 @@ class SimpleEvaluator:
 
     def _find_best_hand(self, cards: List[Card]) -> HandResult:
         """
-        从给定牌中找出最佳5张牌组合。
+        从给定牌中找出最佳的5张牌组合.
         
         Args:
-            cards: 所有可用的牌
+            cards: 候选牌列表
             
         Returns:
-            最佳牌型结果
+            HandResult: 最佳牌型的评估结果
         """
         if len(cards) == 5:
             return self._evaluate_five_cards(cards)
@@ -166,16 +163,13 @@ class SimpleEvaluator:
 
     def _evaluate_five_cards(self, cards: List[Card]) -> HandResult:
         """
-        评估恰好5张牌的牌型。
+        评估恰好5张牌的牌型.
         
         Args:
-            cards: 恰好5张牌
+            cards: 恰好5张牌的列表
             
         Returns:
-            牌型结果
-            
-        Raises:
-            ValueError: 如果不是恰好5张牌
+            HandResult: 牌型评估结果
         """
         if len(cards) != 5:
             raise ValueError(f"必须是5张牌，实际: {len(cards)}")
@@ -238,13 +232,13 @@ class SimpleEvaluator:
 
     def _check_straight(self, ranks: List[int]) -> Tuple[bool, int]:
         """
-        检查是否为顺子。
+        检查是否为顺子.
         
         Args:
-            ranks: 按降序排列的点数列表
+            ranks: 点数列表
             
         Returns:
-            (是否为顺子, 顺子的最高牌)
+            Tuple[bool, int]: (是否为顺子, 顺子的最高牌)
         """
         # 去重并排序
         unique_ranks = sorted(set(ranks), reverse=True)
@@ -265,14 +259,14 @@ class SimpleEvaluator:
 
     def _get_rank_with_count(self, rank_counts: Counter, count: int) -> int:
         """
-        获取出现指定次数的点数。
+        获取指定出现次数的点数.
         
         Args:
             rank_counts: 点数计数器
             count: 目标出现次数
             
         Returns:
-            符合条件的点数
+            int: 符合条件的点数
             
         Raises:
             ValueError: 如果未找到符合条件的点数
@@ -284,13 +278,13 @@ class SimpleEvaluator:
 
     def compare_hands(self, hand1: HandResult, hand2: HandResult) -> int:
         """
-        比较两个牌型。
+        比较两手牌的强弱.
         
         Args:
-            hand1: 第一个牌型
-            hand2: 第二个牌型
+            hand1: 第一手牌
+            hand2: 第二手牌
             
         Returns:
-            1 if hand1 > hand2, -1 if hand1 < hand2, 0 if equal
+            int: 1表示hand1更强，-1表示hand2更强，0表示相等
         """
         return hand1.compare_to(hand2) 
