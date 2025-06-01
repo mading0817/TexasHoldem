@@ -162,6 +162,7 @@ class GameState:
     
     # Round tracking
     street_index: int = 0
+    actions_this_round: int = 0  # 当前下注轮的行动次数
     
     # Deck and randomness
     deck: Optional[Deck] = None
@@ -397,10 +398,15 @@ class GameState:
         self.last_raiser = None
         self.last_raise_amount = 0
         self.street_index = 0
+        self.actions_this_round = 0  # 重置行动计数器
         
         # Reset all players' current bets
         for player in self.players:
             player.reset_current_bet()
+    
+    def increment_action_count(self) -> None:
+        """增加当前下注轮的行动计数."""
+        self.actions_this_round += 1
     
     def advance_phase(self) -> None:
         """Advance to the next game phase."""

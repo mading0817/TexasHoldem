@@ -143,8 +143,9 @@ class SimpleAI:
         if cost_ratio > self.config.fold_threshold:
             return Action(player_id=player.seat_id, action_type=ActionType.FOLD)
             
-        # Check if we can check (no bet to call)
-        if snapshot.current_bet == player.current_bet:
+        # Check if there's any bet to call (including blinds)
+        if snapshot.current_bet == 0:
+            # No bet at all, can check or bet
             # Conservative check most of the time
             if random.random() < self.config.conservativeness:
                 return Action(player_id=player.seat_id, action_type=ActionType.CHECK)
@@ -156,13 +157,19 @@ class SimpleAI:
                     action_type=ActionType.BET, 
                     amount=bet_amount
                 )
+            else:
+                # Default to check when no bet to call
+                return Action(player_id=player.seat_id, action_type=ActionType.CHECK)
                 
-        # If there's a bet to call
-        if call_cost > 0:
-            # Call if cost is acceptable
-            if cost_ratio <= self.config.fold_threshold:
-                # Occasionally raise instead of call
-                if random.random() < self.config.raise_frequency:
+        # If there's a bet to call (including blinds)
+        else:  # snapshot.current_bet > 0
+            # If we've already matched the current bet, we can check
+            if call_cost == 0:
+                # We've already matched the bet, can check or raise
+                if random.random() < self.config.conservativeness:
+                    return Action(player_id=player.seat_id, action_type=ActionType.CHECK)
+                # Occasionally raise
+                elif random.random() < self.config.raise_frequency:
                     raise_amount = self._calculate_raise_amount(player, snapshot)
                     if raise_amount <= player.chips:
                         return Action(
@@ -170,19 +177,30 @@ class SimpleAI:
                             action_type=ActionType.RAISE,
                             amount=raise_amount
                         )
-                        
-                # Default to call
-                return Action(
-                    player_id=player.seat_id,
-                    action_type=ActionType.CALL,
-                    amount=call_cost
-                )
-                
-        # Default to check if possible, otherwise fold
-        if snapshot.current_bet == player.current_bet:
-            return Action(player_id=player.seat_id, action_type=ActionType.CHECK)
-        else:
-            return Action(player_id=player.seat_id, action_type=ActionType.FOLD)
+                # Default to check
+                return Action(player_id=player.seat_id, action_type=ActionType.CHECK)
+            else:
+                # Need to call, decide whether to call, raise, or fold
+                if cost_ratio <= self.config.fold_threshold:
+                    # Occasionally raise instead of call
+                    if random.random() < self.config.raise_frequency:
+                        raise_amount = self._calculate_raise_amount(player, snapshot)
+                        if raise_amount <= player.chips:
+                            return Action(
+                                player_id=player.seat_id,
+                                action_type=ActionType.RAISE,
+                                amount=raise_amount
+                            )
+                            
+                    # Default to call
+                    return Action(
+                        player_id=player.seat_id,
+                        action_type=ActionType.CALL,
+                        amount=call_cost
+                    )
+                else:
+                    # Cost too high, fold
+                    return Action(player_id=player.seat_id, action_type=ActionType.FOLD)
             
     def _calculate_bet_amount(self, player: Player, snapshot: GameSnapshot) -> int:
         """Calculate bet amount using conservative strategy.

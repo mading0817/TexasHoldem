@@ -5,6 +5,7 @@
 """
 
 import click
+import sys
 from typing import List, Tuple, Optional
 from v2.core import ActionType, GameSnapshot, SeatStatus
 from v2.controller import ActionInput
@@ -15,6 +16,7 @@ class CLIInputHandler:
     
     负责处理用户输入，提供强校验和错误处理。
     使用click库确保输入的有效性和用户体验。
+    支持交互式和非交互式输入模式。
     """
     
     @staticmethod
@@ -43,7 +45,59 @@ class CLIInputHandler:
         for i, (_, description, _) in enumerate(available_actions):
             click.echo(f"  {i + 1}. {description}")
         
-        # 获取用户选择
+        # 检查是否为非交互式模式
+        if not sys.stdin.isatty():
+            # 非交互式模式，从stdin读取
+            max_attempts = 10  # 防止无限循环
+            attempts = 0
+            
+            while attempts < max_attempts:
+                try:
+                    line = sys.stdin.readline().strip()
+                    if not line:
+                        raise click.Abort()
+                    
+                    attempts += 1
+                    
+                    # 解析文本命令
+                    action_input = CLIInputHandler._parse_text_command(
+                        line, available_actions, player_id, snapshot, player
+                    )
+                    if action_input:
+                        click.echo(f"执行行动: {line}")
+                        return action_input
+                    else:
+                        # 如果解析失败，尝试作为数字选择
+                        try:
+                            choice = int(line)
+                            if 1 <= choice <= len(available_actions):
+                                action_type, _, base_amount = available_actions[choice - 1]
+                                click.echo(f"执行行动: 选择 {choice}")
+                                return ActionInput(
+                                    player_id=player_id,
+                                    action_type=action_type,
+                                    amount=base_amount
+                                )
+                            else:
+                                click.echo(f"错误: 无效选择 {choice}，请选择 1-{len(available_actions)}")
+                                continue
+                        except ValueError:
+                            click.echo(f"错误: 无法识别命令 '{line}'，请输入有效的行动或数字选择")
+                            continue
+                            
+                except EOFError:
+                    click.echo("输入结束")
+                    raise click.Abort()
+                except Exception as e:
+                    click.echo(f"输入处理错误: {e}")
+                    attempts += 1
+                    continue
+            
+            # 如果达到最大尝试次数，抛出异常
+            click.echo(f"错误: 达到最大尝试次数 ({max_attempts})，退出")
+            raise click.Abort()
+        
+        # 交互式模式
         while True:
             try:
                 choice = click.prompt(
@@ -75,12 +129,90 @@ class CLIInputHandler:
                 click.echo("请重新选择")
     
     @staticmethod
+    def _parse_text_command(
+        command: str, 
+        available_actions: List[Tuple[ActionType, str, int]], 
+        player_id: int,
+        snapshot: GameSnapshot,
+        player
+    ) -> Optional[ActionInput]:
+        """解析文本命令.
+        
+        Args:
+            command: 用户输入的文本命令
+            available_actions: 可用行动列表
+            player_id: 玩家ID
+            snapshot: 游戏状态快照
+            player: 玩家对象
+            
+        Returns:
+            解析后的ActionInput对象，如果解析失败返回None
+        """
+        command = command.lower().strip()
+        
+        # 创建行动类型映射
+        action_map = {action_type: (action_type, amount) for action_type, _, amount in available_actions}
+        
+        # 解析常见命令
+        if command in ['fold', 'f', '弃牌']:
+            if ActionType.FOLD in action_map:
+                action_type, amount = action_map[ActionType.FOLD]
+                return ActionInput(player_id=player_id, action_type=action_type, amount=amount)
+        
+        elif command in ['check', 'c', '过牌']:
+            if ActionType.CHECK in action_map:
+                action_type, amount = action_map[ActionType.CHECK]
+                return ActionInput(player_id=player_id, action_type=action_type, amount=amount)
+        
+        elif command in ['call', '跟注']:
+            if ActionType.CALL in action_map:
+                action_type, amount = action_map[ActionType.CALL]
+                return ActionInput(player_id=player_id, action_type=action_type, amount=amount)
+        
+        elif command in ['allin', 'all', '全押']:
+            if ActionType.ALL_IN in action_map:
+                action_type, amount = action_map[ActionType.ALL_IN]
+                return ActionInput(player_id=player_id, action_type=action_type, amount=amount)
+        
+        # 解析带金额的命令
+        elif command.startswith('bet ') or command.startswith('下注 '):
+            if ActionType.BET in action_map:
+                try:
+                    amount_str = command.split(' ', 1)[1]
+                    amount = int(amount_str)
+                    return ActionInput(player_id=player_id, action_type=ActionType.BET, amount=amount)
+                except (ValueError, IndexError):
+                    pass
+        
+        elif command.startswith('raise ') or command.startswith('加注 '):
+            if ActionType.RAISE in action_map:
+                try:
+                    amount_str = command.split(' ', 1)[1]
+                    amount = int(amount_str)
+                    return ActionInput(player_id=player_id, action_type=ActionType.RAISE, amount=amount)
+                except (ValueError, IndexError):
+                    pass
+        
+        return None
+
+    @staticmethod
     def get_continue_choice() -> bool:
         """获取是否继续游戏的选择.
         
         Returns:
             True表示继续，False表示退出
         """
+        # 检查是否为非交互式模式
+        if not sys.stdin.isatty():
+            try:
+                line = sys.stdin.readline().strip().lower()
+                if not line:
+                    return False
+                return line in ['y', 'yes', '是', 'true', '1']
+            except EOFError:
+                return False
+        
+        # 交互式模式
         try:
             return click.confirm("是否继续下一手牌?", default=True)
         except click.Abort:

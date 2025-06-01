@@ -281,7 +281,7 @@ class TestPlay10Hands:
                     # 验证筹码守恒
                     assert result['chip_change'] == 0, f"第{hand_num}手牌筹码不守恒: 变化{result['chip_change']}"
                     
-                    self.logger.info(f"第{hand_num}手牌完成 ✅")
+                    self.logger.info(f"第{hand_num}手牌完成 [PASS]")
                 else:
                     self.logger.warning(f"第{hand_num}手牌失败: {result.get('reason', 'unknown')}")
                     break
@@ -312,8 +312,8 @@ class TestPlay10Hands:
         # 验证事件系统工作正常
         assert len(self.events) > 0, "没有记录到任何事件"
         
-        self.logger.info("✅ 10手牌筹码守恒测试通过")
-        print("✅ 10手牌筹码守恒测试通过")
+        self.logger.info("[PASS] 10手牌筹码守恒测试通过")
+        print("[PASS] 10手牌筹码守恒测试通过")
     
     def test_play_10_hands_game_flow(self):
         """测试10手牌的游戏流程正确性."""
@@ -358,7 +358,7 @@ class TestPlay10Hands:
                                     if p.chips == 0 and p.status != SeatStatus.ACTIVE]
                 flow_stats['player_eliminations'] += len(eliminated_players)
                 
-                self.logger.info(f"第{hand_num}手牌流程正常 ✅")
+                self.logger.info(f"第{hand_num}手牌流程正常 [PASS]")
             else:
                 self.logger.warning(f"第{hand_num}手牌流程异常")
                 break
@@ -373,8 +373,8 @@ class TestPlay10Hands:
         assert flow_stats['hands_completed'] >= 3, "完成的手牌数太少"
         assert flow_stats['total_actions'] > 0, "没有记录到任何行动"
         
-        self.logger.info("✅ 10手牌游戏流程测试通过")
-        print("✅ 10手牌游戏流程测试通过")
+        self.logger.info("[PASS] 10手牌游戏流程测试通过")
+        print("[PASS] 10手牌游戏流程测试通过")
     
     def test_play_10_hands_stress_test(self):
         """10手牌压力测试."""
@@ -419,8 +419,8 @@ class TestPlay10Hands:
         assert stress_stats['error_count'] <= 2, f"错误次数过多: {stress_stats['error_count']}"
         assert stress_stats['total_events'] > 50, "事件数量太少，可能系统有问题"
         
-        self.logger.info("✅ 10手牌压力测试通过")
-        print("✅ 10手牌压力测试通过")
+        self.logger.info("[PASS] 10手牌压力测试通过")
+        print("[PASS] 10手牌压力测试通过")
     
     def test_log_file_analysis(self):
         """测试日志文件分析."""
@@ -443,7 +443,7 @@ class TestPlay10Hands:
             assert "筹码分布" in log_content, "日志中缺少筹码信息"
             assert "行动完成" in log_content, "日志中缺少行动信息"
             
-            self.logger.info("✅ 日志文件分析通过")
-            print("✅ 日志文件分析通过")
+            self.logger.info("[PASS] 日志文件分析通过")
+            print("[PASS] 日志文件分析通过")
         else:
             pytest.fail("日志文件未生成") 

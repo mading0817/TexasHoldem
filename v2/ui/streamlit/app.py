@@ -21,7 +21,7 @@ from typing import Optional
 
 from v2.controller.poker_controller import PokerController
 from v2.ai.simple_ai import SimpleAI
-from v2.core.enums import ActionType, Phase
+from v2.core.enums import ActionType, Phase, Action
 from v2.core.state import GameState
 from v2.controller.dto import ActionInput
 
@@ -45,13 +45,20 @@ def setup_file_logging():
         )
         file_handler.setFormatter(formatter)
         
-        # 添加到根logger
+        # 检查是否已经添加了handler，避免重复添加
         root_logger = logging.getLogger()
-        root_logger.addHandler(file_handler)
         
-        # 同时添加到控制器logger
-        if hasattr(st.session_state, 'controller') and hasattr(st.session_state.controller, '_logger'):
-            st.session_state.controller._logger.addHandler(file_handler)
+        # 移除现有的FileHandler以避免重复
+        for handler in root_logger.handlers[:]:
+            if isinstance(handler, logging.FileHandler):
+                root_logger.removeHandler(handler)
+        
+        # 添加新的handler
+        root_logger.addHandler(file_handler)
+        root_logger.setLevel(logging.DEBUG)
+        
+        # 标记已设置
+        st.session_state.log_handler_setup = True
 
 
 def read_log_file_tail(file_path: str, max_lines: int = 50) -> list:
@@ -60,8 +67,28 @@ def read_log_file_tail(file_path: str, max_lines: int = 50) -> list:
         if not os.path.exists(file_path):
             return ["日志文件不存在"]
         
-        with open(file_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
+        # 尝试多种编码方式读取文件
+        encodings = ['utf-8', 'gbk', 'cp1252', 'latin1']
+        lines = []
+        
+        for encoding in encodings:
+            try:
+                with open(file_path, 'r', encoding=encoding, errors='replace') as f:
+                    lines = f.readlines()
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if not lines:
+            # 如果所有编码都失败，使用二进制模式读取并尝试解码
+            try:
+                with open(file_path, 'rb') as f:
+                    content = f.read()
+                    # 尝试解码为UTF-8，失败时替换无效字符
+                    text = content.decode('utf-8', errors='replace')
+                    lines = text.splitlines(keepends=True)
+            except Exception:
+                return ["日志文件读取失败：编码问题"]
             
         # 返回最后max_lines行，去除空行
         recent_lines = [line.strip() for line in lines[-max_lines:] if line.strip()]
@@ -85,6 +112,9 @@ def initialize_session_state():
             ai_strategy=ai_strategy,
             logger=logger
         )
+        
+        # 初始化玩家 - 添加人类玩家和AI玩家
+        _setup_players(st.session_state.controller)
     
     # 使用setdefault确保其他键存在
     st.session_state.setdefault('game_started', False)
@@ -95,6 +125,37 @@ def initialize_session_state():
     
     # 设置文件日志记录
     setup_file_logging()
+
+
+def _setup_players(controller: PokerController, num_players: int = 4, initial_chips: int = 1000) -> None:
+    """设置玩家.
+    
+    Args:
+        controller: 游戏控制器
+        num_players: 玩家数量
+        initial_chips: 初始筹码
+    """
+    from v2.core.player import Player
+    
+    # 检查是否已经有玩家
+    snapshot = controller.get_snapshot()
+    if len(snapshot.players) >= num_players:
+        return  # 已经初始化过了
+    
+    # 添加玩家到游戏状态
+    for i in range(num_players):
+        if i == 0:
+            name = "You"  # 人类玩家
+        else:
+            name = f"AI_{i}"
+        
+        # 通过控制器的游戏状态添加玩家
+        player = Player(
+            seat_id=i,
+            name=name,
+            chips=initial_chips
+        )
+        controller._game_state.add_player(player)
 
 
 def render_header():
@@ -136,11 +197,18 @@ def render_game_state(snapshot):
         st.subheader("🃏 公共牌")
         cards_display = []
         for card in snapshot.community_cards:
-            suit_symbol = {"HEARTS": "♥️", "DIAMONDS": "♦️", "CLUBS": "♣️", "SPADES": "♠️"}
-            rank_display = card.rank.value
+            # 修复牌面显示 - 使用正确的rank名称映射
+            rank_display_map = {
+                "TWO": "2", "THREE": "3", "FOUR": "4", "FIVE": "5",
+                "SIX": "6", "SEVEN": "7", "EIGHT": "8", "NINE": "9",
+                "TEN": "10", "JACK": "J", "QUEEN": "Q", 
+                "KING": "K", "ACE": "A"
+            }
+            suit_symbol = {"♥": "♥️", "♦": "♦️", "♣": "♣️", "♠": "♠️"}
+            rank_display = rank_display_map.get(card.rank.name, card.rank.name)
             suit_display = suit_symbol[card.suit.value]
             # 使用不同颜色显示红色和黑色花色
-            if card.suit.value in ["HEARTS", "DIAMONDS"]:
+            if card.suit.value in ["♥", "♦"]:
                 cards_display.append(f"<span style='color: red; font-size: 1.5em;'>{rank_display}{suit_display}</span>")
             else:
                 cards_display.append(f"<span style='color: black; font-size: 1.5em;'>{rank_display}{suit_display}</span>")
@@ -154,7 +222,9 @@ def render_game_state(snapshot):
             with col1:
                 # 高亮当前玩家
                 if i == snapshot.current_player:
-                    st.markdown(f"**🎯 {player.name}** (当前)")
+                    st.markdown(f"**🎯 {player.name}** (当前行动)")
+                elif i == snapshot.dealer_position:
+                    st.markdown(f"**🎲 {player.name}** (庄家)")
                 else:
                     st.write(f"**{player.name}**")
             with col2:
@@ -162,23 +232,38 @@ def render_game_state(snapshot):
             with col3:
                 st.write(f"📊 当前下注: ${player.current_bet}")
             with col4:
-                status_emoji = {
-                    "ACTIVE": "🟢",
-                    "FOLDED": "🔴", 
-                    "ALL_IN": "🟡",
-                    "OUT": "⚫"
+                # 优化状态显示，使其更清晰
+                status_display = {
+                    "ACTIVE": "🟢 活跃",
+                    "FOLDED": "🔴 已弃牌", 
+                    "ALL_IN": "🟡 全押",
+                    "OUT": "⚫ 出局",
+                    "WAITING": "⏳ 等待"
                 }
-                emoji = status_emoji.get(player.status.value, "❓")
-                st.write(f"{emoji} {player.status.value}")
+                status_text = status_display.get(player.status.value, f"❓ {player.status.value}")
+                st.write(status_text)
+                
+            # 显示盲注信息
+            if hasattr(player, 'is_small_blind') and player.is_small_blind:
+                st.caption("🔸 小盲")
+            elif hasattr(player, 'is_big_blind') and player.is_big_blind:
+                st.caption("🔹 大盲")
                 
             # 显示人类玩家的手牌
             if i == 0 and player.hole_cards:  # 假设玩家0是人类
                 cards_display = []
                 for card in player.hole_cards:
-                    suit_symbol = {"HEARTS": "♥️", "DIAMONDS": "♦️", "CLUBS": "♣️", "SPADES": "♠️"}
-                    rank_display = card.rank.value
+                    # 修复牌面显示 - 使用正确的rank名称映射
+                    rank_display_map = {
+                        "TWO": "2", "THREE": "3", "FOUR": "4", "FIVE": "5",
+                        "SIX": "6", "SEVEN": "7", "EIGHT": "8", "NINE": "9",
+                        "TEN": "10", "JACK": "J", "QUEEN": "Q", 
+                        "KING": "K", "ACE": "A"
+                    }
+                    suit_symbol = {"♥": "♥️", "♦": "♦️", "♣": "♣️", "♠": "♠️"}
+                    rank_display = rank_display_map.get(card.rank.name, card.rank.name)
                     suit_display = suit_symbol[card.suit.value]
-                    if card.suit.value in ["HEARTS", "DIAMONDS"]:
+                    if card.suit.value in ["♥", "♦"]:
                         cards_display.append(f"<span style='color: red; font-size: 1.2em;'>{rank_display}{suit_display}</span>")
                     else:
                         cards_display.append(f"<span style='color: black; font-size: 1.2em;'>{rank_display}{suit_display}</span>")
@@ -187,28 +272,107 @@ def render_game_state(snapshot):
 
 
 def process_ai_actions_continuously(controller):
-    """连续处理AI行动直到轮到人类玩家或游戏结束."""
-    max_iterations = 10  # 防止无限循环
-    iterations = 0
+    """持续处理AI行动直到轮到人类玩家或手牌结束."""
+    max_ai_actions = 20  # 防止无限循环
+    ai_actions_count = 0
     
-    while iterations < max_iterations:
-        current_player_id = controller.get_current_player_id()
-        
-        if current_player_id is None or current_player_id == 0:
-            break  # 游戏结束或轮到人类玩家
-            
+    # 记录处理前的状态
+    initial_snapshot = controller.get_snapshot()
+    initial_phase = initial_snapshot.phase
+    initial_events_count = len(initial_snapshot.events)
+    
+    while ai_actions_count < max_ai_actions:
         if controller.is_hand_over():
-            break  # 手牌结束
-            
-        # 处理AI行动
-        success = controller.process_ai_action()
-        if not success:
             break
             
-        iterations += 1
-        time.sleep(0.1)  # 短暂延迟，避免过快处理
+        current_player_id = controller.get_current_player_id()
+        if current_player_id is None:
+            break
+            
+        # 如果轮到人类玩家（玩家0），停止AI处理
+        if current_player_id == 0:
+            break
+            
+        # 记录行动前的状态
+        snapshot_before = controller.get_snapshot()
+        phase_before = snapshot_before.phase
+        events_before_count = len(snapshot_before.events)
+        
+        # 处理AI行动
+        success = controller.process_ai_action()
+        
+        if success:
+            ai_actions_count += 1
+            
+            # 记录行动后的状态
+            snapshot_after = controller.get_snapshot()
+            phase_after = snapshot_after.phase
+            events_after_count = len(snapshot_after.events)
+            
+            # 初始化UI事件列表
+            if 'events' not in st.session_state:
+                st.session_state.events = []
+            
+            # 记录新增的游戏事件
+            if events_after_count > events_before_count:
+                # 获取新增的事件
+                new_events = snapshot_after.events[events_before_count:]
+                for event in new_events:
+                    # 检查是否是AI行动事件
+                    if current_player_id < len(snapshot_after.players):
+                        ai_player = snapshot_after.players[current_player_id]
+                        # 为AI行动添加玩家标识
+                        if any(action_word in event.lower() for action_word in ['跟注', '过牌', '加注', '弃牌', '全押']):
+                            st.session_state.events.append(f"{ai_player.name} {event}")
+                        else:
+                            # 其他事件（如阶段转换、发牌等）
+                            st.session_state.events.append(event)
+                    else:
+                        st.session_state.events.append(event)
+            
+            # 检查阶段是否发生变化
+            if phase_after != phase_before:
+                phase_change_event = f"Advanced to {phase_after.value}"
+                if phase_change_event not in [event.split(' ', 1)[-1] for event in st.session_state.events[-3:]]:
+                    st.session_state.events.append(phase_change_event)
+                
+                # 记录发牌事件
+                if phase_after.value == "FLOP" and len(snapshot_after.community_cards) >= 3:
+                    cards_str = " ".join(str(card) for card in snapshot_after.community_cards[-3:])
+                    flop_event = f"Flop dealt: {cards_str}"
+                    if flop_event not in st.session_state.events:
+                        st.session_state.events.append(flop_event)
+                elif phase_after.value == "TURN" and len(snapshot_after.community_cards) >= 4:
+                    card_str = str(snapshot_after.community_cards[-1])
+                    turn_event = f"Turn dealt: {card_str}"
+                    if turn_event not in st.session_state.events:
+                        st.session_state.events.append(turn_event)
+                elif phase_after.value == "RIVER" and len(snapshot_after.community_cards) >= 5:
+                    card_str = str(snapshot_after.community_cards[-1])
+                    river_event = f"River dealt: {card_str}"
+                    if river_event not in st.session_state.events:
+                        st.session_state.events.append(river_event)
+        else:
+            break
+            
+        # 短暂延迟，让用户看到AI行动
+        time.sleep(0.1)
     
-    return iterations > 0
+    # 处理完成后，检查是否有遗漏的事件
+    final_snapshot = controller.get_snapshot()
+    final_events_count = len(final_snapshot.events)
+    
+    # 如果还有未记录的事件，补充记录
+    if final_events_count > initial_events_count:
+        if 'events' not in st.session_state:
+            st.session_state.events = []
+        
+        # 获取所有新事件
+        new_events = final_snapshot.events[initial_events_count:]
+        for event in new_events:
+            # 避免重复记录
+            if event not in [e.split(' ', 1)[-1] if ' ' in e else e for e in st.session_state.events]:
+                st.session_state.events.append(event)
 
 
 def render_action_buttons(controller):
@@ -220,18 +384,11 @@ def render_action_buttons(controller):
         return
         
     if current_player_id != 0:  # 不是人类玩家
-        st.info("🤖 等待AI玩家行动...")
+        st.info("🤖 AI玩家正在思考...")
         
-        # 自动处理AI行动
-        if st.button("🚀 处理AI行动", key="process_ai"):
-            with st.spinner("AI正在思考..."):
-                ai_processed = process_ai_actions_continuously(controller)
-                if ai_processed:
-                    st.rerun()
-        
-        # 自动触发AI行动（可选）
-        if st.checkbox("🔄 自动处理AI行动"):
-            time.sleep(1)  # 给用户时间看到状态
+        # 自动处理AI行动 - 移除混乱的按钮，直接自动处理
+        with st.spinner("AI正在行动..."):
+            time.sleep(0.5)  # 短暂延迟让用户看到AI在思考
             ai_processed = process_ai_actions_continuously(controller)
             if ai_processed:
                 st.rerun()
@@ -252,12 +409,14 @@ def render_action_buttons(controller):
     
     with col1:
         if st.button("🚫 弃牌 (Fold)", key="fold"):
-            action = ActionInput(
-                player_id=0,
+            action = Action(
                 action_type=ActionType.FOLD,
-                amount=0
+                amount=0,
+                player_id=0
             )
             controller.execute_action(action)
+            # 记录用户行动事件
+            st.session_state.events.append(f"你选择了弃牌")
             st.rerun()
     
     with col2:
@@ -265,27 +424,32 @@ def render_action_buttons(controller):
         if snapshot.current_bet > player.current_bet:
             call_amount = snapshot.current_bet - player.current_bet
             if st.button(f"✅ 跟注 ${call_amount}", key="call"):
-                action = ActionInput(
-                    player_id=0,
+                action = Action(
                     action_type=ActionType.CALL,
-                    amount=0
+                    amount=0,
+                    player_id=0
                 )
                 controller.execute_action(action)
+                # 记录用户行动事件
+                st.session_state.events.append(f"你跟注了 ${call_amount}")
                 st.rerun()
         else:
             if st.button("✅ 过牌 (Check)", key="check"):
-                action = ActionInput(
-                    player_id=0,
+                action = Action(
                     action_type=ActionType.CHECK,
-                    amount=0
+                    amount=0,
+                    player_id=0
                 )
                 controller.execute_action(action)
+                # 记录用户行动事件
+                st.session_state.events.append(f"你选择了过牌")
                 st.rerun()
     
     with col3:
-        # 加注按钮
-        min_raise = max(snapshot.current_bet * 2 - player.current_bet, 10)
-        max_raise = player.chips
+        # 加注按钮 - 修复最小加注计算
+        # 德州扑克规则：最小加注应该是当前下注的两倍
+        min_raise = max(snapshot.current_bet * 2, snapshot.current_bet + 10) if snapshot.current_bet > 0 else 10
+        max_raise = player.chips + player.current_bet  # 玩家可以下注的最大总额
         
         if max_raise >= min_raise:
             if st.button("📈 加注 (Raise)", key="raise_btn"):
@@ -294,39 +458,53 @@ def render_action_buttons(controller):
     
     with col4:
         if st.button("🎯 全押 (All-in)", key="all_in"):
-            action = ActionInput(
-                player_id=0,
+            action = Action(
                 action_type=ActionType.ALL_IN,
-                amount=0
+                amount=0,
+                player_id=0
             )
             controller.execute_action(action)
+            # 记录用户行动事件
+            st.session_state.events.append(f"你选择了全押 ${player.chips}")
             st.rerun()
     
-    # 加注金额输入
+    # 加注金额输入 - 修复为总下注金额输入
     if hasattr(st.session_state, 'show_raise_input') and st.session_state.show_raise_input:
         st.subheader("📈 加注金额")
-        min_raise = max(snapshot.current_bet * 2 - player.current_bet, 10)
-        max_raise = player.chips
+        
+        # 计算正确的最小和最大加注金额
+        min_raise = max(snapshot.current_bet * 2, snapshot.current_bet + 10) if snapshot.current_bet > 0 else 10
+        max_raise = player.chips + player.current_bet  # 玩家的总可用筹码
         
         if max_raise >= min_raise:
+            # 显示当前下注信息
+            st.info(f"当前下注: ${snapshot.current_bet} | 你已下注: ${player.current_bet}")
+            
             bet_amount = st.number_input(
-                f"加注金额 (${min_raise} - ${max_raise})",
+                f"总下注金额 (${min_raise} - ${max_raise})",
                 min_value=min_raise,
                 max_value=max_raise,
-                value=min(min_raise, max_raise),
+                value=min_raise,
                 step=10,
-                key="raise_amount"
+                key="raise_amount",
+                help="输入你想要的总下注金额（不是增量）"
             )
+            
+            # 显示实际需要投入的筹码
+            actual_bet_needed = bet_amount - player.current_bet
+            st.write(f"💰 需要投入筹码: ${actual_bet_needed}")
             
             col1, col2 = st.columns(2)
             with col1:
-                if st.button(f"✅ 确认加注 ${bet_amount}", key="confirm_raise"):
-                    action = ActionInput(
-                        player_id=0,
+                if st.button(f"✅ 确认加注到 ${bet_amount}", key="confirm_raise"):
+                    action = Action(
                         action_type=ActionType.RAISE,
-                        amount=bet_amount
+                        amount=bet_amount,  # 传递总下注金额
+                        player_id=0
                     )
                     controller.execute_action(action)
+                    # 记录用户行动事件
+                    st.session_state.events.append(f"你加注到 ${bet_amount} (投入 ${actual_bet_needed})")
                     st.session_state.show_raise_input = False
                     st.rerun()
             
@@ -334,6 +512,11 @@ def render_action_buttons(controller):
                 if st.button("❌ 取消", key="cancel_raise"):
                     st.session_state.show_raise_input = False
                     st.rerun()
+        else:
+            st.warning("筹码不足以进行加注")
+            if st.button("❌ 取消", key="cancel_raise_insufficient"):
+                st.session_state.show_raise_input = False
+                st.rerun()
 
 
 def render_sidebar():
@@ -349,7 +532,7 @@ def render_sidebar():
             if debug_mode:
                 st.session_state.controller._logger.setLevel(logging.DEBUG)
                 logging.getLogger().setLevel(logging.DEBUG)
-        else:
+            else:
                 st.session_state.controller._logger.setLevel(logging.INFO)
                 logging.getLogger().setLevel(logging.INFO)
     
@@ -425,37 +608,59 @@ def render_sidebar():
             except Exception as e:
                 st.sidebar.error(f"❌ 导出快照失败: {str(e)}")
                 
-    # 显示实时日志
-    if debug_mode and hasattr(st.session_state, 'log_file_path'):
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("📜 实时日志")
+    # 显示实时日志和游戏事件
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📜 游戏日志")
+    
+    # 显示游戏事件日志（更详细的信息）
+    if hasattr(st.session_state, 'controller'):
+        snapshot = st.session_state.controller.get_snapshot()
+        if snapshot and hasattr(snapshot, 'events') and snapshot.events:
+            # 显示游戏状态中的事件
+            st.sidebar.write("**游戏状态事件:**")
+            recent_game_events = snapshot.events[-8:]  # 最近8个事件
+            for i, event in enumerate(reversed(recent_game_events)):
+                st.sidebar.text(f"{len(recent_game_events)-i}. {event}")
         
+    # 显示实时系统日志（调试模式下）
+    if debug_mode and hasattr(st.session_state, 'log_file_path'):
         # 显示日志开关
-        show_logs = st.sidebar.checkbox("显示实时日志", value=st.session_state.get('show_logs', False))
+        show_logs = st.sidebar.checkbox("显示系统日志", value=st.session_state.get('show_logs', False))
         st.session_state.show_logs = show_logs
         
         if show_logs:
-            log_lines = read_log_file_tail(st.session_state.log_file_path, max_lines=20)
+            log_lines = read_log_file_tail(st.session_state.log_file_path, max_lines=15)
             if log_lines:
-                # 使用代码块显示日志，支持滚动
-                log_text = "\n".join(log_lines[-10:])  # 只显示最后10行
-                st.sidebar.code(log_text, language="text")
+                st.sidebar.write("**系统日志:**")
+                # 过滤并格式化日志，只显示重要信息
+                filtered_logs = []
+                for line in log_lines[-8:]:  # 最后8行
+                    if any(keyword in line.lower() for keyword in ['action', 'bet', 'fold', 'call', 'raise', 'phase', 'winner']):
+                        # 简化日志显示，只保留关键信息
+                        if ' - ' in line:
+                            parts = line.split(' - ')
+                            if len(parts) >= 3:
+                                time_part = parts[0].split()[-1] if parts[0] else ""
+                                message = parts[-1].strip()
+                                filtered_logs.append(f"{time_part}: {message}")
+                
+                if filtered_logs:
+                    for log in filtered_logs[-6:]:  # 最多显示6行
+                        st.sidebar.text(log)
+                else:
+                    st.sidebar.text("暂无相关日志")
     
-    # 事件日志
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📋 游戏事件")
-    
+    # 事件日志（保留原有功能）
     if st.session_state.events:
+        st.sidebar.write("**UI事件:**")
         # 显示最近的事件（倒序）
-        recent_events = st.session_state.events[-10:]  # 最近10个事件
+        recent_events = st.session_state.events[-5:]  # 最近5个事件
         for i, event in enumerate(reversed(recent_events)):
             event_text = f"{len(recent_events)-i}. {event}"
             st.sidebar.text(event_text)
-    else:
-        st.sidebar.text("暂无游戏事件")
     
     # 清除事件日志按钮
-    if st.sidebar.button("🗑️ 清除事件日志"):
+    if st.sidebar.button("🗑️ 清除日志"):
         st.session_state.events = []
         st.rerun()
 
@@ -496,10 +701,10 @@ def run_auto_play_test(num_hands: int) -> dict:
                         import random
                         actions = [ActionType.FOLD, ActionType.CALL, ActionType.CHECK]
                         action_type = random.choice(actions)
-                        action = ActionInput(
-                            player_id=0,
+                        action = Action(
                             action_type=action_type,
-                            amount=0
+                            amount=0,
+                            player_id=0
                         )
                         controller.execute_action(action)
                     else:
@@ -590,6 +795,13 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("🆕 开始新手牌", type="primary", use_container_width=True):
+                # 确保没有手牌在进行中
+                if controller._hand_in_progress:
+                    try:
+                        controller.end_hand()
+                    except Exception as e:
+                        st.warning(f"结束上一手牌时出错: {e}")
+                
                 success = controller.start_new_hand()
                 if success:
                     st.session_state.game_started = True
@@ -604,24 +816,50 @@ def main():
     # 渲染游戏状态
     render_game_state(snapshot)
     
+    # 自动处理AI行动
+    if st.session_state.game_started and not controller.is_hand_over():
+        current_player_id = controller.get_current_player_id()
+        if current_player_id is not None and current_player_id != 0:
+            # 当前是AI玩家，自动处理
+            process_ai_actions_continuously(controller)
+            st.rerun()  # 刷新页面显示最新状态
+    
     # 渲染行动按钮
     if st.session_state.game_started and not controller.is_hand_over():
-        render_action_buttons(controller)
+        current_player_id = controller.get_current_player_id()
+        if current_player_id == 0:  # 只有轮到人类玩家时才显示按钮
+            render_action_buttons(controller)
+        else:
+            st.info("🤖 等待AI玩家行动...")
     elif st.session_state.game_started and controller.is_hand_over():
         st.success("🎉 手牌结束！")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📊 查看结果"):
-                result = controller.end_hand()
-                if result:
-                    st.write(f"🏆 获胜者: {result.winner_ids}")
-                    st.write(f"💰 底池金额: ${result.pot_amount}")
-                    if result.winning_hand_description:
-                        st.write(f"🃏 获胜牌型: {result.winning_hand_description}")
+        # 自动结束手牌并显示结果
+        try:
+            result = controller.end_hand()
+            if result:
+                st.write(f"🏆 获胜者: {[controller.get_snapshot().players[i].name for i in result.winner_ids]}")
+                st.write(f"💰 底池金额: ${result.pot_amount}")
+                if result.winning_hand_description:
+                    st.write(f"🃏 获胜牌型: {result.winning_hand_description}")
+                
+                # 记录手牌结束事件
+                if 'events' not in st.session_state:
+                    st.session_state.events = []
+                st.session_state.events.append(f"手牌结束: {result.winning_hand_description}")
+        except Exception as e:
+            st.error(f"结束手牌时出错: {e}")
         
+        col1, col2 = st.columns(2)
         with col2:
-            if st.button("🔄 下一手牌"):
+            if st.button("🔄 下一手牌", type="primary"):
+                # 确保当前手牌已经结束
+                if controller._hand_in_progress:
+                    try:
+                        controller.end_hand()
+                    except Exception as e:
+                        st.warning(f"强制结束当前手牌: {e}")
+                
                 success = controller.start_new_hand()
                 if success:
                     st.session_state.events = []
