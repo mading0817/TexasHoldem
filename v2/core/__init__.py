@@ -1,114 +1,91 @@
 """
-Core game logic module for Texas Hold'em poker.
+Core game logic for Texas Hold'em poker.
 
-This module provides the fundamental building blocks for poker game logic.
+This package contains the fundamental game components including cards, players,
+game state management, and rule validation.
 """
 
-from .enums import *
+from .enums import Suit, Rank, ActionType, Phase, SeatStatus, HandRank, Action, ValidatedAction, ValidationResultData
 from .cards import Card, Deck
 from .evaluator import SimpleEvaluator, HandResult
 from .player import Player
 from .validator import ActionValidator, GameStateProtocol, InvalidActionError, InsufficientChipsError
 from .pot import SidePot, PotManager, calculate_side_pots, get_pot_distribution_summary
 from .state import GameState, GameSnapshot
-from .events import EventType, GameEvent, EventBus, EventListener, get_event_bus, set_event_bus
+from .events import EventBus, EventType, GameEvent, get_event_bus
+from .health_checker import (
+    GameStateHealthChecker, 
+    HealthIssue, 
+    HealthCheckResult, 
+    HealthIssueType, 
+    HealthIssueSeverity
+)
 
-# High-level API functions
-def new_deck(shuffled: bool = True, rng=None) -> Deck:
-    """
-    Create a new deck of cards.
+# Convenience functions for common operations
+def new_deck(shuffle: bool = True) -> Deck:
+    """Create a new deck of cards.
     
     Args:
-        shuffled: Whether to shuffle the deck after creation
-        rng: Random number generator for shuffling
+        shuffle: Whether to shuffle the deck after creation.
         
     Returns:
-        Deck: A new deck of 52 cards
+        A new deck of cards.
     """
-    deck = Deck(rng=rng)
-    if shuffled:
+    deck = Deck()
+    if shuffle:
         deck.shuffle()
     return deck
 
 
-def evaluate_hand(hole_cards, community_cards) -> HandResult:
-    """
-    Evaluate the best poker hand from hole cards and community cards.
+def evaluate(cards: list) -> HandResult:
+    """Evaluate a poker hand.
     
     Args:
-        hole_cards: List of 2 hole cards
-        community_cards: List of community cards (up to 5)
+        cards: List of Card objects to evaluate.
         
     Returns:
-        HandResult: The best hand evaluation result
+        HandResult containing the evaluation.
     """
     evaluator = SimpleEvaluator()
-    return evaluator.evaluate_hand(hole_cards, community_cards)
+    return evaluator.evaluate(cards)
 
 
 def create_player(seat_id: int, name: str, chips: int) -> Player:
-    """
-    Create a new player.
+    """Create a new player.
     
     Args:
-        seat_id: Unique seat identifier
-        name: Player name
-        chips: Initial chip count
+        seat_id: The seat ID for the player.
+        name: The player's name.
+        chips: The player's starting chips.
         
     Returns:
-        Player: A new player instance
+        A new Player instance.
     """
     return Player(seat_id=seat_id, name=name, chips=chips)
 
 
-def validate_action(game_state, player: Player, action) -> 'ValidatedAction':
-    """
-    Validate a player action.
-    
-    Args:
-        game_state: Current game state
-        player: Player attempting the action
-        action: Action to validate
-        
-    Returns:
-        ValidatedAction: Validation result with possible conversions
-    """
-    validator = ActionValidator()
-    return validator.validate(game_state, player, action)
-
-
-def create_pot_manager() -> PotManager:
-    """
-    Create a new pot manager.
-    
-    Returns:
-        PotManager: A new pot manager instance
-    """
-    return PotManager()
-
-
 __all__ = [
     # Enums
-    'Suit', 'Rank', 'HandRank', 'ActionType', 'Phase', 'SeatStatus', 
-    'GameEventType', 'ValidationResult', 'ValidationResultData',
-    # Action data classes
-    'Action', 'ValidatedAction',
-    # Cards
-    'Card', 'Deck',
-    # Evaluator
+    'Suit', 'Rank', 'ActionType', 'Phase', 'SeatStatus', 'HandRank', 'Action', 'ValidatedAction', 'ValidationResultData',
+    
+    # Core classes
+    'Card', 'Deck', 'Player', 'GameState', 'GameSnapshot',
+    
+    # Evaluation
     'SimpleEvaluator', 'HandResult',
-    # Player
-    'Player',
-    # Validator
+    
+    # Validation
     'ActionValidator', 'GameStateProtocol', 'InvalidActionError', 'InsufficientChipsError',
+    
     # Pot management
     'SidePot', 'PotManager', 'calculate_side_pots', 'get_pot_distribution_summary',
-    # State management
-    'GameState', 'GameSnapshot',
-    # Event system
-    'EventType', 'GameEvent', 'EventBus', 'EventListener', 'get_event_bus', 'set_event_bus',
-    # Utility functions
-    'get_all_suits', 'get_all_ranks', 'get_valid_actions',
-    # High-level API
-    'new_deck', 'evaluate_hand', 'create_player', 'validate_action', 'create_pot_manager'
+    
+    # Events
+    'EventBus', 'EventType', 'GameEvent', 'get_event_bus',
+    
+    # Health checking
+    'GameStateHealthChecker', 'HealthIssue', 'HealthCheckResult', 'HealthIssueType', 'HealthIssueSeverity',
+    
+    # Convenience functions
+    'new_deck', 'evaluate', 'create_player'
 ] 

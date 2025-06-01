@@ -38,7 +38,7 @@
 
 ## 开发状态
 
-### ✅ 已完成 (PLAN #1-37)
+### ✅ 已完成 (PLAN #1-37 + 紧急修复)
 - v2目录结构建立
 - 核心枚举定义 (Suit, Rank, ActionType, Phase等)
 - 扑克牌对象 (Card, Deck)
@@ -63,12 +63,25 @@
 - **CLI输入处理强校验 (CLIInputHandler)**
 - **CLI模块完整docstring**
 - **Streamlit MVP (完整Web界面)**
+- **🔥 Streamlit关键bug修复 (spinner错误、Session State幂等初始化)**
 - 基础测试框架 (327个测试用例全部通过)
 - **文档生成**: 使用pdoc生成完整API文档，包含所有模块
 
+### 🚧 进行中 (PLAN #38-48)
+- **Session State幂等初始化** (PLAN #38) ✅
+- **调试开关与性能解耦** (PLAN #39) ✅
+- **基础运行时日志可视化** (PLAN #40) ✅
+- **游戏状态健康度检查** (PLAN #41) ✅
+- 快照导出导入功能 (PLAN #42)
+- 测试路径重构 (PLAN #43)
+- 反作弊测试 (PLAN #44)
+- 覆盖率配置 (PLAN #45)
+- 端到端测试 (PLAN #46)
+- CI性能门禁 (PLAN #47)
+- 文档同步机制 (PLAN #48)
+
 ### 📋 计划中
-- 测试体系完善 (PLAN #38-45)
-- 收尾与维护 (PLAN #46-50)
+- 收尾与维护 (PLAN #49-55)
 
 ## Streamlit Web界面
 

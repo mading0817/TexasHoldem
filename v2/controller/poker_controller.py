@@ -6,13 +6,14 @@
 """
 
 import logging
-from typing import Optional
+import json
+from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 
 from ..core import (
     GameState, GameSnapshot, Player, Action, ActionType, 
     ActionValidator, ValidationResultData, Phase, SeatStatus,
-    EventType, EventBus, get_event_bus
+    EventType, EventBus, get_event_bus, Card, Suit, Rank
 )
 from ..ai import AIStrategy
 from .decorators import atomic
@@ -31,10 +32,10 @@ class HandResult:
         side_pots: 边池分配信息
     """
     
-    winner_ids: list[int]
+    winner_ids: List[int]
     pot_amount: int
     winning_hand_description: str
-    side_pots: list[dict]
+    side_pots: List[dict]
 
 
 class PokerController:
@@ -652,4 +653,193 @@ class PokerController:
                 self._game_state.current_player = pos
                 return
                 
-        self._game_state.current_player = None 
+        self._game_state.current_player = None
+        
+    def export_snapshot(self) -> Dict[str, Any]:
+        """导出当前游戏状态为可序列化的字典.
+        
+        导出的数据包含完整的游戏状态信息，可以用于保存游戏进度、
+        调试分析或状态恢复。
+        
+        Returns:
+            包含完整游戏状态的字典，可以直接序列化为JSON
+            
+        Note:
+            导出的数据包括：
+            - 游戏阶段和公共牌
+            - 底池和下注信息
+            - 所有玩家的完整状态（包括手牌）
+            - 位置和轮次信息
+            - 事件日志
+            - 控制器状态
+        """
+        snapshot = self.get_snapshot()
+        
+        # 序列化玩家数据
+        players_data = []
+        for player in snapshot.players:
+            player_data = {
+                'seat_id': player.seat_id,
+                'name': player.name,
+                'chips': player.chips,
+                'current_bet': player.current_bet,
+                'status': player.status.name,
+                'is_dealer': player.is_dealer,
+                'is_small_blind': player.is_small_blind,
+                'is_big_blind': player.is_big_blind,
+                'is_human': player.is_human,
+                'total_bet_this_hand': player.total_bet_this_hand,
+                'last_action_type': player.last_action_type.name if player.last_action_type else None,
+                'hole_cards': [{'suit': card.suit.name, 'rank': card.rank.name} for card in player.hole_cards]
+            }
+            players_data.append(player_data)
+        
+        # 序列化公共牌
+        community_cards_data = [
+            {'suit': card.suit.name, 'rank': card.rank.name} 
+            for card in snapshot.community_cards
+        ]
+        
+        # 构建完整的导出数据
+        export_data = {
+            'version': '2.0',  # 版本标识，用于兼容性检查
+            'timestamp': None,  # 可以在需要时添加时间戳
+            'game_state': {
+                'phase': snapshot.phase.name,
+                'community_cards': community_cards_data,
+                'pot': snapshot.pot,
+                'current_bet': snapshot.current_bet,
+                'last_raiser': snapshot.last_raiser,
+                'last_raise_amount': snapshot.last_raise_amount,
+                'players': players_data,
+                'dealer_position': snapshot.dealer_position,
+                'current_player': snapshot.current_player,
+                'small_blind': snapshot.small_blind,
+                'big_blind': snapshot.big_blind,
+                'street_index': snapshot.street_index,
+                'events': snapshot.events.copy()
+            },
+            'controller_state': {
+                'hand_in_progress': self._hand_in_progress,
+                'has_ai_strategy': self._ai_strategy is not None
+            }
+        }
+        
+        self._logger.info("游戏状态已导出")
+        return export_data
+    
+    def import_snapshot(self, export_data: Dict[str, Any]) -> bool:
+        """从导出的数据恢复游戏状态.
+        
+        完整恢复游戏状态，包括所有玩家信息、游戏阶段、
+        底池状态等。恢复后的游戏可以继续正常进行。
+        
+        Args:
+            export_data: 通过export_snapshot()导出的数据字典
+            
+        Returns:
+            是否成功导入状态
+            
+        Raises:
+            ValueError: 如果导入数据格式无效或版本不兼容
+            
+        Note:
+            导入操作会完全替换当前的游戏状态，包括：
+            - 重置所有玩家状态
+            - 恢复游戏阶段和公共牌
+            - 恢复底池和下注信息
+            - 恢复事件日志
+            - 恢复控制器状态
+        """
+        try:
+            # 验证数据格式
+            if not isinstance(export_data, dict):
+                raise ValueError("导入数据必须是字典格式")
+            
+            if 'version' not in export_data:
+                raise ValueError("导入数据缺少版本信息")
+            
+            if 'game_state' not in export_data:
+                raise ValueError("导入数据缺少游戏状态信息")
+            
+            # 检查版本兼容性
+            version = export_data['version']
+            if not version.startswith('2.'):
+                raise ValueError(f"不支持的数据版本: {version}")
+            
+            game_data = export_data['game_state']
+            controller_data = export_data.get('controller_state', {})
+            
+            # 重建玩家列表
+            players = []
+            for player_data in game_data['players']:
+                # 重建手牌
+                hole_cards = []
+                for card_data in player_data['hole_cards']:
+                    suit = Suit[card_data['suit']]
+                    rank = Rank[card_data['rank']]
+                    hole_cards.append(Card(suit, rank))
+                
+                # 重建玩家对象
+                player = Player(
+                    seat_id=player_data['seat_id'],
+                    name=player_data['name'],
+                    chips=player_data['chips'],
+                    hole_cards=hole_cards,
+                    current_bet=player_data['current_bet'],
+                    status=SeatStatus[player_data['status']],
+                    is_dealer=player_data['is_dealer'],
+                    is_small_blind=player_data['is_small_blind'],
+                    is_big_blind=player_data['is_big_blind'],
+                    is_human=player_data.get('is_human', False),
+                    total_bet_this_hand=player_data.get('total_bet_this_hand', 0),
+                    last_action_type=ActionType[player_data['last_action_type']] if player_data['last_action_type'] else None
+                )
+                players.append(player)
+            
+            # 重建公共牌
+            community_cards = []
+            for card_data in game_data['community_cards']:
+                suit = Suit[card_data['suit']]
+                rank = Rank[card_data['rank']]
+                community_cards.append(Card(suit, rank))
+            
+            # 创建新的游戏状态
+            new_game_state = GameState(
+                phase=Phase[game_data['phase']],
+                community_cards=community_cards,
+                pot=game_data['pot'],
+                current_bet=game_data['current_bet'],
+                last_raiser=game_data['last_raiser'],
+                last_raise_amount=game_data['last_raise_amount'],
+                players=players,
+                dealer_position=game_data['dealer_position'],
+                current_player=game_data['current_player'],
+                small_blind=game_data['small_blind'],
+                big_blind=game_data['big_blind'],
+                street_index=game_data['street_index'],
+                events=game_data['events'].copy()
+            )
+            
+            # 替换当前游戏状态
+            self._game_state = new_game_state
+            
+            # 恢复控制器状态
+            self._hand_in_progress = controller_data.get('hand_in_progress', False)
+            
+            # 发射状态导入事件
+            self._event_bus.emit_simple(
+                EventType.STATE_CHANGED,
+                action="state_imported",
+                players_count=len(players)
+            )
+            
+            self._logger.info(f"成功导入游戏状态，包含{len(players)}个玩家")
+            return True
+            
+        except (KeyError, ValueError, TypeError) as e:
+            self._logger.error(f"导入游戏状态失败: {e}")
+            raise ValueError(f"导入数据格式错误: {e}")
+        except Exception as e:
+            self._logger.error(f"导入游戏状态时发生未知错误: {e}")
+            return False 
