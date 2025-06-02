@@ -84,7 +84,6 @@ class ProjectCleaner:
         self.protected_files = {
             ".gitignore",
             ".gitkeep",
-            "README.md",
             "requirements.txt",
             "setup.py",
             "pyproject.toml",

@@ -228,16 +228,14 @@ def check_project_structure():
     print(f"当前工作目录: {current_dir}")
     
     required_dirs = [
-        "core_game_logic/core",
-        "core_game_logic/game", 
-        "core_game_logic/betting",
-        "core_game_logic/phases",
-        "core_game_logic/evaluator",
-        "tests/common",
-        "tests/unit",
-        "tests/integration",
-        "tests/e2e",
-        "tests/rules"
+        "v2",
+        "v2/core",
+        "v2/controller", 
+        "v2/ai",
+        "v2/ui",
+        "v2/ui/cli",
+        "v2/ui/streamlit",
+        "tests/unit"
     ]
     
     missing_dirs = []
