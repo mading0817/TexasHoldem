@@ -335,7 +335,9 @@ class GameState:
                 cards = self.deck.deal_cards(2)
                 player.set_hole_cards(cards)
         
-        self.add_event(f"Dealt hole cards to {len(active_players)} players")
+        # 添加阶段标识
+        phase_prefix = f"[{self.phase.value}] "
+        self.add_event(f"{phase_prefix}发底牌给 {len(active_players)} 位玩家")
     
     def deal_community_cards(self, count: int) -> None:
         """Deal community cards.
@@ -364,16 +366,19 @@ class GameState:
             else:
                 raise ValueError(f"Insufficient cards in deck to deal {count} community cards")
         
+        # 添加阶段标识
+        phase_prefix = f"[{self.phase.value}] "
+        
         # Log the event based on phase
         if self.phase == Phase.FLOP:
             cards_str = " ".join(str(card) for card in self.community_cards[-3:])
-            self.add_event(f"Flop dealt: {cards_str}")
+            self.add_event(f"{phase_prefix}翻牌: {cards_str}")
         elif self.phase == Phase.TURN:
             card_str = str(self.community_cards[-1])
-            self.add_event(f"Turn dealt: {card_str}")
+            self.add_event(f"{phase_prefix}转牌: {card_str}")
         elif self.phase == Phase.RIVER:
             card_str = str(self.community_cards[-1])
-            self.add_event(f"River dealt: {card_str}")
+            self.add_event(f"{phase_prefix}河牌: {card_str}")
     
     def collect_bets_to_pot(self) -> int:
         """Collect all current bets into the pot.
@@ -415,12 +420,23 @@ class GameState:
         try:
             current_index = phase_order.index(self.phase)
             if current_index < len(phase_order) - 1:
+                old_phase = self.phase
                 self.phase = phase_order[current_index + 1]
-                self.add_event(f"Advanced to {self.phase.name}")
+                # 添加更详细的阶段转换信息
+                phase_names = {
+                    Phase.PRE_FLOP: "翻牌前",
+                    Phase.FLOP: "翻牌",
+                    Phase.TURN: "转牌", 
+                    Phase.RIVER: "河牌",
+                    Phase.SHOWDOWN: "摊牌"
+                }
+                old_name = phase_names.get(old_phase, old_phase.name)
+                new_name = phase_names.get(self.phase, self.phase.name)
+                self.add_event(f"阶段转换: {old_name} → {new_name}")
         except ValueError:
             # If current phase is not in the list, set to showdown
             self.phase = Phase.SHOWDOWN
-            self.add_event(f"Advanced to {self.phase.name}")
+            self.add_event(f"阶段转换: 未知阶段 → 摊牌")
     
     def add_event(self, event: str) -> None:
         """Add an event to the game log.

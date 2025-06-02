@@ -185,8 +185,16 @@ def render_game_state(snapshot):
         st.subheader(f"🎯 当前阶段: {phase_names.get(snapshot.phase, snapshot.phase.value)}")
     
     with col2:
-        # 显示底池
-        st.metric("💰 底池", f"${snapshot.pot}")
+        # 计算实时底池：当前底池 + 所有玩家的当前下注
+        current_round_bets = sum(player.current_bet for player in snapshot.players)
+        total_pot = snapshot.pot + current_round_bets
+        
+        # 显示实时底池和详细信息
+        st.metric("💰 底池", f"${total_pot}")
+        if current_round_bets > 0:
+            st.caption(f"已收集: ${snapshot.pot} + 当前轮: ${current_round_bets}")
+        else:
+            st.caption(f"已收集: ${snapshot.pot}")
     
     with col3:
         # 显示当前下注
@@ -287,7 +295,17 @@ def process_ai_actions_continuously(controller):
             
         current_player_id = controller.get_current_player_id()
         if current_player_id is None:
-            break
+            # 没有当前玩家，可能需要阶段转换
+            # 强制检查阶段转换
+            try:
+                controller._check_phase_transition()
+                # 检查阶段转换后是否有新的当前玩家
+                current_player_id = controller.get_current_player_id()
+                if current_player_id is None:
+                    break
+            except Exception as e:
+                st.error(f"阶段转换检查失败: {e}")
+                break
             
         # 如果轮到人类玩家（玩家0），停止AI处理
         if current_player_id == 0:
@@ -318,41 +336,20 @@ def process_ai_actions_continuously(controller):
                 # 获取新增的事件
                 new_events = snapshot_after.events[events_before_count:]
                 for event in new_events:
-                    # 检查是否是AI行动事件
-                    if current_player_id < len(snapshot_after.players):
-                        ai_player = snapshot_after.players[current_player_id]
-                        # 为AI行动添加玩家标识
-                        if any(action_word in event.lower() for action_word in ['跟注', '过牌', '加注', '弃牌', '全押']):
-                            st.session_state.events.append(f"{ai_player.name} {event}")
-                        else:
-                            # 其他事件（如阶段转换、发牌等）
-                            st.session_state.events.append(event)
-                    else:
-                        st.session_state.events.append(event)
+                    # 直接添加事件，不再修改格式（因为controller已经添加了玩家名称和阶段信息）
+                    st.session_state.events.append(event)
             
             # 检查阶段是否发生变化
             if phase_after != phase_before:
-                phase_change_event = f"Advanced to {phase_after.value}"
-                if phase_change_event not in [event.split(' ', 1)[-1] for event in st.session_state.events[-3:]]:
-                    st.session_state.events.append(phase_change_event)
+                # 阶段转换事件已经在controller中记录，这里不需要重复添加
                 
-                # 记录发牌事件
-                if phase_after.value == "FLOP" and len(snapshot_after.community_cards) >= 3:
-                    cards_str = " ".join(str(card) for card in snapshot_after.community_cards[-3:])
-                    flop_event = f"Flop dealt: {cards_str}"
-                    if flop_event not in st.session_state.events:
-                        st.session_state.events.append(flop_event)
-                elif phase_after.value == "TURN" and len(snapshot_after.community_cards) >= 4:
-                    card_str = str(snapshot_after.community_cards[-1])
-                    turn_event = f"Turn dealt: {card_str}"
-                    if turn_event not in st.session_state.events:
-                        st.session_state.events.append(turn_event)
-                elif phase_after.value == "RIVER" and len(snapshot_after.community_cards) >= 5:
-                    card_str = str(snapshot_after.community_cards[-1])
-                    river_event = f"River dealt: {card_str}"
-                    if river_event not in st.session_state.events:
-                        st.session_state.events.append(river_event)
+                # 阶段转换后，重新检查当前玩家
+                # 如果阶段转换后轮到人类玩家，停止AI处理
+                new_current_player_id = controller.get_current_player_id()
+                if new_current_player_id == 0:
+                    break
         else:
+            # AI行动失败，停止处理
             break
             
         # 短暂延迟，让用户看到AI行动
@@ -371,8 +368,11 @@ def process_ai_actions_continuously(controller):
         new_events = final_snapshot.events[initial_events_count:]
         for event in new_events:
             # 避免重复记录
-            if event not in [e.split(' ', 1)[-1] if ' ' in e else e for e in st.session_state.events]:
+            if event not in st.session_state.events:
                 st.session_state.events.append(event)
+    
+    # 返回是否有AI行动被处理
+    return ai_actions_count > 0
 
 
 def render_action_buttons(controller):
@@ -446,15 +446,27 @@ def render_action_buttons(controller):
                 st.rerun()
     
     with col3:
-        # 加注按钮 - 修复最小加注计算
-        # 德州扑克规则：最小加注应该是当前下注的两倍
-        min_raise = max(snapshot.current_bet * 2, snapshot.current_bet + 10) if snapshot.current_bet > 0 else 10
-        max_raise = player.chips + player.current_bet  # 玩家可以下注的最大总额
-        
-        if max_raise >= min_raise:
-            if st.button("📈 加注 (Raise)", key="raise_btn"):
-                st.session_state.show_raise_input = True
-                st.rerun()
+        # 加注/下注按钮 - 修复BET vs RAISE逻辑和最小值计算
+        if snapshot.current_bet == 0:
+            # 无人下注时显示"下注"按钮
+            min_bet = snapshot.big_blind  # 最小下注为大盲注
+            max_bet = player.chips + player.current_bet  # 玩家可以下注的最大总额
+            
+            if max_bet >= min_bet:
+                if st.button("💰 下注 (Bet)", key="bet_btn"):
+                    st.session_state.show_bet_input = True
+                    st.rerun()
+        else:
+            # 有人下注时显示"加注"按钮
+            # 德州扑克规则：最小加注 = 当前下注 + 上次加注增量
+            last_raise_increment = snapshot.last_raise_amount if snapshot.last_raise_amount > 0 else snapshot.big_blind
+            min_raise = snapshot.current_bet + last_raise_increment
+            max_raise = player.chips + player.current_bet  # 玩家可以下注的最大总额
+            
+            if max_raise >= min_raise:
+                if st.button("📈 加注 (Raise)", key="raise_btn"):
+                    st.session_state.show_raise_input = True
+                    st.rerun()
     
     with col4:
         if st.button("🎯 全押 (All-in)", key="all_in"):
@@ -468,24 +480,76 @@ def render_action_buttons(controller):
             st.session_state.events.append(f"你选择了全押 ${player.chips}")
             st.rerun()
     
-    # 加注金额输入 - 修复为总下注金额输入
+    # 下注金额输入（无人下注时）
+    if hasattr(st.session_state, 'show_bet_input') and st.session_state.show_bet_input:
+        st.subheader("💰 下注金额")
+        
+        # 计算正确的最小和最大下注金额
+        min_bet = snapshot.big_blind
+        max_bet = player.chips + player.current_bet  # 玩家的总可用筹码
+        
+        if max_bet >= min_bet:
+            # 显示当前下注信息
+            st.info(f"当前下注: ${snapshot.current_bet} | 你已下注: ${player.current_bet}")
+            
+            bet_amount = st.number_input(
+                f"下注金额 (${min_bet} - ${max_bet})",
+                min_value=min_bet,
+                max_value=max_bet,
+                value=min_bet,
+                step=snapshot.big_blind,
+                key="bet_amount",
+                help="输入你想要的下注金额"
+            )
+            
+            # 显示实际需要投入的筹码
+            actual_bet_needed = bet_amount - player.current_bet
+            st.write(f"💰 需要投入筹码: ${actual_bet_needed}")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button(f"✅ 确认下注 ${bet_amount}", key="confirm_bet"):
+                    action = Action(
+                        action_type=ActionType.BET,
+                        amount=bet_amount,  # 传递下注金额
+                        player_id=0
+                    )
+                    controller.execute_action(action)
+                    # 记录用户行动事件
+                    st.session_state.events.append(f"你下注了 ${bet_amount} (投入 ${actual_bet_needed})")
+                    st.session_state.show_bet_input = False
+                    st.rerun()
+            
+            with col2:
+                if st.button("❌ 取消", key="cancel_bet"):
+                    st.session_state.show_bet_input = False
+                    st.rerun()
+        else:
+            st.warning("筹码不足以进行下注")
+            if st.button("❌ 取消", key="cancel_bet_insufficient"):
+                st.session_state.show_bet_input = False
+                st.rerun()
+
+    # 加注金额输入（有人下注时）
     if hasattr(st.session_state, 'show_raise_input') and st.session_state.show_raise_input:
         st.subheader("📈 加注金额")
         
         # 计算正确的最小和最大加注金额
-        min_raise = max(snapshot.current_bet * 2, snapshot.current_bet + 10) if snapshot.current_bet > 0 else 10
+        last_raise_increment = snapshot.last_raise_amount if snapshot.last_raise_amount > 0 else snapshot.big_blind
+        min_raise = snapshot.current_bet + last_raise_increment
         max_raise = player.chips + player.current_bet  # 玩家的总可用筹码
         
         if max_raise >= min_raise:
             # 显示当前下注信息
             st.info(f"当前下注: ${snapshot.current_bet} | 你已下注: ${player.current_bet}")
+            st.info(f"上次加注增量: ${last_raise_increment} | 最小加注总额: ${min_raise}")
             
             bet_amount = st.number_input(
                 f"总下注金额 (${min_raise} - ${max_raise})",
                 min_value=min_raise,
                 max_value=max_raise,
                 value=min_raise,
-                step=10,
+                step=last_raise_increment,
                 key="raise_amount",
                 help="输入你想要的总下注金额（不是增量）"
             )
@@ -821,8 +885,14 @@ def main():
         current_player_id = controller.get_current_player_id()
         if current_player_id is not None and current_player_id != 0:
             # 当前是AI玩家，自动处理
-            process_ai_actions_continuously(controller)
-            st.rerun()  # 刷新页面显示最新状态
+            ai_processed = process_ai_actions_continuously(controller)
+            if ai_processed:
+                st.rerun()  # 刷新页面显示最新状态
+        elif current_player_id is None:
+            # 没有当前玩家，可能需要检查游戏状态
+            # 这种情况可能发生在所有玩家完成行动但阶段未转换时
+            st.info("⏳ 检查游戏状态...")
+            st.rerun()  # 刷新页面重新检查状态
     
     # 渲染行动按钮
     if st.session_state.game_started and not controller.is_hand_over():

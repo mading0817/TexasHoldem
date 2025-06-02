@@ -7,6 +7,7 @@ Streamlit UI流程验证测试 - Texas Hold'em Poker Game v2
 2. 验证事件记录完整匹配
 3. 验证AI行动正确记录
 4. 模拟真实用户操作流程
+5. 验证ALL_IN场景的正确处理
 
 Author: Texas Hold'em v2 Team
 Version: 1.0
@@ -218,6 +219,35 @@ class UIFlowValidator:
             new_events = final_snapshot.events[len(events_recorded):]
             events_recorded.extend(new_events)
         
+        # 检查ALL_IN场景
+        active_players = [p for p in final_snapshot.players if p.status == SeatStatus.ACTIVE]
+        all_in_players = [p for p in final_snapshot.players if p.status == SeatStatus.ALL_IN]
+        folded_players = [p for p in final_snapshot.players if p.status == SeatStatus.FOLDED]
+        
+        # 检测ALL_IN场景的正确处理
+        all_in_scenario_valid = True
+        all_in_scenario_description = "正常结束"
+        
+        # 场景1：只有一个活跃玩家和一些弃牌玩家
+        if len(active_players) <= 1 and len(folded_players) > 0:
+            if not self.controller.is_hand_over():
+                all_in_scenario_valid = False
+                all_in_scenario_description = "只剩一个活跃玩家但手牌未结束"
+            else:
+                all_in_scenario_description = "只剩一个活跃玩家，手牌正确结束"
+        
+        # 场景2：所有剩余玩家都是ALL_IN
+        elif len(active_players) == 0 and len(all_in_players) > 1:
+            if not self.controller.is_hand_over():
+                all_in_scenario_valid = False
+                all_in_scenario_description = "所有玩家ALL_IN但手牌未结束"
+            else:
+                all_in_scenario_description = "所有玩家ALL_IN，手牌正确结束"
+        
+        # 场景3：有ALL_IN玩家和活跃玩家
+        elif len(active_players) > 0 and len(all_in_players) > 0:
+            all_in_scenario_description = f"混合场景：{len(active_players)}活跃，{len(all_in_players)}全押"
+        
         return {
             'hand_number': hand_number,
             'success': True,
@@ -227,7 +257,14 @@ class UIFlowValidator:
             'winner_ids': winner_ids,
             'pot_amount': pot_amount,
             'phase_sequence_valid': self.validate_phase_sequence(phases_reached),
-            'events_list': events_recorded
+            'events_list': events_recorded,
+            'all_in_scenario_valid': all_in_scenario_valid,
+            'all_in_scenario_description': all_in_scenario_description,
+            'player_status': {
+                'active': len(active_players),
+                'all_in': len(all_in_players),
+                'folded': len(folded_players)
+            }
         }
     
     def validate_phase_sequence(self, phases: List[Phase]) -> bool:
@@ -273,6 +310,7 @@ class UIFlowValidator:
         successful_hands = 0
         phase_jump_issues = 0
         event_recording_issues = 0
+        all_in_scenario_issues = 0
         
         for hand_num in range(1, num_hands + 1):
             try:
@@ -291,6 +329,11 @@ class UIFlowValidator:
                     if result['events_recorded'] < result['actions_taken']:
                         event_recording_issues += 1
                         self.logger.warning(f"第{hand_num}手牌事件记录不足: {result['events_recorded']}/{result['actions_taken']}")
+                    
+                    # 检查ALL_IN场景问题
+                    if not result['all_in_scenario_valid']:
+                        all_in_scenario_issues += 1
+                        self.logger.warning(f"第{hand_num}手牌ALL_IN场景问题: {result['all_in_scenario_description']}")
                     
                     # 检查是否有阶段跳跃（从PRE_FLOP直接到SHOWDOWN）
                     phases = result['phases_reached']
@@ -311,7 +354,7 @@ class UIFlowValidator:
         
         # 计算得分
         base_score = (successful_hands / num_hands) * 100
-        penalty = (phase_jump_issues * 20) + (event_recording_issues * 10)
+        penalty = (phase_jump_issues * 20) + (event_recording_issues * 10) + (all_in_scenario_issues * 15)
         final_score = max(0, base_score - penalty)
         
         # 确定等级
@@ -330,6 +373,7 @@ class UIFlowValidator:
             'successful_hands': successful_hands,
             'phase_jump_issues': phase_jump_issues,
             'event_recording_issues': event_recording_issues,
+            'all_in_scenario_issues': all_in_scenario_issues,
             'score': final_score,
             'grade': grade,
             'total_time': total_time,
@@ -360,6 +404,7 @@ class UIFlowValidator:
         report_lines.append("-" * 40)
         report_lines.append(f"阶段跳跃问题: {result['phase_jump_issues']}个")
         report_lines.append(f"事件记录问题: {result['event_recording_issues']}个")
+        report_lines.append(f"ALL_IN场景问题: {result['all_in_scenario_issues']}个")
         report_lines.append("")
         
         # 详细手牌结果
@@ -397,6 +442,11 @@ class UIFlowValidator:
             report_lines.append("✅ 事件记录问题已完全修复")
         else:
             report_lines.append(f"⚠️ 仍有{result['event_recording_issues']}个事件记录问题")
+        
+        if result['all_in_scenario_issues'] == 0:
+            report_lines.append("✅ ALL_IN场景问题已完全修复")
+        else:
+            report_lines.append(f"⚠️ 仍有{result['all_in_scenario_issues']}个ALL_IN场景问题")
         
         report_lines.append("")
         

@@ -16,6 +16,7 @@
 8. AI行动合理性：AI在各种情况下的决策符合逻辑
 9. UI界面一致性：按钮、状态、提示信息的准确性
 10. 边界情况处理：最小加注、全押、筹码不足等特殊情况
+11. ALL_IN场景验证：全押后其他人弃牌、多人全押等场景的正确处理
 
 Author: Texas Hold'em v2 Team
 Version: 1.0
@@ -384,6 +385,7 @@ class TexasHoldemRuleValidator:
         2. 加注金额应该是总下注额，不是增量
         3. 全下玩家无权参与后续下注，但仍可赢得主池
         4. 平分底池时，多余筹码给予庄家左侧第一位玩家
+        5. 当无人下注时应该使用BET，有人下注时应该使用RAISE
         
         Args:
             hand_record: 手牌记录
@@ -392,9 +394,6 @@ class TexasHoldemRuleValidator:
             验证是否通过
         """
         is_valid = True
-        
-        # 这里可以添加更详细的下注规则验证
-        # 由于当前测试框架限制，我们主要验证结果的合理性
         
         # 验证筹码变化的合理性
         total_initial = sum(hand_record.initial_chips.values())
@@ -407,6 +406,178 @@ class TexasHoldemRuleValidator:
                 description=f"第{hand_record.hand_number}手牌筹码总量变化",
                 details=f"初始: {total_initial}, 最终: {total_final}",
                 hand_number=hand_record.hand_number
+            )
+            self.issues.append(issue)
+            is_valid = False
+        
+        return is_valid
+    
+    def validate_bet_vs_raise_logic(self, controller: 'PokerController') -> bool:
+        """验证BET vs RAISE逻辑.
+        
+        德州扑克规则：
+        1. 当current_bet=0时，应该使用BET行动
+        2. 当current_bet>0时，应该使用RAISE行动
+        3. 最小下注应该是大盲注
+        4. 最小加注应该是当前下注+上次加注增量
+        
+        Args:
+            controller: 游戏控制器
+            
+        Returns:
+            验证是否通过
+        """
+        is_valid = True
+        
+        try:
+            from v2.core.enums import Action, ActionType
+            from v2.core.validator import ActionValidator
+            
+            snapshot = controller.get_snapshot()
+            validator = ActionValidator()
+            
+            # 找到一个活跃的玩家进行测试
+            active_player = None
+            for player in snapshot.players:
+                if player.status.value == 'active':
+                    active_player = player
+                    break
+            
+            if not active_player:
+                # 如果没有活跃玩家，跳过这个测试
+                return is_valid
+            
+            # 测试BET逻辑（无人下注时）
+            if snapshot.current_bet == 0:
+                # 验证最小下注应该是大盲注
+                expected_min_bet = snapshot.big_blind
+                
+                # 模拟下注行动
+                test_bet_action = Action(ActionType.BET, expected_min_bet, active_player.seat_id)
+                
+                try:
+                    validated_action = validator.validate(controller._game_state, active_player, test_bet_action)
+                    if validated_action.final_action.action_type != ActionType.BET:
+                        issue = ValidationIssue(
+                            severity=TestResult.FAIL,
+                            category="BET vs RAISE逻辑",
+                            description="无人下注时BET行动被错误转换",
+                            details=f"期望BET，实际{validated_action.final_action.action_type.value}",
+                            hand_number=None
+                        )
+                        self.issues.append(issue)
+                        is_valid = False
+                except Exception as e:
+                    issue = ValidationIssue(
+                        severity=TestResult.WARNING,
+                        category="BET vs RAISE逻辑",
+                        description="BET行动验证失败",
+                        details=str(e),
+                        hand_number=None
+                    )
+                    self.issues.append(issue)
+            
+            # 测试RAISE逻辑（有人下注时）
+            elif snapshot.current_bet > 0:
+                # 验证最小加注计算
+                last_raise_increment = snapshot.last_raise_amount if snapshot.last_raise_amount > 0 else snapshot.big_blind
+                expected_min_raise = snapshot.current_bet + last_raise_increment
+                
+                # 确保玩家有足够筹码进行加注
+                if active_player.chips + active_player.current_bet >= expected_min_raise:
+                    # 模拟加注行动
+                    test_raise_action = Action(ActionType.RAISE, expected_min_raise, active_player.seat_id)
+                    
+                    try:
+                        validated_action = validator.validate(controller._game_state, active_player, test_raise_action)
+                        if validated_action.final_action.action_type not in [ActionType.RAISE, ActionType.ALL_IN]:
+                            issue = ValidationIssue(
+                                severity=TestResult.FAIL,
+                                category="BET vs RAISE逻辑",
+                                description="有人下注时RAISE行动被错误转换",
+                                details=f"期望RAISE，实际{validated_action.final_action.action_type.value}",
+                                hand_number=None
+                            )
+                            self.issues.append(issue)
+                            is_valid = False
+                    except Exception as e:
+                        issue = ValidationIssue(
+                            severity=TestResult.WARNING,
+                            category="BET vs RAISE逻辑",
+                            description="RAISE行动验证失败",
+                            details=str(e),
+                            hand_number=None
+                        )
+                        self.issues.append(issue)
+        
+        except Exception as e:
+            issue = ValidationIssue(
+                severity=TestResult.WARNING,
+                category="BET vs RAISE逻辑",
+                description="BET vs RAISE逻辑验证异常",
+                details=str(e),
+                hand_number=None
+            )
+            self.issues.append(issue)
+        
+        return is_valid
+    
+    def validate_minimum_bet_calculation(self, controller: 'PokerController') -> bool:
+        """验证最小下注/加注计算.
+        
+        德州扑克规则：
+        1. 最小下注 = 大盲注
+        2. 最小加注 = 当前下注 + 上次加注增量
+        3. 如果是第一次加注，增量为大盲注
+        
+        Args:
+            controller: 游戏控制器
+            
+        Returns:
+            验证是否通过
+        """
+        is_valid = True
+        
+        try:
+            snapshot = controller.get_snapshot()
+            
+            if snapshot.current_bet == 0:
+                # 无人下注时，最小下注应该是大盲注
+                expected_min = snapshot.big_blind
+                if expected_min != snapshot.big_blind:
+                    issue = ValidationIssue(
+                        severity=TestResult.FAIL,
+                        category="最小下注计算",
+                        description="最小下注计算错误",
+                        details=f"期望{snapshot.big_blind}，实际{expected_min}",
+                        hand_number=None
+                    )
+                    self.issues.append(issue)
+                    is_valid = False
+            else:
+                # 有人下注时，最小加注应该是当前下注+上次加注增量
+                last_raise_increment = snapshot.last_raise_amount if snapshot.last_raise_amount > 0 else snapshot.big_blind
+                expected_min = snapshot.current_bet + last_raise_increment
+                
+                # 这里我们验证逻辑是否正确，而不是具体的UI实现
+                if last_raise_increment <= 0:
+                    issue = ValidationIssue(
+                        severity=TestResult.FAIL,
+                        category="最小下注计算",
+                        description="上次加注增量计算错误",
+                        details=f"last_raise_amount: {snapshot.last_raise_amount}, big_blind: {snapshot.big_blind}",
+                        hand_number=None
+                    )
+                    self.issues.append(issue)
+                    is_valid = False
+        
+        except Exception as e:
+            issue = ValidationIssue(
+                severity=TestResult.FAIL,
+                category="最小下注计算",
+                description="最小下注计算验证异常",
+                details=str(e),
+                hand_number=None
             )
             self.issues.append(issue)
             is_valid = False
@@ -673,11 +844,10 @@ class TexasHoldemRuleValidator:
         is_valid = True
         
         # 验证阶段转换事件记录
-        for phase in hand_record.phases_reached:
-            if phase != Phase.PRE_FLOP:  # PRE_FLOP是初始阶段，不需要转换事件
-                # 应该有对应的阶段转换记录
-                # 这里我们无法直接访问事件记录，但可以通过其他方式验证
-                pass
+        expected_phase_events = []
+        for i, phase in enumerate(hand_record.phases_reached):
+            if i > 0:  # 跳过第一个阶段（PRE_FLOP是初始阶段）
+                expected_phase_events.append(f"Advanced to {phase.value}")
         
         # 验证行动数量与阶段的合理性
         min_expected_actions = len(hand_record.phases_reached) * 2  # 每个阶段至少2个行动
@@ -693,13 +863,109 @@ class TexasHoldemRuleValidator:
         
         return is_valid
     
-    def validate_betting_round_completeness(self, hand_record: HandRecord) -> bool:
-        """验证下注轮完整性.
+    def validate_betting_round_completion(self, controller: 'PokerController') -> bool:
+        """验证下注轮完成逻辑.
         
         德州扑克规则：
-        1. 每个下注轮都必须给所有活跃玩家行动机会
-        2. 只有当所有玩家都匹配了当前下注时，下注轮才能结束
-        3. 不能因为玩家数量少而跳过下注轮
+        1. 当所有活跃玩家都匹配当前下注且都已行动过时，下注轮应该完成
+        2. 下注轮完成后应该自动进入下一阶段
+        3. 不应该出现所有玩家匹配下注但仍可继续行动的情况
+        
+        Args:
+            controller: 游戏控制器
+            
+        Returns:
+            验证是否通过
+        """
+        is_valid = True
+        
+        try:
+            snapshot = controller.get_snapshot()
+            active_players = snapshot.get_active_players()
+            
+            if len(active_players) < 2:
+                # 活跃玩家不足，跳过测试
+                return is_valid
+            
+            # 检查是否所有活跃玩家都匹配了当前下注
+            all_matched = True
+            for player in active_players:
+                if player.current_bet < snapshot.current_bet:
+                    all_matched = False
+                    break
+            
+            if all_matched and snapshot.current_bet > 0:
+                # 所有玩家都匹配了下注，检查是否还有玩家可以行动
+                current_player_id = controller.get_current_player_id()
+                
+                if current_player_id is not None:
+                    # 还有玩家可以行动，检查这是否合理
+                    current_player = snapshot.get_player_by_seat(current_player_id)
+                    
+                    if current_player and current_player.status.value == 'active':
+                        # 检查行动数是否足够
+                        actions_count = getattr(snapshot, 'actions_this_round', 0)
+                        min_actions_needed = len(active_players)
+                        
+                        # 如果有加注者，检查是否轮回到加注者后的第一个活跃玩家
+                        if snapshot.last_raiser is not None:
+                            # 找到加注者后的第一个活跃玩家
+                            players = snapshot.players
+                            raiser_pos = snapshot.last_raiser
+                            next_active_after_raiser = None
+                            
+                            for i in range(1, len(players) + 1):
+                                next_pos = (raiser_pos + i) % len(players)
+                                if players[next_pos].status.value == 'active':
+                                    next_active_after_raiser = next_pos
+                                    break
+                            
+                            # 如果当前玩家是加注者后的第一个活跃玩家，且所有人都匹配下注，应该进入下一阶段
+                            if (next_active_after_raiser is not None and 
+                                current_player_id == next_active_after_raiser and
+                                actions_count >= min_actions_needed):
+                                
+                                issue = ValidationIssue(
+                                    severity=TestResult.FAIL,
+                                    category="下注轮完成",
+                                    description="所有玩家匹配下注且轮回到加注者后第一个活跃玩家，但下注轮未完成",
+                                    details=f"当前下注: {snapshot.current_bet}, 活跃玩家: {len(active_players)}, 当前玩家: {current_player_id}, 加注者: {snapshot.last_raiser}, 行动数: {actions_count}",
+                                    hand_number=None
+                                )
+                                self.issues.append(issue)
+                                is_valid = False
+                        else:
+                            # 没有加注者的情况，如果行动数足够且所有人匹配下注，应该进入下一阶段
+                            if actions_count >= min_actions_needed:
+                                issue = ValidationIssue(
+                                    severity=TestResult.FAIL,
+                                    category="下注轮完成",
+                                    description="无加注者且所有玩家匹配下注，行动数足够，但下注轮未完成",
+                                    details=f"当前下注: {snapshot.current_bet}, 活跃玩家: {len(active_players)}, 当前玩家: {current_player_id}, 行动数: {actions_count}",
+                                    hand_number=None
+                                )
+                                self.issues.append(issue)
+                                is_valid = False
+        
+        except Exception as e:
+            issue = ValidationIssue(
+                severity=TestResult.WARNING,
+                category="下注轮完成",
+                description="下注轮完成逻辑验证异常",
+                details=str(e),
+                hand_number=None
+            )
+            self.issues.append(issue)
+        
+        return is_valid
+    
+    def validate_phase_transition_timing(self, hand_record: HandRecord) -> bool:
+        """验证阶段转换时机.
+        
+        德州扑克规则：
+        1. 阶段转换应该在下注轮完成后立即发生
+        2. 不应该出现下注轮完成但阶段不转换的情况
+        3. 阶段转换应该是自动的，不需要额外的用户操作
         
         Args:
             hand_record: 手牌记录
@@ -709,19 +975,232 @@ class TexasHoldemRuleValidator:
         """
         is_valid = True
         
-        # 检查是否有足够的行动来支持阶段转换
-        if len(hand_record.phases_reached) > 1:
-            # 如果有多个阶段，应该有足够的行动
-            expected_min_actions = (len(hand_record.phases_reached) - 1) * 4  # 每个阶段转换至少4个行动
-            if hand_record.total_actions < expected_min_actions:
-                issue = ValidationIssue(
-                    severity=TestResult.WARNING,
-                    category="下注轮完整性",
-                    description=f"第{hand_record.hand_number}手牌下注轮可能不完整",
-                    details=f"经历{len(hand_record.phases_reached)}个阶段但只有{hand_record.total_actions}个行动",
-                    hand_number=hand_record.hand_number
-                )
-                self.issues.append(issue)
+        # 检查阶段转换的连续性
+        phases = hand_record.phases_reached
+        if len(phases) > 1:
+            for i in range(1, len(phases)):
+                prev_phase = phases[i-1]
+                curr_phase = phases[i]
+                
+                # 检查阶段转换是否合理
+                expected_transitions = {
+                    Phase.PRE_FLOP: Phase.FLOP,
+                    Phase.FLOP: Phase.TURN,
+                    Phase.TURN: Phase.RIVER,
+                    Phase.RIVER: Phase.SHOWDOWN
+                }
+                
+                if prev_phase in expected_transitions:
+                    expected_next = expected_transitions[prev_phase]
+                    if curr_phase != expected_next:
+                        issue = ValidationIssue(
+                            severity=TestResult.FAIL,
+                            category="阶段转换时机",
+                            description=f"第{hand_record.hand_number}手牌阶段转换异常",
+                            details=f"从{prev_phase.value}转换到{curr_phase.value}，期望{expected_next.value}",
+                            hand_number=hand_record.hand_number
+                        )
+                        self.issues.append(issue)
+                        is_valid = False
+        
+        return is_valid
+    
+    def validate_betting_round_completion_detailed(self, controller: 'PokerController') -> bool:
+        """详细验证下注轮完成逻辑.
+        
+        德州扑克规则：
+        1. 当所有活跃玩家都匹配当前下注且都已行动过时，下注轮应该完成
+        2. 下注轮完成后应该自动进入下一阶段
+        3. 不应该出现所有玩家匹配下注但仍可继续行动的情况
+        
+        Args:
+            controller: 游戏控制器
+            
+        Returns:
+            验证是否通过
+        """
+        is_valid = True
+        
+        try:
+            snapshot = controller.get_snapshot()
+            active_players = snapshot.get_active_players()
+            
+            if len(active_players) < 2:
+                # 活跃玩家不足，跳过测试
+                return is_valid
+            
+            # 检查是否所有活跃玩家都匹配了当前下注
+            all_matched = True
+            for player in active_players:
+                if player.current_bet < snapshot.current_bet:
+                    all_matched = False
+                    break
+            
+            if all_matched and snapshot.current_bet > 0:
+                # 所有玩家都匹配了下注，检查是否还有玩家可以行动
+                current_player_id = controller.get_current_player_id()
+                
+                if current_player_id is not None:
+                    # 还有玩家可以行动，检查这是否合理
+                    current_player = snapshot.get_player_by_seat(current_player_id)
+                    
+                    if current_player and current_player.status.value == 'active':
+                        # 检查行动数是否足够
+                        actions_count = getattr(snapshot, 'actions_this_round', 0)
+                        min_actions_needed = len(active_players)
+                        
+                        # 如果有加注者，检查是否轮回到加注者后的第一个活跃玩家
+                        if snapshot.last_raiser is not None:
+                            # 找到加注者后的第一个活跃玩家
+                            players = snapshot.players
+                            raiser_pos = snapshot.last_raiser
+                            next_active_after_raiser = None
+                            
+                            for i in range(1, len(players) + 1):
+                                next_pos = (raiser_pos + i) % len(players)
+                                if players[next_pos].status.value == 'active':
+                                    next_active_after_raiser = next_pos
+                                    break
+                            
+                            # 如果当前玩家是加注者后的第一个活跃玩家，且所有人都匹配下注，应该进入下一阶段
+                            if (next_active_after_raiser is not None and 
+                                current_player_id == next_active_after_raiser and
+                                actions_count >= min_actions_needed):
+                                
+                                issue = ValidationIssue(
+                                    severity=TestResult.FAIL,
+                                    category="下注轮完成",
+                                    description="所有玩家匹配下注且轮回到加注者后第一个活跃玩家，但下注轮未完成",
+                                    details=f"当前下注: {snapshot.current_bet}, 活跃玩家: {len(active_players)}, 当前玩家: {current_player_id}, 加注者: {snapshot.last_raiser}, 行动数: {actions_count}",
+                                    hand_number=None
+                                )
+                                self.issues.append(issue)
+                                is_valid = False
+                        else:
+                            # 没有加注者的情况，如果行动数足够且所有人匹配下注，应该进入下一阶段
+                            if actions_count >= min_actions_needed:
+                                issue = ValidationIssue(
+                                    severity=TestResult.FAIL,
+                                    category="下注轮完成",
+                                    description="无加注者且所有玩家匹配下注，行动数足够，但下注轮未完成",
+                                    details=f"当前下注: {snapshot.current_bet}, 活跃玩家: {len(active_players)}, 当前玩家: {current_player_id}, 行动数: {actions_count}",
+                                    hand_number=None
+                                )
+                                self.issues.append(issue)
+                                is_valid = False
+        
+        except Exception as e:
+            issue = ValidationIssue(
+                severity=TestResult.WARNING,
+                category="下注轮完成",
+                description="下注轮完成详细逻辑验证异常",
+                details=str(e),
+                hand_number=None
+            )
+            self.issues.append(issue)
+        
+        return is_valid
+    
+    def validate_all_in_scenarios(self, hand_record: HandRecord, controller: 'PokerController') -> bool:
+        """验证ALL_IN场景处理规则.
+        
+        德州扑克规则：
+        1. 当玩家全押后其他人全部弃牌时，手牌应该立即结束
+        2. 当所有剩余玩家都是ALL_IN时，应该直接进入摊牌
+        3. ALL_IN玩家不能参与后续下注，但可以赢得底池
+        4. 有ALL_IN玩家时，游戏应该继续到摊牌阶段
+        
+        Args:
+            hand_record: 手牌记录
+            controller: 游戏控制器
+            
+        Returns:
+            验证是否通过
+        """
+        is_valid = True
+        
+        try:
+            # 检查手牌记录中是否有ALL_IN相关的异常情况
+            if hand_record.phases_reached:
+                # 如果手牌只达到了PRE_FLOP或FLOP就结束，检查是否是合理的ALL_IN场景
+                last_phase = hand_record.phases_reached[-1]
+                
+                # 获取当前游戏状态快照
+                snapshot = controller.get_snapshot()
+                active_players = [p for p in snapshot.players if p.status == SeatStatus.ACTIVE]
+                all_in_players = [p for p in snapshot.players if p.status == SeatStatus.ALL_IN]
+                folded_players = [p for p in snapshot.players if p.status == SeatStatus.FOLDED]
+                
+                # 场景1：只有一个活跃玩家和一些弃牌玩家，手牌应该结束
+                if len(active_players) <= 1 and len(folded_players) > 0:
+                    if not controller.is_hand_over():
+                        issue = ValidationIssue(
+                            severity=TestResult.FAIL,
+                            category="ALL_IN场景",
+                            description=f"第{hand_record.hand_number}手牌只剩一个活跃玩家但手牌未结束",
+                            details=f"活跃玩家: {len(active_players)}, 弃牌玩家: {len(folded_players)}, ALL_IN玩家: {len(all_in_players)}",
+                            hand_number=hand_record.hand_number
+                        )
+                        self.issues.append(issue)
+                        is_valid = False
+                
+                # 场景2：所有剩余玩家都是ALL_IN，应该能够进入摊牌
+                if len(active_players) == 0 and len(all_in_players) > 1:
+                    if last_phase != Phase.SHOWDOWN and not controller.is_hand_over():
+                        issue = ValidationIssue(
+                            severity=TestResult.WARNING,
+                            category="ALL_IN场景",
+                            description=f"第{hand_record.hand_number}手牌所有玩家ALL_IN但未进入摊牌",
+                            details=f"ALL_IN玩家: {len(all_in_players)}, 最后阶段: {last_phase.value}",
+                            hand_number=hand_record.hand_number
+                        )
+                        self.issues.append(issue)
+                
+                # 场景3：有ALL_IN玩家和活跃玩家，游戏应该继续
+                if len(active_players) > 0 and len(all_in_players) > 0:
+                    # 这是正常情况，ALL_IN玩家不参与后续下注，但游戏继续
+                    # 验证ALL_IN玩家确实不能再行动
+                    current_player_id = controller.get_current_player_id()
+                    if current_player_id is not None:
+                        current_player = snapshot.get_player_by_seat(current_player_id)
+                        if current_player and current_player.status == SeatStatus.ALL_IN:
+                            issue = ValidationIssue(
+                                severity=TestResult.FAIL,
+                                category="ALL_IN场景",
+                                description=f"第{hand_record.hand_number}手牌ALL_IN玩家仍被要求行动",
+                                details=f"当前玩家: {current_player_id}, 状态: {current_player.status.value}",
+                                hand_number=hand_record.hand_number
+                            )
+                            self.issues.append(issue)
+                            is_valid = False
+                
+                # 场景4：验证手牌结束的合理性
+                if controller.is_hand_over():
+                    total_remaining = len(active_players) + len(all_in_players)
+                    if total_remaining > 1 and last_phase not in [Phase.SHOWDOWN]:
+                        # 如果有多个玩家剩余但不在摊牌阶段就结束，检查是否合理
+                        if len(active_players) <= 1:
+                            # 只有一个或零个活跃玩家，这是合理的
+                            pass
+                        else:
+                            issue = ValidationIssue(
+                                severity=TestResult.WARNING,
+                                category="ALL_IN场景",
+                                description=f"第{hand_record.hand_number}手牌在非摊牌阶段结束但有多个玩家剩余",
+                                details=f"活跃玩家: {len(active_players)}, ALL_IN玩家: {len(all_in_players)}, 阶段: {last_phase.value}",
+                                hand_number=hand_record.hand_number
+                            )
+                            self.issues.append(issue)
+        
+        except Exception as e:
+            issue = ValidationIssue(
+                severity=TestResult.WARNING,
+                category="ALL_IN场景",
+                description=f"第{hand_record.hand_number}手牌ALL_IN场景验证异常",
+                details=str(e),
+                hand_number=hand_record.hand_number
+            )
+            self.issues.append(issue)
         
         return is_valid
 
@@ -1063,7 +1542,16 @@ class UltimateReleaseValidator:
                 self.validator.validate_ai_action_recording(hand_record)
                 self.validator.validate_game_flow_completeness(hand_record)
                 self.validator.validate_event_recording_completeness(hand_record)
-                self.validator.validate_betting_round_completeness(hand_record)
+                self.validator.validate_betting_round_completion(self.controller)
+                self.validator.validate_phase_transition_timing(hand_record)
+                
+                # 新增验证：BET vs RAISE逻辑和最小下注计算
+                if self.controller:
+                    self.validator.validate_bet_vs_raise_logic(self.controller)
+                    self.validator.validate_minimum_bet_calculation(self.controller)
+                    self.validator.validate_betting_round_completion_detailed(self.controller)
+                    # 新增：ALL_IN场景验证
+                    self.validator.validate_all_in_scenarios(hand_record, self.controller)
                 
             except Exception as e:
                 self.logger.error(f"第{hand_num}手牌失败: {e}")

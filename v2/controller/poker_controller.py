@@ -186,13 +186,24 @@ class PokerController:
         if not self._hand_in_progress:
             return True
             
-        # 检查是否只剩一个活跃玩家
+        # 检查是否只剩一个活跃玩家（不包括ALL_IN玩家）
         active_players = [
             p for p in self._game_state.players 
-            if p.status in [SeatStatus.ACTIVE, SeatStatus.ALL_IN]
+            if p.status == SeatStatus.ACTIVE
         ]
         
+        # 检查ALL_IN玩家
+        all_in_players = [
+            p for p in self._game_state.players 
+            if p.status == SeatStatus.ALL_IN
+        ]
+        
+        # 如果只有一个或零个活跃玩家，手牌结束
         if len(active_players) <= 1:
+            return True
+            
+        # 如果所有剩余玩家都是ALL_IN，手牌结束（直接摊牌）
+        if len(active_players) == 0 and len(all_in_players) > 0:
             return True
             
         # 只有在SHOWDOWN阶段才认为手牌结束
@@ -453,12 +464,15 @@ class PokerController:
         small_blind_pos = (dealer_pos + 1) % len(players)
         big_blind_pos = (dealer_pos + 2) % len(players)
         
+        # 获取当前阶段标识
+        phase_prefix = f"[{self._game_state.phase.value}] "
+        
         # 收取小盲注
         small_blind_player = players[small_blind_pos]
         if small_blind_player.chips >= self._game_state.small_blind:
             small_blind_player.bet(self._game_state.small_blind)
             small_blind_player.is_small_blind = True
-            self._game_state.add_event(f"{small_blind_player.name} 下小盲注 {self._game_state.small_blind}")
+            self._game_state.add_event(f"{phase_prefix}{small_blind_player.name} 下小盲注 {self._game_state.small_blind}")
         
         # 收取大盲注
         big_blind_player = players[big_blind_pos]
@@ -466,7 +480,7 @@ class PokerController:
             big_blind_player.bet(self._game_state.big_blind)
             big_blind_player.is_big_blind = True
             self._game_state.current_bet = self._game_state.big_blind
-            self._game_state.add_event(f"{big_blind_player.name} 下大盲注 {self._game_state.big_blind}")
+            self._game_state.add_event(f"{phase_prefix}{big_blind_player.name} 下大盲注 {self._game_state.big_blind}")
             
         # 发射盲注事件
         self._event_bus.emit_simple(
@@ -492,10 +506,13 @@ class PokerController:
         player = self._game_state.get_player_by_seat(action.player_id)
         if player is None:
             raise ValueError(f"找不到玩家 {action.player_id}")
+        
+        # 获取当前阶段标识
+        phase_prefix = f"[{self._game_state.phase.value}] "
             
         if action.action_type == ActionType.FOLD:
             player.status = SeatStatus.FOLDED
-            self._game_state.add_event(f"{player.name} 弃牌")
+            self._game_state.add_event(f"{phase_prefix}{player.name} 弃牌")
             # 发射玩家弃牌事件
             self._event_bus.emit_simple(
                 EventType.PLAYER_FOLDED,
@@ -504,7 +521,7 @@ class PokerController:
             )
             
         elif action.action_type == ActionType.CHECK:
-            self._game_state.add_event(f"{player.name} 过牌")
+            self._game_state.add_event(f"{phase_prefix}{player.name} 过牌")
             # 发射玩家行动事件
             self._event_bus.emit_simple(
                 EventType.PLAYER_ACTION,
@@ -518,7 +535,8 @@ class PokerController:
             call_amount = self._game_state.current_bet - player.current_bet
             if call_amount > 0:
                 player.bet(call_amount)
-                self._game_state.add_event(f"{player.name} 跟注 {call_amount}")
+                # 修复：显示"跟注到X"而不是"跟注X"
+                self._game_state.add_event(f"{phase_prefix}{player.name} 跟注到 {self._game_state.current_bet}")
                 # 发射玩家行动事件
                 self._event_bus.emit_simple(
                     EventType.PLAYER_ACTION,
@@ -528,7 +546,7 @@ class PokerController:
                     amount=call_amount
                 )
             else:
-                self._game_state.add_event(f"{player.name} 过牌")
+                self._game_state.add_event(f"{phase_prefix}{player.name} 过牌")
                 # 发射玩家行动事件
                 self._event_bus.emit_simple(
                     EventType.PLAYER_ACTION,
@@ -539,32 +557,36 @@ class PokerController:
                 )
                 
         elif action.action_type == ActionType.BET:
-            player.bet(action.amount)
-            self._game_state.current_bet = action.amount
+            total_bet = action.amount
+            bet_amount = total_bet - player.current_bet
+            player.bet(bet_amount)
+            self._game_state.current_bet = total_bet
             self._game_state.last_raiser = action.player_id
-            self._game_state.add_event(f"{player.name} 下注 {action.amount}")
+            # BET时，加注增量就是下注金额（相对于0）
+            self._game_state.last_raise_amount = total_bet
+            self._game_state.add_event(f"{phase_prefix}{player.name} 下注 {total_bet}")
             # 发射下注事件
             self._event_bus.emit_simple(
                 EventType.BET_PLACED,
                 player_id=action.player_id,
                 player_name=player.name,
                 action_type="bet",
-                amount=action.amount,
+                amount=bet_amount,
+                total_bet=total_bet,
                 new_current_bet=self._game_state.current_bet
             )
             
         elif action.action_type == ActionType.RAISE:
-            # 修复加注逻辑：action.amount应该是总下注金额，不是增量
-            # 德州扑克规则：加注15意味着总下注15，不是当前下注+15
-            total_bet = action.amount  # 直接使用用户输入的金额作为总下注
+            total_bet = action.amount
             bet_amount = total_bet - player.current_bet
             player.bet(bet_amount)
+            # 计算实际加注增量（新的总下注 - 之前的总下注）
+            previous_bet = self._game_state.current_bet
+            raise_increment = total_bet - previous_bet
             self._game_state.current_bet = total_bet
             self._game_state.last_raiser = action.player_id
-            # 计算实际加注增量（用于记录）
-            raise_increment = total_bet - self._game_state.current_bet if hasattr(self._game_state, '_previous_bet') else action.amount
             self._game_state.last_raise_amount = raise_increment
-            self._game_state.add_event(f"{player.name} 加注到 {total_bet}")
+            self._game_state.add_event(f"{phase_prefix}{player.name} 加注到 {total_bet}")
             # 发射下注事件
             self._event_bus.emit_simple(
                 EventType.BET_PLACED,
@@ -583,7 +605,7 @@ class PokerController:
             if player.current_bet > self._game_state.current_bet:
                 self._game_state.current_bet = player.current_bet
                 self._game_state.last_raiser = action.player_id
-            self._game_state.add_event(f"{player.name} 全押 {all_in_amount}")
+            self._game_state.add_event(f"{phase_prefix}{player.name} 全押 {all_in_amount}")
             # 发射全押事件
             self._event_bus.emit_simple(
                 EventType.PLAYER_ALL_IN,
@@ -628,6 +650,10 @@ class PokerController:
         
     def _check_phase_transition(self) -> None:
         """检查并处理游戏阶段转换."""
+        # 首先检查手牌是否应该结束
+        if self.is_hand_over():
+            return  # 手牌结束，不进入下一阶段
+            
         if self._all_actions_complete():
             self._advance_to_next_phase()
             
@@ -639,113 +665,77 @@ class PokerController:
         2. 只有当所有活跃玩家都匹配了当前下注且都已行动过时，下注轮才结束
         3. 如果只剩一个活跃玩家，手牌立即结束（不是阶段结束）
         4. 在PRE_FLOP阶段，大盲注玩家有最后行动权
+        5. 如果所有玩家都是ALL_IN，应该直接进入下一阶段直到摊牌
         """
         active_players = self._game_state.get_active_players()
         
+        # 调试信息
+        self._logger.debug(f"检查下注轮完成: 活跃玩家数={len(active_players)}, 当前下注={self._game_state.current_bet}, 行动数={self._game_state.actions_this_round}, 当前玩家={self._game_state.current_player}, 加注者={self._game_state.last_raiser}")
+        
         # 如果没有活跃玩家，行动完成
         if not active_players:
+            self._logger.debug("没有活跃玩家，下注轮完成")
             return True
         
-        # 如果只有一个活跃玩家，手牌应该结束（不是阶段结束）
-        # 这种情况应该在is_hand_over()中处理，而不是在这里
+        # 检查是否所有剩余玩家都是ALL_IN
+        all_in_players = [p for p in self._game_state.players if p.status == SeatStatus.ALL_IN]
+        if len(active_players) == 0 and len(all_in_players) > 0:
+            self._logger.debug("所有剩余玩家都是ALL_IN，下注轮完成")
+            return True
+        
+        # 如果只有一个活跃玩家，下注轮完成（但手牌可能结束）
         if len(active_players) == 1:
-            # 检查是否还有ALL_IN玩家
-            all_in_players = [p for p in self._game_state.players if p.status == SeatStatus.ALL_IN]
-            if not all_in_players:
-                # 只有一个活跃玩家且没有ALL_IN玩家，手牌结束
-                return True
+            self._logger.debug("只有一个活跃玩家，下注轮完成")
+            return True
         
         # 检查是否所有活跃玩家都已匹配当前下注
         for player in active_players:
             if player.current_bet < self._game_state.current_bet:
+                self._logger.debug(f"玩家{player.seat_id}下注{player.current_bet}未匹配当前下注{self._game_state.current_bet}")
                 return False
         
-        # 使用更简单的逻辑：检查是否每个活跃玩家都至少行动过一次
+        # 所有玩家都匹配了当前下注，检查行动是否完成
+        self._logger.debug("所有活跃玩家都匹配了当前下注")
+        
+        # 计算需要的最小行动数
         min_actions_needed = len(active_players)
         
-        # 在PRE_FLOP阶段，需要考虑盲注已经是行动
-        if self._game_state.phase == Phase.PRE_FLOP:
-            # 盲注不算在行动计数中，所以需要确保每个玩家都有机会行动
-            # 至少需要活跃玩家数量的行动
-            if self._game_state.actions_this_round < min_actions_needed:
-                return False
-            
-            # 特殊检查：如果没有加注，大盲注玩家应该有最后行动权
-            if self._game_state.last_raiser is None:
-                # 找到大盲注玩家
-                big_blind_player = None
-                for player in self._game_state.players:
-                    if hasattr(player, 'is_big_blind') and player.is_big_blind:
-                        big_blind_player = player
-                        break
-                
-                if (big_blind_player and 
-                    big_blind_player.status == SeatStatus.ACTIVE and 
-                    self._game_state.current_player == big_blind_player.seat_id):
-                    # 大盲注玩家还没有行动，需要等待
-                    return False
-        else:
-            # 其他阶段：确保每个活跃玩家都至少行动过一次
-            if self._game_state.actions_this_round < min_actions_needed:
-                return False
+        # 如果行动数不足，下注轮未完成
+        if self._game_state.actions_this_round < min_actions_needed:
+            self._logger.debug(f"行动数不足: {self._game_state.actions_this_round} < {min_actions_needed}")
+            return False
         
-        # 如果有加注者，检查是否轮回到加注者
-        if self._game_state.last_raiser is not None:
-            # 从加注者的下一个位置开始找第一个活跃玩家
-            players = self._game_state.players
-            raiser_pos = self._game_state.last_raiser
-            
-            for i in range(1, len(players) + 1):
-                next_pos = (raiser_pos + i) % len(players)
-                if players[next_pos].status == SeatStatus.ACTIVE:
-                    # 如果当前玩家就是加注者后的第一个活跃玩家
-                    if self._game_state.current_player == next_pos:
-                        return True
-                    break
-        else:
-            # 没有加注者的情况，检查是否轮回到第一个行动玩家
-            first_player_pos = self._get_first_player_position()
-            if self._game_state.current_player == first_player_pos:
-                # 如果轮回到第一个玩家，且所有人都已匹配下注，则完成
-                return True
+        # 行动数足够，且所有玩家都匹配了下注，下注轮完成
+        # 修复：简化逻辑，当满足基本条件时，下注轮就应该完成
+        # 不再检查复杂的"轮回到加注者后第一个玩家"逻辑，因为这会导致误判
         
-        return False
-    
-    def _get_first_player_position(self) -> int:
-        """获取当前下注轮的第一个行动玩家位置.
-        
-        Returns:
-            第一个行动玩家的位置
-        """
-        if self._game_state.phase == Phase.PRE_FLOP:
-            # 翻牌前：大盲注左侧第一位玩家开始
-            players = self._game_state.players
-            big_blind_pos = None
+        # 特殊情况：在PRE_FLOP阶段，如果是初始状态（只有盲注），大盲注玩家有最后行动权
+        if (self._game_state.phase == Phase.PRE_FLOP and 
+            self._game_state.last_raiser is None and 
+            self._game_state.current_bet == self._game_state.big_blind):
             
-            # 找到大盲注位置
-            for i, player in enumerate(players):
+            # 找到大盲注玩家
+            big_blind_player = None
+            for player in self._game_state.players:
                 if hasattr(player, 'is_big_blind') and player.is_big_blind:
-                    big_blind_pos = i
+                    big_blind_player = player
                     break
             
-            if big_blind_pos is not None:
-                # 从大盲注左侧开始找第一个活跃玩家
-                for i in range(1, len(players) + 1):
-                    pos = (big_blind_pos + i) % len(players)
-                    if players[pos].status == SeatStatus.ACTIVE:
-                        return pos
-        else:
-            # 翻牌后：庄家左侧第一位活跃玩家开始
-            players = self._game_state.players
-            dealer_pos = self._game_state.dealer_position
-            
-            for i in range(1, len(players) + 1):
-                pos = (dealer_pos + i) % len(players)
-                if players[pos].status == SeatStatus.ACTIVE:
-                    return pos
+            # 如果大盲注玩家还是当前玩家，需要给他最后行动的机会
+            if (big_blind_player and 
+                big_blind_player.status == SeatStatus.ACTIVE and 
+                self._game_state.current_player == big_blind_player.seat_id):
+                # 但如果行动数已经足够多（每个玩家都行动过），则可以结束
+                if self._game_state.actions_this_round >= len(active_players):
+                    self._logger.debug("PRE_FLOP阶段，大盲注玩家有最后行动权，但每个玩家都已行动，下注轮完成")
+                    return True
+                else:
+                    self._logger.debug("PRE_FLOP阶段，大盲注玩家还有最后行动权")
+                    return False
         
-        # 如果找不到，返回当前玩家位置
-        return self._game_state.current_player or 0
+        # 正常情况：所有玩家都匹配下注且行动数足够，下注轮完成
+        self._logger.debug("所有条件满足，下注轮完成")
+        return True
         
     def _advance_to_next_phase(self) -> None:
         """推进到下一个游戏阶段."""
