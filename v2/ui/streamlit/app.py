@@ -107,24 +107,35 @@ def initialize_session_state():
         ai_strategy = SimpleAI()
         logger = setup_file_logging()
         event_bus = EventBus()
-        
+
         controller = PokerController(game_state, ai_strategy, logger, event_bus)
-        
+
         # 设置玩家
         _setup_players(controller)
-        
+
         st.session_state.controller = controller
+    
+    # 设置默认值，只有当键不存在时才设置
+    if 'game_started' not in st.session_state:
         st.session_state.game_started = False
+    if 'events' not in st.session_state:
         st.session_state.events = []
+    if 'log_file_path' not in st.session_state:
         st.session_state.log_file_path = None
-        # 添加摊牌处理标记，防止重复处理
+    # 添加摊牌处理标记，防止重复处理
+    if 'showdown_processed' not in st.session_state:
         st.session_state.showdown_processed = False
+    if 'hand_result_displayed' not in st.session_state:
         st.session_state.hand_result_displayed = False
-        
-        # 添加调试模式相关的session state变量
+
+    # 添加调试模式相关的session state变量
+    if 'debug_mode' not in st.session_state:
         st.session_state.debug_mode = False
+    if 'show_logs' not in st.session_state:
         st.session_state.show_logs = False
+    if 'show_raise_input' not in st.session_state:
         st.session_state.show_raise_input = False
+    if 'show_bet_input' not in st.session_state:
         st.session_state.show_bet_input = False
 
 

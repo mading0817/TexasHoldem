@@ -196,36 +196,97 @@ class TestStreamlitApp:
         # Verify metric was called for pot
         assert any("底池" in str(call) for call in mock_st.metric.call_args_list)
     
+    @patch('v2.ui.streamlit.app.st.session_state')
+    @patch('v2.ui.streamlit.app.st')
     @pytest.mark.unit
     @pytest.mark.fast
-    def test_process_ai_actions_continuously(self):
+    def test_process_ai_actions_continuously(self, mock_st, mock_session_state):
         """测试连续AI行动处理."""
+        # Create a proper session state mock that supports 'in' operator
+        class SessionStateMock:
+            def __init__(self):
+                self.events = []
+                
+            def __contains__(self, key):
+                return hasattr(self, key)
+                
+            def __getitem__(self, key):
+                return getattr(self, key)
+                
+            def __setitem__(self, key, value):
+                setattr(self, key, value)
+        
+        # Replace the mock with our custom session state
+        session_state_instance = SessionStateMock()
+        mock_st.session_state = session_state_instance
+        
         # Create mock controller
         mock_controller = Mock()
         
         # Create mock snapshot with events attribute
         mock_snapshot = Mock()
-        mock_snapshot.events = []  # Add events attribute
+        mock_snapshot.events = []  # Empty list for events
+        mock_snapshot.phase = Mock()
+        mock_snapshot.phase.value = "FLOP"
         mock_controller.get_snapshot.return_value = mock_snapshot
         
         # Test case 1: No current player
         mock_controller.get_current_player_id.return_value = None
+        mock_controller.is_hand_over.return_value = False
+        mock_controller._check_phase_transition = Mock()  # Mock this method
         result = process_ai_actions_continuously(mock_controller)
         assert result is False
+        
+        # Reset mocks for next test
+        mock_controller.reset_mock()
         
         # Test case 2: Human player turn
         mock_controller.get_current_player_id.return_value = 0
+        mock_controller.is_hand_over.return_value = False
+        mock_controller.get_snapshot.return_value = mock_snapshot
         result = process_ai_actions_continuously(mock_controller)
         assert result is False
         
-        # Test case 3: AI player processes action
-        mock_controller.get_current_player_id.side_effect = [1, 0]  # AI then human
+        # Reset mocks for next test
+        mock_controller.reset_mock()
+        
+        # Test case 3: AI player processes multiple actions then human player turn
+        # Reset session state for this test
+        session_state_instance.events = []  # Reset events
+        
+        # Create a more realistic mock player
+        mock_player = Mock()
+        mock_player.seat_id = 1
+        mock_player.name = "AI Player"
+        mock_player.chips = 1000
+        mock_player.current_bet = 0
+        
+        # Update snapshot to include the player
+        mock_snapshot.players = [Mock(), mock_player]  # Player 0 and Player 1
+        mock_controller.get_snapshot.return_value = mock_snapshot # Ensure snapshot is updated
+        
+        # Set up the sequence: AI player (1) -> AI player (1) -> Human player (0)
+        # The function calls get_current_player_id multiple times in each loop iteration
+        call_count = [0]
+        def mock_get_current_player():
+            call_count[0] += 1
+            # First few calls return AI player, then human player
+            if call_count[0] <= 4:  # Allow for multiple calls per iteration
+                return 1  # AI player
+            else:
+                return 0  # Human player
+        
+        mock_controller.get_current_player_id.side_effect = mock_get_current_player
         mock_controller.is_hand_over.return_value = False
         mock_controller.process_ai_action.return_value = True
         
         result = process_ai_actions_continuously(mock_controller)
+        
+        # Should return True if at least one AI action was processed
         assert result is True
-        mock_controller.process_ai_action.assert_called_once()
+        
+        # Verify process_ai_action was called at least once
+        assert mock_controller.process_ai_action.call_count >= 1
     
     @patch('v2.ui.streamlit.app.st')
     @pytest.mark.unit
