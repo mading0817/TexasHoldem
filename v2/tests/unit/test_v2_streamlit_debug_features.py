@@ -13,6 +13,8 @@ import streamlit as st
 from v2.ui.streamlit.app import run_log_level_performance_test, run_auto_play_test
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestStreamlitDebugFeatures:
     """测试Streamlit调试功能和性能解耦."""
     
@@ -25,6 +27,8 @@ class TestStreamlitDebugFeatures:
         # 重置日志级别
         logging.getLogger().setLevel(logging.INFO)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_log_level_performance_test_basic(self):
         """测试日志级别性能对比测试的基本功能."""
         # Mock session state controller
@@ -50,6 +54,8 @@ class TestStreamlitDebugFeatures:
             # 验证run_auto_play_test被调用了4次（每个日志级别一次）
             assert mock_auto_play.call_count == 4
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_log_level_changes_applied(self):
         """测试日志级别变更是否正确应用."""
         # Mock session state controller
@@ -70,6 +76,8 @@ class TestStreamlitDebugFeatures:
             # 验证控制器的logger级别也被设置
             assert mock_controller._logger.setLevel.call_count >= 4
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_performance_test_timing(self):
         """测试性能测试的时间测量功能."""
         # Mock session state controller
@@ -95,6 +103,8 @@ class TestStreamlitDebugFeatures:
             for level, duration in results.items():
                 assert duration > 0
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_log_level_performance_comparison(self):
         """测试不同日志级别的性能差异."""
         # Mock session state controller
@@ -123,6 +133,8 @@ class TestStreamlitDebugFeatures:
             avg_other_time = sum(other_times) / len(other_times) if other_times else 0
             assert debug_time >= avg_other_time * 0.8  # 允许20%的误差
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_auto_play_test_performance_metrics(self):
         """测试自动游戏测试的性能指标."""
         # Mock session state controller
@@ -158,6 +170,8 @@ class TestStreamlitDebugFeatures:
         # 验证性能合理（5手牌应该在合理时间内完成）
         assert duration <= 5.0  # 不超过5秒
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_log_level_restoration_on_exception(self):
         """测试异常情况下日志级别是否正确恢复."""
         # Mock session state controller
@@ -179,6 +193,8 @@ class TestStreamlitDebugFeatures:
             # 验证即使发生异常，日志级别也被恢复
             assert logging.getLogger().level == original_level
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_performance_test_with_different_hand_counts(self):
         """测试不同手牌数量的性能测试."""
         # Mock session state controller

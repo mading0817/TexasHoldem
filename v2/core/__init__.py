@@ -5,7 +5,7 @@ This package contains the fundamental game components including cards, players,
 game state management, and rule validation.
 """
 
-from .enums import Suit, Rank, ActionType, Phase, SeatStatus, HandRank, Action, ValidatedAction, ValidationResultData
+from .enums import Suit, Rank, ActionType, Phase, SeatStatus, HandRank, Action, ValidatedAction, ValidationResultData, GameEventType, ValidationResult, get_all_suits, get_all_ranks, get_valid_actions
 from .cards import Card, Deck
 from .evaluator import SimpleEvaluator, HandResult
 from .player import Player
@@ -66,7 +66,7 @@ def create_player(seat_id: int, name: str, chips: int) -> Player:
 
 __all__ = [
     # Enums
-    'Suit', 'Rank', 'ActionType', 'Phase', 'SeatStatus', 'HandRank', 'Action', 'ValidatedAction', 'ValidationResultData',
+    'Suit', 'Rank', 'ActionType', 'Phase', 'SeatStatus', 'HandRank', 'Action', 'ValidatedAction', 'ValidationResultData', 'GameEventType', 'ValidationResult',
     
     # Core classes
     'Card', 'Deck', 'Player', 'GameState', 'GameSnapshot',
@@ -87,5 +87,8 @@ __all__ = [
     'GameStateHealthChecker', 'HealthIssue', 'HealthCheckResult', 'HealthIssueType', 'HealthIssueSeverity',
     
     # Convenience functions
-    'new_deck', 'evaluate', 'create_player'
+    'new_deck', 'evaluate', 'create_player',
+    
+    # Utility functions
+    'get_all_suits', 'get_all_ranks', 'get_valid_actions'
 ] 

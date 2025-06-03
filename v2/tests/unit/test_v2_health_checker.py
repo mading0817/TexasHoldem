@@ -20,6 +20,8 @@ from v2.core.player import Player
 from v2.core.state import GameSnapshot
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestGameStateHealthChecker:
     """测试游戏状态健康检查器."""
     
@@ -53,6 +55,8 @@ class TestGameStateHealthChecker:
         
         return snapshot
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_healthy_game_state(self):
         """测试健康的游戏状态."""
         snapshot = self.create_test_snapshot()
@@ -65,6 +69,8 @@ class TestGameStateHealthChecker:
         assert result.summary['total_issues'] == 0
         assert result.summary['critical_issues'] == 0
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_chip_conservation_violation(self):
         """测试筹码守恒违规检测."""
         # 创建筹码不守恒的快照
@@ -86,6 +92,8 @@ class TestGameStateHealthChecker:
         assert result.issues[0].details['actual_total'] == 1950
         assert result.issues[0].details['difference'] == -50
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_invalid_player_count_too_few(self):
         """测试玩家数量过少."""
         players = [Player(seat_id=0, name="Alice", chips=1000)]  # 只有1个玩家
@@ -99,6 +107,8 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.CRITICAL
         assert "Too few players" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_invalid_player_count_too_many(self):
         """测试玩家数量过多."""
         players = [Player(seat_id=i, name=f"Player{i}", chips=1000) for i in range(12)]  # 12个玩家
@@ -111,6 +121,8 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.WARNING
         assert "Too many players" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_no_active_players_during_game(self):
         """测试游戏中无活跃玩家."""
         players = [
@@ -129,6 +141,8 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.CRITICAL
         assert "No active players" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_invalid_current_player_index(self):
         """测试无效的当前玩家索引."""
         snapshot = self.create_test_snapshot(current_player=5)  # 索引超出范围
@@ -141,6 +155,8 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.CRITICAL
         assert "Invalid current player index" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_current_player_not_active(self):
         """测试当前玩家非活跃状态."""
         players = [
@@ -157,6 +173,8 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.WARNING
         assert "is not active" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_negative_bet_amounts(self):
         """测试负数下注金额."""
         players = [
@@ -174,6 +192,8 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.CRITICAL
         assert "negative bet" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_bet_exceeds_available_chips(self):
         """测试下注超过可用筹码."""
         players = [
@@ -191,6 +211,8 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.CRITICAL
         assert "bet exceeds available chips" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_negative_current_bet(self):
         """测试负数当前下注."""
         snapshot = self.create_test_snapshot(current_bet=-10)
@@ -203,6 +225,8 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.CRITICAL
         assert "Negative current bet" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_invalid_community_cards_count(self):
         """测试无效的公共牌数量."""
         # FLOP阶段应该有3张公共牌，但只有2张
@@ -221,6 +245,8 @@ class TestGameStateHealthChecker:
         assert issues[0].details['expected_count'] == 3
         assert issues[0].details['actual_count'] == 2
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_duplicate_cards_detection(self):
         """测试重复牌检测."""
         # 创建重复的牌
@@ -247,6 +273,8 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.CRITICAL
         assert "Duplicate cards detected" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_negative_pot_amount(self):
         """测试负数底池金额."""
         snapshot = self.create_test_snapshot(pot=-100)
@@ -259,11 +287,15 @@ class TestGameStateHealthChecker:
         assert issues[0].severity == HealthIssueSeverity.CRITICAL
         assert "Negative pot amount" in issues[0].message
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_set_expected_total_chips(self):
         """测试设置期望总筹码."""
         self.checker.set_expected_total_chips(5000)
         assert self.checker.expected_total_chips == 5000
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_health_summary_healthy(self):
         """测试健康状态的摘要."""
         snapshot = self.create_test_snapshot()
@@ -273,6 +305,8 @@ class TestGameStateHealthChecker:
         
         assert "✅ Game state is healthy" in summary
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_health_summary_with_issues(self):
         """测试有问题状态的摘要."""
         snapshot = self.create_test_snapshot(pot=-50)  # 负数底池
@@ -283,6 +317,8 @@ class TestGameStateHealthChecker:
         assert "🔴" in summary  # 严重问题的emoji
         assert "Negative pot amount" in summary
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_multiple_issues_detection(self):
         """测试多个问题的检测."""
         # 创建有多个问题的快照
@@ -302,6 +338,8 @@ class TestGameStateHealthChecker:
         assert result.summary['total_issues'] >= 3
         assert result.summary['critical_issues'] >= 3
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_chip_conservation_without_expected_total(self):
         """测试未设置期望总筹码时的筹码守恒检查."""
         # 不设置expected_total_chips
@@ -313,6 +351,8 @@ class TestGameStateHealthChecker:
         chip_issues = [i for i in result.issues if i.issue_type == HealthIssueType.CHIP_CONSERVATION_VIOLATION]
         assert len(chip_issues) == 0
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_health_check_result_structure(self):
         """测试健康检查结果的结构."""
         snapshot = self.create_test_snapshot()

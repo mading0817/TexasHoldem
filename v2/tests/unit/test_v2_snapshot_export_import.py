@@ -17,6 +17,8 @@ from v2.core import (
 from v2.ai.simple_ai import SimpleAI
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestSnapshotExportImport:
     """测试快照导出导入功能."""
     
@@ -40,6 +42,8 @@ class TestSnapshotExportImport:
         for player in self.players:
             self.controller._game_state.add_player(player)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_export_snapshot_basic(self):
         """测试基本的快照导出功能."""
         # 开始新手牌
@@ -73,6 +77,8 @@ class TestSnapshotExportImport:
         assert controller_state['hand_in_progress'] is True
         assert controller_state['has_ai_strategy'] is True
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_export_snapshot_with_cards(self):
         """测试包含手牌和公共牌的快照导出."""
         # 开始新手牌
@@ -108,6 +114,8 @@ class TestSnapshotExportImport:
                 assert 'suit' in card_data
                 assert 'rank' in card_data
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_export_snapshot_serializable(self):
         """测试导出的数据可以序列化为JSON."""
         # 开始新手牌
@@ -125,6 +133,8 @@ class TestSnapshotExportImport:
         parsed_data = json.loads(json_str)
         assert parsed_data == export_data
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_import_snapshot_basic(self):
         """测试基本的快照导入功能."""
         # 开始新手牌并导出
@@ -150,6 +160,8 @@ class TestSnapshotExportImport:
         assert imported_snapshot.current_player == original_snapshot.current_player
         assert len(imported_snapshot.players) == len(original_snapshot.players)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_import_snapshot_deep_equality(self):
         """测试导入后的状态深度相等."""
         # 开始新手牌
@@ -219,6 +231,8 @@ class TestSnapshotExportImport:
                 assert card.suit == original_card.suit
                 assert card.rank == original_card.rank
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_import_snapshot_invalid_data(self):
         """测试导入无效数据的错误处理."""
         new_controller = PokerController(event_bus=self.event_bus)
@@ -242,6 +256,8 @@ class TestSnapshotExportImport:
                 'game_state': {}
             })
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_import_snapshot_malformed_data(self):
         """测试导入格式错误数据的处理."""
         new_controller = PokerController(event_bus=self.event_bus)
@@ -260,6 +276,8 @@ class TestSnapshotExportImport:
         with pytest.raises(ValueError, match="导入数据格式错误"):
             new_controller.import_snapshot(malformed_data)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_export_import_round_trip(self):
         """测试完整的导出导入往返过程."""
         # 开始新手牌
@@ -304,6 +322,8 @@ class TestSnapshotExportImport:
             assert orig_player['status'] == imp_player['status']
             assert orig_player['hole_cards'] == imp_player['hole_cards']
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_export_import_with_different_phases(self):
         """测试不同游戏阶段的导出导入."""
         phases_to_test = [Phase.PRE_FLOP, Phase.FLOP, Phase.TURN, Phase.RIVER, Phase.SHOWDOWN]
@@ -326,6 +346,8 @@ class TestSnapshotExportImport:
             imported_snapshot = new_controller.get_snapshot()
             assert imported_snapshot.phase == phase
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_export_import_preserves_controller_state(self):
         """测试导出导入保持控制器状态."""
         # 开始新手牌
@@ -346,6 +368,8 @@ class TestSnapshotExportImport:
         # 验证控制器状态被正确恢复
         assert new_controller._hand_in_progress is True
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_export_import_with_events(self):
         """测试事件日志的导出导入."""
         # 清空初始事件（玩家加入事件）

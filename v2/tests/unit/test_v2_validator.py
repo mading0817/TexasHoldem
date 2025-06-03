@@ -43,6 +43,8 @@ class MockGameState:
         return self._player_bets.get(seat, 0)
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestActionValidator:
     """Test cases for ActionValidator class."""
     
@@ -52,6 +54,8 @@ class TestActionValidator:
         self.player = Player(seat_id=1, name="Player1", chips=1000)
         self.game_state = MockGameState()
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_fold_action(self):
         """Test validation of fold actions."""
         action = Action(ActionType.FOLD)
@@ -63,6 +67,8 @@ class TestActionValidator:
         assert result.final_action.player_id == 1
         assert not result.was_converted
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_check_action_valid(self):
         """Test validation of check action when no bet exists."""
         action = Action(ActionType.CHECK)
@@ -72,6 +78,8 @@ class TestActionValidator:
         assert result.final_action.amount == 0
         assert not result.was_converted
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_check_action_invalid_with_bet(self):
         """Test that check is invalid when there's a bet."""
         self.game_state._current_bet = 50
@@ -80,6 +88,8 @@ class TestActionValidator:
         with pytest.raises(InvalidActionError, match="Cannot check when there is a bet"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_call_action_no_bet_converts_to_check(self):
         """Test that call converts to check when there's no bet."""
         action = Action(ActionType.CALL)
@@ -90,6 +100,8 @@ class TestActionValidator:
         assert result.was_converted
         assert "No bet to call" in result.conversion_reason
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_call_action_valid(self):
         """Test validation of call action with sufficient chips."""
         self.game_state._current_bet = 50
@@ -100,6 +112,8 @@ class TestActionValidator:
         assert result.final_action.amount == 50
         assert not result.was_converted
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_call_action_insufficient_chips_converts_to_all_in(self):
         """Test that call converts to all-in when chips are insufficient."""
         self.game_state._current_bet = 1500  # More than player's chips
@@ -112,6 +126,8 @@ class TestActionValidator:
         assert result.was_converted
         assert "Insufficient chips to call" in result.conversion_reason
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_bet_action_valid(self):
         """Test validation of bet action when no current bet exists."""
         action = Action(ActionType.BET, amount=100)
@@ -121,6 +137,8 @@ class TestActionValidator:
         assert result.final_action.amount == 100
         assert not result.was_converted
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_bet_action_invalid_with_existing_bet(self):
         """Test that bet is invalid when there's already a bet."""
         self.game_state._current_bet = 50
@@ -129,6 +147,8 @@ class TestActionValidator:
         with pytest.raises(InvalidActionError, match="Cannot bet when there is already a bet"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_bet_action_invalid_below_big_blind(self):
         """Test that bet below big blind is invalid."""
         action = Action(ActionType.BET, amount=5)  # Less than big blind (10)
@@ -136,6 +156,8 @@ class TestActionValidator:
         with pytest.raises(InvalidActionError, match="Bet amount .* is less than big blind"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_bet_action_insufficient_chips_converts_to_all_in(self):
         """Test that bet converts to all-in when chips are insufficient."""
         self.player = Player(seat_id=1, name="Player1", chips=50)
@@ -147,6 +169,8 @@ class TestActionValidator:
         assert result.was_converted
         assert "Insufficient chips to bet" in result.conversion_reason
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_raise_action_valid(self):
         """Test validation of raise action with sufficient amount."""
         self.game_state._current_bet = 50
@@ -158,6 +182,8 @@ class TestActionValidator:
         assert result.final_action.amount == 70
         assert not result.was_converted
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_raise_action_invalid_no_bet(self):
         """Test that raise is invalid when there's no bet."""
         action = Action(ActionType.RAISE, amount=100)
@@ -165,6 +191,8 @@ class TestActionValidator:
         with pytest.raises(InvalidActionError, match="Cannot raise when there is no bet"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_raise_action_invalid_below_minimum(self):
         """Test that raise below minimum is invalid."""
         self.game_state._current_bet = 50
@@ -174,6 +202,8 @@ class TestActionValidator:
         with pytest.raises(InvalidActionError, match="Raise total .* is less than minimum raise"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_raise_action_all_in_below_minimum_valid(self):
         """Test that all-in raise below minimum is valid."""
         self.game_state._current_bet = 50
@@ -188,6 +218,8 @@ class TestActionValidator:
         assert result.was_converted
         assert "equals all-in total" in result.conversion_reason
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_raise_action_insufficient_chips_to_call(self):
         """Test that raise fails when player can't even call."""
         self.game_state._current_bet = 100
@@ -198,6 +230,8 @@ class TestActionValidator:
         with pytest.raises(InsufficientChipsError, match="Insufficient chips to call"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_all_in_action_valid(self):
         """Test validation of all-in action."""
         action = Action(ActionType.ALL_IN)
@@ -207,6 +241,8 @@ class TestActionValidator:
         assert result.final_action.amount == 1000  # Player's chip count
         assert not result.was_converted
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_all_in_action_invalid_no_chips(self):
         """Test that all-in is invalid when player has no chips."""
         self.player = Player(seat_id=1, name="Player1", chips=0)
@@ -215,6 +251,8 @@ class TestActionValidator:
         with pytest.raises(InvalidActionError, match="Cannot go all-in with no chips"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_basic_conditions_wrong_turn(self):
         """Test that validation fails when it's not the player's turn."""
         self.game_state._current_player_seat = 2  # Different player's turn
@@ -223,6 +261,8 @@ class TestActionValidator:
         with pytest.raises(InvalidActionError, match="Not player .* turn"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_basic_conditions_player_cannot_act(self):
         """Test that validation fails when player cannot act."""
         self.player.fold()  # Player is now folded
@@ -231,6 +271,8 @@ class TestActionValidator:
         with pytest.raises(InvalidActionError, match="Player .* cannot act"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validate_basic_conditions_no_current_player(self):
         """Test that validation fails when no player can act."""
         self.game_state._current_player_seat = None
@@ -239,11 +281,15 @@ class TestActionValidator:
         with pytest.raises(InvalidActionError, match="No player can act"):
             self.validator.validate(self.game_state, self.player, action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_calculate_call_amount_no_bet(self):
         """Test call amount calculation when there's no bet."""
         call_amount = self.validator._calculate_call_amount(self.game_state, self.player)
         assert call_amount == 0
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_calculate_call_amount_with_bet(self):
         """Test call amount calculation with existing bet."""
         self.game_state._current_bet = 100
@@ -251,6 +297,8 @@ class TestActionValidator:
         call_amount = self.validator._calculate_call_amount(self.game_state, self.player)
         assert call_amount == 70  # 100 - 30
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_available_actions_no_bet(self):
         """Test available actions when there's no bet."""
         actions = self.validator.get_available_actions(self.game_state, self.player)
@@ -262,6 +310,8 @@ class TestActionValidator:
         assert ActionType.CALL not in actions
         assert ActionType.RAISE not in actions
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_available_actions_with_bet(self):
         """Test available actions when there's a bet."""
         self.game_state._current_bet = 50
@@ -274,6 +324,8 @@ class TestActionValidator:
         assert ActionType.CHECK not in actions
         assert ActionType.BET not in actions
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_available_actions_insufficient_chips_for_raise(self):
         """Test available actions when player can't afford minimum raise."""
         self.game_state._current_bet = 50
@@ -287,6 +339,8 @@ class TestActionValidator:
         assert ActionType.ALL_IN in actions
         assert ActionType.RAISE not in actions
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_available_actions_folded_player(self):
         """Test that folded player has no available actions."""
         self.player.fold()
@@ -294,6 +348,8 @@ class TestActionValidator:
         
         assert actions == []
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_available_actions_no_chips(self):
         """Test available actions when player has no chips."""
         self.player = Player(seat_id=1, name="Player1", chips=0)
@@ -305,9 +361,13 @@ class TestActionValidator:
         assert ActionType.BET not in actions
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestActionDataClass:
     """Test cases for Action data class."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_creation_valid(self):
         """Test creating valid actions."""
         fold_action = Action(ActionType.FOLD)
@@ -318,21 +378,29 @@ class TestActionDataClass:
         assert bet_action.action_type == ActionType.BET
         assert bet_action.amount == 100
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_creation_invalid_negative_amount(self):
         """Test that negative amounts are rejected."""
         with pytest.raises(ValueError, match="行动金额不能为负数"):
             Action(ActionType.BET, amount=-50)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_creation_invalid_fold_with_amount(self):
         """Test that fold with amount is rejected."""
         with pytest.raises(ValueError, match="fold行动不应该有金额"):
             Action(ActionType.FOLD, amount=100)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_creation_invalid_check_with_amount(self):
         """Test that check with amount is rejected."""
         with pytest.raises(ValueError, match="check行动不应该有金额"):
             Action(ActionType.CHECK, amount=50)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_string_representation(self):
         """Test string representation of actions."""
         fold_action = Action(ActionType.FOLD)
@@ -341,9 +409,13 @@ class TestActionDataClass:
         assert "amount=0" in str(fold_action)
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestValidatedActionDataClass:
     """Test cases for ValidatedAction data class."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validated_action_creation(self):
         """Test creating ValidatedAction instances."""
         original = Action(ActionType.CALL)
@@ -364,6 +436,8 @@ class TestValidatedActionDataClass:
         assert validated.was_converted
         assert validated.conversion_reason == "No bet to call"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validated_action_string_representation(self):
         """Test string representation of ValidatedAction."""
         original = Action(ActionType.CALL)

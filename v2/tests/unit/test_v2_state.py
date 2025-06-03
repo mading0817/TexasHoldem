@@ -13,9 +13,13 @@ from v2.core.cards import Card, Deck
 from v2.core.enums import Phase, SeatStatus, Suit, Rank
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestGameSnapshot:
     """Test the GameSnapshot class."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_snapshot_creation(self):
         """Test basic snapshot creation."""
         player1 = Player(seat_id=1, name="Alice", chips=1000)
@@ -43,6 +47,8 @@ class TestGameSnapshot:
         assert snapshot.current_bet == 50
         assert len(snapshot.players) == 2
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_active_players(self):
         """Test getting active players from snapshot."""
         player1 = Player(seat_id=1, name="Alice", chips=1000)
@@ -72,6 +78,8 @@ class TestGameSnapshot:
         assert len(active_players) == 1
         assert active_players[0].name == "Alice"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_players_in_hand(self):
         """Test getting players still in hand from snapshot."""
         player1 = Player(seat_id=1, name="Alice", chips=1000)
@@ -101,6 +109,8 @@ class TestGameSnapshot:
         assert len(players_in_hand) == 2
         assert {p.name for p in players_in_hand} == {"Alice", "Charlie"}
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_player_by_seat(self):
         """Test getting player by seat number from snapshot."""
         player1 = Player(seat_id=1, name="Alice", chips=1000)
@@ -129,6 +139,8 @@ class TestGameSnapshot:
         not_found = snapshot.get_player_by_seat(3)
         assert not_found is None
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_current_player(self):
         """Test getting current player from snapshot."""
         player1 = Player(seat_id=1, name="Alice", chips=1000)
@@ -158,6 +170,8 @@ class TestGameSnapshot:
         snapshot.current_player = None
         assert snapshot.get_current_player() is None
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_to_dict_with_viewer(self):
         """Test converting snapshot to dict with viewer perspective."""
         player1 = Player(seat_id=1, name="Alice", chips=1000)
@@ -198,9 +212,13 @@ class TestGameSnapshot:
         assert bob_data['hole_cards'] == "XX XX"
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestGameState:
     """Test the GameState class."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_initialization(self):
         """Test basic game state initialization."""
         state = GameState()
@@ -213,6 +231,8 @@ class TestGameState:
         assert state.small_blind == 1
         assert state.big_blind == 2
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_initialization_validation(self):
         """Test validation during initialization."""
         # Test negative pot
@@ -231,6 +251,8 @@ class TestGameState:
         with pytest.raises(ValueError, match="Big blind .* must be greater than small blind"):
             GameState(small_blind=10, big_blind=5)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_add_player(self):
         """Test adding players to the game."""
         state = GameState()
@@ -250,6 +272,8 @@ class TestGameState:
         with pytest.raises(ValueError, match="Seat 1 is already occupied"):
             state.add_player(player3)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_remove_player(self):
         """Test removing players from the game."""
         state = GameState()
@@ -269,6 +293,8 @@ class TestGameState:
         not_removed = state.remove_player(3)
         assert not_removed is None
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_initialize_deck(self):
         """Test deck initialization and shuffling."""
         state = GameState()
@@ -291,6 +317,8 @@ class TestGameState:
         card2 = state3.deck.deal_card()
         assert card1 == card2
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deal_hole_cards(self):
         """Test dealing hole cards to players."""
         state = GameState()
@@ -311,8 +339,10 @@ class TestGameState:
         assert len(player1.hole_cards) == 2
         assert len(player2.hole_cards) == 2
         assert state.deck.cards_remaining == 48  # 52 - 4 cards dealt
-        assert "Dealt hole cards to 2 players" in state.events
+        assert "[pre_flop] 发底牌给 2 位玩家" in state.events
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deal_community_cards(self):
         """Test dealing community cards."""
         state = GameState()
@@ -324,7 +354,7 @@ class TestGameState:
         
         assert len(state.community_cards) == 3
         assert state.deck.cards_remaining == 48  # 52 - 1 burn - 3 community
-        assert "Flop dealt:" in state.events[-1]
+        assert "[flop] 翻牌:" in state.events[-1]
         
         # Test dealing turn (1 card)
         state.phase = Phase.TURN
@@ -332,7 +362,7 @@ class TestGameState:
         
         assert len(state.community_cards) == 4
         assert state.deck.cards_remaining == 46  # 48 - 1 burn - 1 community
-        assert "Turn dealt:" in state.events[-1]
+        assert "[turn] 转牌:" in state.events[-1]
         
         # Test dealing river (1 card)
         state.phase = Phase.RIVER
@@ -340,8 +370,10 @@ class TestGameState:
         
         assert len(state.community_cards) == 5
         assert state.deck.cards_remaining == 44  # 46 - 1 burn - 1 community
-        assert "River dealt:" in state.events[-1]
+        assert "[river] 河牌:" in state.events[-1]
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_collect_bets_to_pot(self):
         """Test collecting bets to pot."""
         state = GameState()
@@ -363,6 +395,8 @@ class TestGameState:
         assert player2.current_bet == 0
         assert "Collected 150 chips to pot" in state.events[-1]
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_reset_betting_round(self):
         """Test resetting betting round state."""
         state = GameState()
@@ -389,6 +423,8 @@ class TestGameState:
         assert player1.current_bet == 0
         assert player2.current_bet == 0
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_advance_phase(self):
         """Test advancing game phases."""
         state = GameState()
@@ -397,7 +433,7 @@ class TestGameState:
         
         state.advance_phase()
         assert state.phase == Phase.FLOP
-        assert "Advanced to FLOP" in state.events[-1]
+        assert "阶段转换: 翻牌前 → 翻牌" in state.events[-1]
         
         state.advance_phase()
         assert state.phase == Phase.TURN
@@ -412,6 +448,8 @@ class TestGameState:
         state.advance_phase()
         assert state.phase == Phase.SHOWDOWN
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_create_snapshot(self):
         """Test creating game state snapshots."""
         state = GameState()
@@ -441,6 +479,8 @@ class TestGameState:
         snapshot_player = snapshot.get_player_by_seat(1)
         assert snapshot_player.chips == 1000  # Should not change
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_restore_from_snapshot(self):
         """Test restoring game state from snapshot."""
         state = GameState()
@@ -471,6 +511,8 @@ class TestGameState:
         restored_player = state.get_player_by_seat(1)
         assert restored_player.chips == 1000
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_clone(self):
         """Test cloning game state."""
         state = GameState()
@@ -491,6 +533,8 @@ class TestGameState:
         state.players[0].chips = 500
         assert cloned.players[0].chips == 1000
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_management(self):
         """Test event logging and management."""
         state = GameState()
@@ -505,6 +549,8 @@ class TestGameState:
         state.clear_events()
         assert len(state.events) == 0
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_to_dict(self):
         """Test converting state to dictionary."""
         state = GameState()
@@ -520,6 +566,8 @@ class TestGameState:
         assert len(data['players']) == 1
         assert data['players'][0]['name'] == 'Alice'
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_string_representations(self):
         """Test string representations of game state."""
         state = GameState()
@@ -539,9 +587,13 @@ class TestGameState:
         assert "GameState(phase=FLOP, pot=100, players=1)" == repr_str
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestSnapshotComparison:
     """Test snapshot comparison for testing purposes."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_snapshot_bet_comparison(self):
         """Test comparing snapshots after betting action."""
         state = GameState()
@@ -573,6 +625,8 @@ class TestSnapshotComparison:
         assert before_snapshot.current_bet == 0
         assert after_snapshot.current_bet == 50
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_snapshot_no_opponent_cards(self):
         """Test that snapshots don't reveal opponent cards."""
         state = GameState()

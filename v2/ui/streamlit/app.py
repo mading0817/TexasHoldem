@@ -24,6 +24,7 @@ from v2.ai.simple_ai import SimpleAI
 from v2.core.enums import ActionType, Phase, Action
 from v2.core.state import GameState
 from v2.controller.dto import ActionInput
+from v2.core.events import EventBus
 
 
 def setup_file_logging():
@@ -99,32 +100,32 @@ def read_log_file_tail(file_path: str, max_lines: int = 50) -> list:
 
 
 def initialize_session_state():
-    """初始化Streamlit session state，使用幂等方式避免重复创建."""
-    # 使用setdefault确保键存在且仅在首次创建时初始化
+    """初始化session state."""
     if 'controller' not in st.session_state:
-        # 创建游戏控制器
+        # 创建游戏状态和控制器
         game_state = GameState()
         ai_strategy = SimpleAI()
-        logger = logging.getLogger(__name__)
+        logger = setup_file_logging()
+        event_bus = EventBus()
         
-        st.session_state.controller = PokerController(
-            game_state=game_state,
-            ai_strategy=ai_strategy,
-            logger=logger
-        )
+        controller = PokerController(game_state, ai_strategy, logger, event_bus)
         
-        # 初始化玩家 - 添加人类玩家和AI玩家
-        _setup_players(st.session_state.controller)
-    
-    # 使用setdefault确保其他键存在
-    st.session_state.setdefault('game_started', False)
-    st.session_state.setdefault('events', [])
-    st.session_state.setdefault('debug_mode', False)
-    st.session_state.setdefault('show_raise_input', False)
-    st.session_state.setdefault('show_logs', False)
-    
-    # 设置文件日志记录
-    setup_file_logging()
+        # 设置玩家
+        _setup_players(controller)
+        
+        st.session_state.controller = controller
+        st.session_state.game_started = False
+        st.session_state.events = []
+        st.session_state.log_file_path = None
+        # 添加摊牌处理标记，防止重复处理
+        st.session_state.showdown_processed = False
+        st.session_state.hand_result_displayed = False
+        
+        # 添加调试模式相关的session state变量
+        st.session_state.debug_mode = False
+        st.session_state.show_logs = False
+        st.session_state.show_raise_input = False
+        st.session_state.show_bet_input = False
 
 
 def _setup_players(controller: PokerController, num_players: int = 4, initial_chips: int = 1000) -> None:
@@ -289,32 +290,72 @@ def process_ai_actions_continuously(controller):
     initial_phase = initial_snapshot.phase
     initial_events_count = len(initial_snapshot.events)
     
+    # 增强日志记录
+    if 'events' not in st.session_state:
+        st.session_state.events = []
+    
+    # 记录AI处理开始
+    debug_msg = f"[DEBUG] 开始AI连续处理 - 阶段:{initial_phase.value}, 当前玩家:{controller.get_current_player_id()}, 事件数:{initial_events_count}"
+    st.session_state.events.append(debug_msg)
+    
     while ai_actions_count < max_ai_actions:
         if controller.is_hand_over():
+            debug_msg = f"[DEBUG] 手牌结束，停止AI处理 (处理了{ai_actions_count}次AI行动)"
+            st.session_state.events.append(debug_msg)
             break
             
         current_player_id = controller.get_current_player_id()
         if current_player_id is None:
             # 没有当前玩家，可能需要阶段转换
+            debug_msg = f"[DEBUG] 当前玩家为None，尝试阶段转换"
+            st.session_state.events.append(debug_msg)
+            
             # 强制检查阶段转换
             try:
                 controller._check_phase_transition()
                 # 检查阶段转换后是否有新的当前玩家
                 current_player_id = controller.get_current_player_id()
+                new_snapshot = controller.get_snapshot()
+                
+                if new_snapshot.phase != initial_phase:
+                    debug_msg = f"[DEBUG] 阶段转换成功: {initial_phase.value} -> {new_snapshot.phase.value}"
+                    st.session_state.events.append(debug_msg)
+                    initial_phase = new_snapshot.phase
+                
                 if current_player_id is None:
+                    debug_msg = f"[DEBUG] 阶段转换后仍无当前玩家，可能需要等待或手牌结束"
+                    st.session_state.events.append(debug_msg)
                     break
+                else:
+                    debug_msg = f"[DEBUG] 阶段转换后当前玩家: {current_player_id}"
+                    st.session_state.events.append(debug_msg)
             except Exception as e:
-                st.error(f"阶段转换检查失败: {e}")
+                error_msg = f"[ERROR] 阶段转换失败: {e}"
+                st.session_state.events.append(error_msg)
+                st.error(error_msg)
                 break
             
         # 如果轮到人类玩家（玩家0），停止AI处理
         if current_player_id == 0:
+            debug_msg = f"[DEBUG] 轮到人类玩家，停止AI处理 (处理了{ai_actions_count}次AI行动)"
+            st.session_state.events.append(debug_msg)
             break
             
         # 记录行动前的状态
         snapshot_before = controller.get_snapshot()
         phase_before = snapshot_before.phase
         events_before_count = len(snapshot_before.events)
+        
+        # 获取当前玩家信息
+        current_player = None
+        for p in snapshot_before.players:
+            if p.seat_id == current_player_id:
+                current_player = p
+                break
+        
+        player_name = current_player.name if current_player else f"Player_{current_player_id}"
+        debug_msg = f"[DEBUG] 准备处理 {player_name} 的行动 (筹码:{current_player.chips if current_player else 'N/A'}, 当前下注:{current_player.current_bet if current_player else 'N/A'})"
+        st.session_state.events.append(debug_msg)
         
         # 处理AI行动
         success = controller.process_ai_action()
@@ -339,17 +380,27 @@ def process_ai_actions_continuously(controller):
                     # 直接添加事件，不再修改格式（因为controller已经添加了玩家名称和阶段信息）
                     st.session_state.events.append(event)
             
+            # 记录AI行动成功
+            debug_msg = f"[DEBUG] {player_name} 行动成功 (第{ai_actions_count}次AI行动)"
+            st.session_state.events.append(debug_msg)
+            
             # 检查阶段是否发生变化
             if phase_after != phase_before:
                 # 阶段转换事件已经在controller中记录，这里不需要重复添加
+                debug_msg = f"[DEBUG] 阶段转换: {phase_before.value} -> {phase_after.value}"
+                st.session_state.events.append(debug_msg)
                 
                 # 阶段转换后，重新检查当前玩家
                 # 如果阶段转换后轮到人类玩家，停止AI处理
                 new_current_player_id = controller.get_current_player_id()
                 if new_current_player_id == 0:
+                    debug_msg = f"[DEBUG] 阶段转换后轮到人类玩家，停止AI处理"
+                    st.session_state.events.append(debug_msg)
                     break
         else:
             # AI行动失败，停止处理
+            error_msg = f"[ERROR] {player_name} AI行动失败，停止处理"
+            st.session_state.events.append(error_msg)
             break
             
         # 短暂延迟，让用户看到AI行动
@@ -359,19 +410,16 @@ def process_ai_actions_continuously(controller):
     final_snapshot = controller.get_snapshot()
     final_events_count = len(final_snapshot.events)
     
-    # 如果还有未记录的事件，补充记录
-    if final_events_count > initial_events_count:
-        if 'events' not in st.session_state:
-            st.session_state.events = []
-        
-        # 获取所有新事件
-        new_events = final_snapshot.events[initial_events_count:]
-        for event in new_events:
-            # 避免重复记录
-            if event not in st.session_state.events:
-                st.session_state.events.append(event)
+    # 记录处理完成
+    debug_msg = f"[DEBUG] AI处理完成 - 总共处理{ai_actions_count}次行动, 当前玩家:{controller.get_current_player_id()}, 阶段:{final_snapshot.phase.value}"
+    st.session_state.events.append(debug_msg)
     
-    # 返回是否有AI行动被处理
+    # 如果有新事件但没有被处理，添加它们
+    if final_events_count > initial_events_count + ai_actions_count:
+        missing_events = final_snapshot.events[initial_events_count + ai_actions_count:]
+        for event in missing_events:
+            st.session_state.events.append(event)
+    
     return ai_actions_count > 0
 
 
@@ -619,6 +667,46 @@ def render_sidebar():
     if debug_mode:
         st.sidebar.markdown("---")
         st.sidebar.subheader("🔧 调试工具")
+        
+        # 显示当前session state状态
+        st.sidebar.write("**Session State状态:**")
+        if hasattr(st.session_state, 'controller'):
+            controller = st.session_state.controller
+            is_hand_over = controller.is_hand_over()
+            snapshot = controller.get_snapshot()
+            
+            st.sidebar.text(f"game_started: {st.session_state.get('game_started', False)}")
+            st.sidebar.text(f"showdown_processed: {st.session_state.get('showdown_processed', False)}")
+            st.sidebar.text(f"hand_result_displayed: {st.session_state.get('hand_result_displayed', False)}")
+            st.sidebar.text(f"is_hand_over: {is_hand_over}")
+            st.sidebar.text(f"phase: {snapshot.phase if snapshot else 'None'}")
+            st.sidebar.text(f"pot: ${snapshot.pot if snapshot else 0}")
+            st.sidebar.text(f"hand_in_progress: {controller._hand_in_progress}")
+            
+            # 显示应该匹配的UI条件
+            if is_hand_over and st.session_state.get('game_started', False):
+                condition1 = (snapshot and snapshot.phase == Phase.SHOWDOWN and 
+                             not st.session_state.get('showdown_processed', False))
+                condition2 = (st.session_state.get('showdown_processed', False) and 
+                             not st.session_state.get('hand_result_displayed', False))
+                condition3 = (st.session_state.get('showdown_processed', False) and 
+                             st.session_state.get('hand_result_displayed', False))
+                condition4 = (not snapshot or snapshot.phase != Phase.SHOWDOWN)
+                
+                st.sidebar.text("**UI条件匹配:**")
+                st.sidebar.text(f"需要处理摊牌: {condition1}")
+                st.sidebar.text(f"显示结果: {condition2}")
+                st.sidebar.text(f"摊牌完成: {condition3}")
+                st.sidebar.text(f"非摊牌结束: {condition4}")
+        
+        # 强制重置session state按钮
+        if st.sidebar.button("🔄 重置Session State"):
+            st.session_state.showdown_processed = False
+            st.session_state.hand_result_displayed = False
+            if hasattr(st.session_state, 'last_hand_result'):
+                del st.session_state.last_hand_result
+            st.sidebar.success("✅ Session State已重置")
+            st.rerun()
         
         # 10手牌自动测试
         if st.sidebar.button("🎯 自动玩 10 手"):
@@ -870,6 +958,9 @@ def main():
                 if success:
                     st.session_state.game_started = True
                     st.session_state.events = []
+                    # 重置摊牌处理标记
+                    st.session_state.showdown_processed = False
+                    st.session_state.hand_result_displayed = False
                     if hasattr(st.session_state, 'show_raise_input'):
                         st.session_state.show_raise_input = False
                     st.rerun()
@@ -880,8 +971,12 @@ def main():
     # 渲染游戏状态
     render_game_state(snapshot)
     
-    # 自动处理AI行动
-    if st.session_state.game_started and not controller.is_hand_over():
+    # 检查手牌是否结束
+    is_hand_over = controller.is_hand_over()
+    
+    # 处理游戏逻辑
+    if st.session_state.game_started and not is_hand_over:
+        # 手牌进行中，处理AI行动
         current_player_id = controller.get_current_player_id()
         if current_player_id is not None and current_player_id != 0:
             # 当前是AI玩家，自动处理
@@ -890,54 +985,128 @@ def main():
                 st.rerun()  # 刷新页面显示最新状态
         elif current_player_id is None:
             # 没有当前玩家，可能需要检查游戏状态
-            # 这种情况可能发生在所有玩家完成行动但阶段未转换时
             st.info("⏳ 检查游戏状态...")
             st.rerun()  # 刷新页面重新检查状态
-    
-    # 渲染行动按钮
-    if st.session_state.game_started and not controller.is_hand_over():
-        current_player_id = controller.get_current_player_id()
-        if current_player_id == 0:  # 只有轮到人类玩家时才显示按钮
+        
+        # 渲染行动按钮（只有轮到人类玩家时）
+        if current_player_id == 0:
             render_action_buttons(controller)
         else:
             st.info("🤖 等待AI玩家行动...")
-    elif st.session_state.game_started and controller.is_hand_over():
-        st.success("🎉 手牌结束！")
+            
+    elif st.session_state.game_started and is_hand_over:
+        # 手牌结束，处理摊牌逻辑
+        snapshot = controller.get_snapshot()
         
-        # 自动结束手牌并显示结果
-        try:
-            result = controller.end_hand()
-            if result:
-                st.write(f"🏆 获胜者: {[controller.get_snapshot().players[i].name for i in result.winner_ids]}")
-                st.write(f"💰 底池金额: ${result.pot_amount}")
-                if result.winning_hand_description:
-                    st.write(f"🃏 获胜牌型: {result.winning_hand_description}")
-                
-                # 记录手牌结束事件
-                if 'events' not in st.session_state:
-                    st.session_state.events = []
-                st.session_state.events.append(f"手牌结束: {result.winning_hand_description}")
-        except Exception as e:
-            st.error(f"结束手牌时出错: {e}")
-        
-        col1, col2 = st.columns(2)
-        with col2:
-            if st.button("🔄 下一手牌", type="primary"):
-                # 确保当前手牌已经结束
-                if controller._hand_in_progress:
-                    try:
-                        controller.end_hand()
-                    except Exception as e:
-                        st.warning(f"强制结束当前手牌: {e}")
-                
-                success = controller.start_new_hand()
-                if success:
-                    st.session_state.events = []
-                    if hasattr(st.session_state, 'show_raise_input'):
-                        st.session_state.show_raise_input = False
-                    st.rerun()
+        # 检查是否需要处理摊牌
+        if (snapshot and snapshot.phase == Phase.SHOWDOWN and 
+            not st.session_state.showdown_processed):
+            
+            st.info("🎯 摊牌阶段，正在计算结果...")
+            try:
+                result = controller.end_hand()
+                if result:
+                    # 标记摊牌已处理
+                    st.session_state.showdown_processed = True
+                    
+                    # 记录手牌结束事件
+                    if 'events' not in st.session_state:
+                        st.session_state.events = []
+                    st.session_state.events.append(f"手牌结束: {result.winning_hand_description}")
+                    
+                    # 存储结果用于显示
+                    st.session_state.last_hand_result = result
+                    st.session_state.hand_result_displayed = False
+                    
+                    st.rerun()  # 刷新页面显示结果
                 else:
-                    st.error("❌ 无法开始新手牌")
+                    st.error("❌ 摊牌计算失败")
+                    st.session_state.showdown_processed = True
+                    st.rerun()
+            except Exception as e:
+                st.error(f"摊牌阶段处理失败: {e}")
+                st.session_state.showdown_processed = True
+                st.rerun()
+        
+        # 统一的手牌结束显示和下一手牌逻辑
+        else:
+            st.success("🎉 手牌结束！")
+            
+            # 显示结果
+            if hasattr(st.session_state, 'last_hand_result') and st.session_state.last_hand_result:
+                result = st.session_state.last_hand_result
+                current_snapshot = controller.get_snapshot()
+                if current_snapshot:
+                    winner_names = [current_snapshot.players[i].name for i in result.winner_ids]
+                    st.write(f"🏆 获胜者: {', '.join(winner_names)}")
+                    st.write(f"💰 底池金额: ${result.pot_amount}")
+                    if result.winning_hand_description:
+                        st.write(f"🃏 获胜牌型: {result.winning_hand_description}")
+            
+            # 标记结果已显示（如果还没有标记的话）
+            if not st.session_state.hand_result_displayed:
+                st.session_state.hand_result_displayed = True
+            
+            # 统一的下一手牌按钮
+            col1, col2 = st.columns(2)
+            with col2:
+                # 使用唯一的key避免重复
+                button_key = f"next_hand_{hash(str(st.session_state.get('last_hand_result', '')))}"
+                if st.button("🔄 下一手牌", type="primary", key=button_key):
+                    try:
+                        # 记录用户操作
+                        if 'events' not in st.session_state:
+                            st.session_state.events = []
+                        st.session_state.events.append("[USER] 点击了'下一手牌'按钮")
+                        
+                        success = controller.start_new_hand()
+                        if success:
+                            # 清理状态
+                            st.session_state.events = []
+                            st.session_state.showdown_processed = False
+                            st.session_state.hand_result_displayed = False
+                            
+                            # 清理可选状态
+                            for attr in ['show_raise_input', 'show_bet_input', 'last_hand_result']:
+                                if hasattr(st.session_state, attr):
+                                    delattr(st.session_state, attr)
+                            
+                            st.session_state.events.append("[SYSTEM] 新手牌开始成功")
+                            st.rerun()
+                        else:
+                            st.error("❌ 无法开始新手牌")
+                            st.session_state.events.append("[ERROR] 无法开始新手牌")
+                    except RuntimeError as e:
+                        # 如果出现"当前已有手牌在进行中"的错误，强制重置状态
+                        if "当前已有手牌在进行中" in str(e):
+                            st.warning("检测到手牌状态异常，正在重置...")
+                            st.session_state.events.append("[SYSTEM] 检测到手牌状态异常，正在重置")
+                            try:
+                                # 使用强制重置方法
+                                controller.force_reset_hand_state()
+                                success = controller.start_new_hand()
+                                if success:
+                                    # 清理状态
+                                    st.session_state.events = []
+                                    st.session_state.showdown_processed = False
+                                    st.session_state.hand_result_displayed = False
+                                    
+                                    # 清理可选状态
+                                    for attr in ['show_raise_input', 'show_bet_input', 'last_hand_result']:
+                                        if hasattr(st.session_state, attr):
+                                            delattr(st.session_state, attr)
+                                    
+                                    st.session_state.events.append("[SYSTEM] 重置成功，新手牌开始")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ 重置后仍无法开始新手牌")
+                                    st.session_state.events.append("[ERROR] 重置后仍无法开始新手牌")
+                            except Exception as reset_e:
+                                st.error(f"❌ 重置失败: {reset_e}")
+                                st.session_state.events.append(f"[ERROR] 重置失败: {reset_e}")
+                        else:
+                            st.error(f"❌ 开始新手牌失败: {e}")
+                            st.session_state.events.append(f"[ERROR] 开始新手牌失败: {e}")
 
 
 if __name__ == "__main__":

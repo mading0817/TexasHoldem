@@ -11,7 +11,7 @@ from datetime import datetime
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 from pydantic import Field, validator
 
-from v2.core import ActionType, Phase, SeatStatus, Card
+from v2.core import ActionType, Phase, SeatStatus, Card, Suit, Rank
 
 
 @pydantic_dataclass

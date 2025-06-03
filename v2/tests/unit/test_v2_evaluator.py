@@ -17,6 +17,8 @@ from v2.core.enums import Rank, Suit, HandRank
 from v2.core.evaluator import SimpleEvaluator, HandResult
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestSimpleEvaluator:
     """简单牌型评估器测试类。"""
     
@@ -35,6 +37,8 @@ class TestSimpleEvaluator:
         """
         return [Card.from_str(s) for s in card_strs]
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_high_card(self):
         """测试高牌识别。"""
         hole_cards = self._create_cards(["As", "Kh"])
@@ -46,6 +50,8 @@ class TestSimpleEvaluator:
         assert result.primary_value == 14  # A
         assert result.kickers == (13, 12, 11, 9)  # K, Q, J, 9
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_one_pair(self):
         """测试一对识别。"""
         hole_cards = self._create_cards(["As", "Ah"])
@@ -57,6 +63,8 @@ class TestSimpleEvaluator:
         assert result.primary_value == 14  # 一对A
         assert result.kickers == (13, 12, 11)  # K, Q, J
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_two_pair(self):
         """测试两对识别。"""
         hole_cards = self._create_cards(["As", "Ah"])
@@ -69,6 +77,8 @@ class TestSimpleEvaluator:
         assert result.secondary_value == 13  # 小对K
         assert result.kickers == (12,)  # Q
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_three_of_a_kind(self):
         """测试三条识别。"""
         hole_cards = self._create_cards(["As", "Ah"])
@@ -80,6 +90,8 @@ class TestSimpleEvaluator:
         assert result.primary_value == 14  # 三条A
         assert result.kickers == (13, 12)  # K, Q
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_straight(self):
         """测试顺子识别。"""
         hole_cards = self._create_cards(["As", "Kh"])
@@ -90,6 +102,8 @@ class TestSimpleEvaluator:
         assert result.rank == HandRank.STRAIGHT
         assert result.primary_value == 14  # A高顺子
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_straight_wheel(self):
         """测试A-2-3-4-5顺子（轮子）。"""
         hole_cards = self._create_cards(["As", "2h"])
@@ -100,6 +114,8 @@ class TestSimpleEvaluator:
         assert result.rank == HandRank.STRAIGHT
         assert result.primary_value == 5  # 轮子以5为高牌
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_flush(self):
         """测试同花识别。"""
         hole_cards = self._create_cards(["As", "Ks"])
@@ -111,6 +127,8 @@ class TestSimpleEvaluator:
         assert result.primary_value == 14  # A高同花
         assert result.kickers == (13, 12, 11, 9)  # K, Q, J, 9
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_full_house(self):
         """测试葫芦识别。"""
         hole_cards = self._create_cards(["As", "Ah"])
@@ -122,6 +140,8 @@ class TestSimpleEvaluator:
         assert result.primary_value == 14  # 三条A
         assert result.secondary_value == 13  # 一对K
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_four_of_a_kind(self):
         """测试四条识别。"""
         hole_cards = self._create_cards(["As", "Ah"])
@@ -133,6 +153,8 @@ class TestSimpleEvaluator:
         assert result.primary_value == 14  # 四条A
         assert result.kickers == (13,)  # K
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_straight_flush(self):
         """测试同花顺识别。"""
         hole_cards = self._create_cards(["9s", "8s"])
@@ -143,6 +165,8 @@ class TestSimpleEvaluator:
         assert result.rank == HandRank.STRAIGHT_FLUSH
         assert result.primary_value == 9  # 9高同花顺
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_royal_flush(self):
         """测试皇家同花顺识别。"""
         hole_cards = self._create_cards(["As", "Ks"])
@@ -154,6 +178,8 @@ class TestSimpleEvaluator:
         assert result.rank == HandRank.ROYAL_FLUSH
         assert result.primary_value == 14  # A高皇家同花顺
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_seven_cards_best_hand(self):
         """测试从7张牌中选择最佳5张。"""
         hole_cards = self._create_cards(["As", "Ah"])
@@ -166,6 +192,8 @@ class TestSimpleEvaluator:
         assert result.primary_value == 14
         assert result.kickers == (13,)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_hand_comparison(self):
         """测试牌型比较。"""
         # 四条 vs 葫芦
@@ -193,6 +221,8 @@ class TestSimpleEvaluator:
         
         assert pair1.compare_to(pair2) == 0
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_invalid_inputs(self):
         """测试无效输入处理。"""
         # 手牌不是2张
@@ -213,6 +243,8 @@ class TestSimpleEvaluator:
                 [Card.from_str(s) for s in ["Qd", "Js", "10c", "9h", "8s", "7d"]]
             )
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_edge_cases(self):
         """测试边界情况。"""
         # 测试多个相同点数的情况
@@ -236,6 +268,8 @@ class TestSimpleEvaluator:
         result = self.evaluator.evaluate_hand(hole_cards, community_cards)
         assert result.rank == HandRank.STRAIGHT
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_hand_result_str(self):
         """测试HandResult的字符串表示。"""
         # 测试一对
@@ -255,6 +289,8 @@ class TestSimpleEvaluator:
         assert "ACE" in str(straight_flush)
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 def test_card_from_str():
     """测试Card.from_str方法。"""
     # 测试基本功能

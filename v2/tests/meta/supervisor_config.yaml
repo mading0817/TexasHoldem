@@ -1,0 +1,270 @@
+# 反作弊监督者配置文件
+# 定义检测规则、白名单和严重程度设置
+
+# 私有属性保护模式
+private_patterns:
+  # 游戏状态相关
+  - "_game_state"
+  - "_current_phase"
+  - "_betting_round"
+  
+  # 玩家相关
+  - "_players"
+  - "_current_player"
+  - "_dealer_position"
+  - "_player_hands"
+  
+  # 牌桌相关
+  - "_deck"
+  - "_community_cards"
+  - "_pot"
+  - "_side_pots"
+  
+  # 盲注相关
+  - "_small_blind"
+  - "_big_blind"
+  - "_min_bet"
+  
+  # 内部状态
+  - "_action_history"
+  - "_hand_number"
+  - "_tournament_state"
+
+# 危险操作列表
+dangerous_operations:
+  # 反射操作
+  - "__new__"
+  - "__setattr__"
+  - "__dict__"
+  - "setattr"
+  - "delattr"
+  - "hasattr"
+  
+  # 代码执行
+  - "exec"
+  - "eval"
+  - "compile"
+  
+  # 作用域操作
+  - "globals"
+  - "locals"
+  - "vars"
+  
+  # 模块操作
+  - "__import__"
+  - "importlib"
+
+# API边界规则
+api_boundary_rules:
+  ui_tests:
+    # UI测试禁止导入的模块
+    forbidden_imports:
+      - "v2\\.core\\."
+      - "from v2\\.core"
+      - "import.*v2\\.core"
+    
+    # UI测试允许导入的模块
+    allowed_imports:
+      - "v2\\.controller\\."
+      - "v2\\.ui\\."
+      - "streamlit"
+      - "pytest"
+      - "unittest"
+      - "mock"
+  
+  integration_tests:
+    # 集成测试的特殊规则
+    forbidden_imports:
+      - "v2\\.core\\..*\\.private"
+    
+    allowed_imports:
+      - "v2\\.core\\."
+      - "v2\\.controller\\."
+
+# 白名单配置
+whitelist:
+  # 允许的测试辅助方法
+  test_helper_methods:
+    - "create_test_game_state"
+    - "setup_test_players"
+    - "mock_deck_for_testing"
+    - "create_test_hand"
+    - "setup_test_scenario"
+    - "mock_ai_strategy"
+    - "create_test_tournament"
+    - "setup_betting_scenario"
+  
+  # 允许的文件（不进行严格检查）
+  allowed_files:
+    - "test_helpers.py"
+    - "conftest.py"
+    - "fixtures.py"
+    - "test_data.py"
+    - "mock_objects.py"
+    - "test_utils.py"
+    - "test_ai_fairness_monitor.py"  # AI公平性测试需要使用setattr来模拟违规行为
+    - "test_streamlit_app.py"  # UI测试需要导入core类型进行测试
+    - "test_integration_demo.py"  # 集成测试需要检查内部状态
+    - "test_v2_controller_atomic.py"  # 原子操作测试需要模拟错误状态
+    - "test_v2_health_checker.py"  # 健康检查测试需要设置错误状态
+    - "test_v2_streamlit_log_visualization.py"  # 日志可视化测试需要检查属性
+    - "test_v2_streamlit_session_state.py"  # 会话状态测试需要检查属性
+    - "test_v2_validator.py"  # 验证器测试需要设置内部状态
+  
+  # 允许的目录（相对宽松的检查）
+  allowed_directories:
+    - "fixtures"
+    - "data"
+    - "mocks"
+    - "helpers"
+  
+  # 特殊情况的白名单
+  special_cases:
+    # 性能测试可能需要直接访问内部状态
+    performance_tests:
+      - "_measure_internal_state"
+      - "_benchmark_private_methods"
+    
+    # 调试测试可能需要特殊权限
+    debug_tests:
+      - "_debug_game_state"
+      - "_inspect_internal_data"
+    
+    # AI公平性测试的特殊权限
+    ai_fairness_tests:
+      - "setattr"  # 用于模拟私有属性访问
+      - "patch.object"  # 用于安全的mock操作
+      - "_private_data"  # 测试用的私有属性
+      - "unknown_attribute"  # 测试用的未知属性
+    
+    # UI测试的特殊权限
+    ui_tests:
+      - "v2.core.state"  # UI测试需要导入core类型进行测试
+      - "v2.core.enums"  # UI测试需要导入枚举类型
+      - "v2.core.cards"  # UI测试需要导入卡牌类型
+      - "from v2.core"  # 允许UI测试导入core模块
+    
+    # 测试框架常用操作
+    test_framework_operations:
+      - "hasattr"  # 检查属性是否存在
+      - "getattr"  # 获取属性值
+      - "_game_state"  # 测试中常用的私有状态
+      - "_current_player_seat"  # 测试中常用的私有状态
+      - "_big_blind"  # 测试中常用的私有状态
+
+# 严重程度配置
+severity_rules:
+  HIGH:
+    - "private_state_tampering"
+    - "constructor_bypass"
+    - "api_boundary_violation"
+    - "dangerous_code_execution"
+  
+  MEDIUM:
+    - "suspicious_reflection"
+    - "potential_boundary_violation"
+    - "file_parsing_error"
+  
+  LOW:
+    - "style_violation"
+    - "minor_boundary_issue"
+    - "documentation_warning"
+
+# 检测选项
+detection_options:
+  # 是否启用严格模式
+  strict_mode: true
+  
+  # 是否检查注释中的代码
+  check_comments: false
+  
+  # 是否检查字符串中的代码
+  check_strings: false
+  
+  # 最大文件大小（KB）
+  max_file_size: 1024
+  
+  # 是否启用性能监控
+  performance_monitoring: true
+  
+  # 是否生成详细报告
+  detailed_reports: true
+
+# 报告配置
+report_settings:
+  # 报告格式
+  format: "text"  # text, json, html
+  
+  # 是否包含代码片段
+  include_code_snippets: true
+  
+  # 代码片段最大长度
+  max_snippet_length: 100
+  
+  # 是否显示修复建议
+  show_fix_suggestions: true
+  
+  # 是否按文件分组
+  group_by_file: true
+  
+  # 是否显示统计信息
+  show_statistics: true
+
+# 集成配置
+integration:
+  # CI/CD集成
+  ci_cd:
+    # 是否在CI中运行
+    run_in_ci: true
+    
+    # 失败时的退出码
+    failure_exit_code: 1
+    
+    # 是否阻止合并
+    block_merge_on_violation: true
+  
+  # IDE集成
+  ide:
+    # 是否生成IDE兼容的输出
+    ide_compatible_output: true
+    
+    # 输出格式
+    output_format: "checkstyle"  # checkstyle, junit, sonar
+  
+  # 钩子配置
+  hooks:
+    # pre-commit钩子
+    pre_commit: true
+    
+    # pre-push钩子
+    pre_push: false
+
+# 自定义规则
+custom_rules:
+  # 项目特定的规则
+  texas_holdem_specific:
+    # 德州扑克特定的私有状态
+    poker_private_patterns:
+      - "_hole_cards"
+      - "_folded_players"
+      - "_all_in_players"
+      - "_showdown_results"
+    
+    # 德州扑克特定的危险操作
+    poker_dangerous_operations:
+      - "reveal_hole_cards"
+      - "manipulate_deck"
+      - "force_win_condition"
+  
+  # 测试质量规则
+  test_quality:
+    # 禁止的测试模式
+    forbidden_patterns:
+      - "assert True"  # 无意义的断言
+      - "pass"         # 空测试
+      - "# TODO"       # 未完成的测试
+    
+    # 必需的测试模式
+    required_patterns:
+      - "assert"       # 必须有断言
+      - "def test_"    # 必须是测试函数 

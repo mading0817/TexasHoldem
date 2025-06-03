@@ -12,9 +12,13 @@ from v2.controller.dto import (
 from v2.core import ActionType, Phase, SeatStatus, Card, Suit, Rank
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestPlayerSnapshot:
     """玩家快照测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_player_snapshot_creation(self):
         """测试玩家快照创建."""
         player = PlayerSnapshot(
@@ -33,6 +37,8 @@ class TestPlayerSnapshot:
         assert player.hole_cards is None
         assert player.is_dealer is False
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_player_snapshot_validation(self):
         """测试玩家快照验证."""
         # 测试无效座位ID
@@ -65,6 +71,8 @@ class TestPlayerSnapshot:
                 status=SeatStatus.ACTIVE
             )
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_player_snapshot_with_cards(self):
         """测试包含手牌的玩家快照."""
         cards = [
@@ -87,9 +95,13 @@ class TestPlayerSnapshot:
         assert player.is_dealer is True
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestGameStateSnapshot:
     """游戏状态快照测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_game_state_snapshot_creation(self):
         """测试游戏状态快照创建."""
         players = [
@@ -128,6 +140,8 @@ class TestGameStateSnapshot:
         assert snapshot.small_blind == 10
         assert snapshot.big_blind == 20
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_game_state_snapshot_validation(self):
         """测试游戏状态快照验证."""
         players = [
@@ -168,9 +182,13 @@ class TestGameStateSnapshot:
             )
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestActionInput:
     """行动输入测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_input_creation(self):
         """测试行动输入创建."""
         action = ActionInput(
@@ -184,6 +202,8 @@ class TestActionInput:
         assert action.amount == 100
         assert isinstance(action.timestamp, datetime)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_input_validation(self):
         """测试行动输入验证."""
         # 测试FOLD行动不应包含金额
@@ -210,6 +230,8 @@ class TestActionInput:
                 amount=-50  # 负金额
             )
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_valid_action_inputs(self):
         """测试有效的行动输入."""
         # FOLD行动
@@ -229,9 +251,13 @@ class TestActionInput:
         assert bet_action.amount == 100
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestValidationResult:
     """验证结果测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validation_result_creation(self):
         """测试验证结果创建."""
         result = ValidationResult(
@@ -245,6 +271,8 @@ class TestValidationResult:
         assert len(result.warnings) == 1
         assert result.warnings[0] == "警告信息"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validation_result_with_suggestion(self):
         """测试包含建议行动的验证结果."""
         suggested_action = ActionInput(
@@ -264,9 +292,13 @@ class TestValidationResult:
         assert result.suggested_action.action_type == ActionType.CALL
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestActionResult:
     """行动结果测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_result_creation(self):
         """测试行动结果创建."""
         validation = ValidationResult(is_valid=True)
@@ -283,9 +315,13 @@ class TestActionResult:
         assert isinstance(result.timestamp, datetime)
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestHandResult:
     """手牌结果测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_hand_result_creation(self):
         """测试手牌结果创建."""
         result = HandResult(
@@ -303,9 +339,13 @@ class TestHandResult:
         assert result.total_actions == 15
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestGameConfiguration:
     """游戏配置测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_game_configuration_creation(self):
         """测试游戏配置创建."""
         config = GameConfiguration(
@@ -324,6 +364,8 @@ class TestGameConfiguration:
         assert config.ai_difficulty == "normal"
         assert config.enable_events is True
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_game_configuration_validation(self):
         """测试游戏配置验证."""
         # 测试大盲小于等于小盲
@@ -357,9 +399,13 @@ class TestGameConfiguration:
             )
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestEventData:
     """事件数据测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_data_creation(self):
         """测试事件数据创建."""
         event = EventData(
@@ -376,9 +422,13 @@ class TestEventData:
         assert isinstance(event.timestamp, datetime)
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestSerializationContract:
     """序列化契约测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_player_snapshot_serialization(self):
         """测试玩家快照序列化/反序列化."""
         original = PlayerSnapshot(
@@ -404,6 +454,8 @@ class TestSerializationContract:
         assert restored.status == original.status
         assert restored.is_dealer == original.is_dealer
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_input_serialization(self):
         """测试行动输入序列化/反序列化."""
         original = ActionInput(
@@ -426,6 +478,8 @@ class TestSerializationContract:
         assert restored.action_type == original.action_type
         assert restored.amount == original.amount
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_game_configuration_serialization(self):
         """测试游戏配置序列化/反序列化."""
         original = GameConfiguration(
@@ -453,6 +507,8 @@ class TestSerializationContract:
         assert restored.ai_difficulty == original.ai_difficulty
         assert restored.enable_events == original.enable_events
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validation_result_with_complex_data(self):
         """测试包含复杂数据的验证结果序列化."""
         suggested_action = ActionInput(
@@ -474,6 +530,8 @@ class TestSerializationContract:
         assert original.suggested_action.player_id == 1
         assert len(original.warnings) == 2
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_contract_consistency(self):
         """测试契约一致性：确保所有DTO都可以正常创建和访问."""
         # 创建一个完整的游戏状态快照

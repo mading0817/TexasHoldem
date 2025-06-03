@@ -1,0 +1,202 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # 统一测试阶段 - 简化版本
+  test:
+    name: 🧪 Run All Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Create test reports directory
+      run: |
+        mkdir -p test-reports
+        
+    - name: Run unit tests
+      run: |
+        python -m pytest v2/tests/unit/ -v \
+          --junitxml=test-reports/unit-junit.xml \
+          --cov=v2 \
+          --cov-report=xml:test-reports/unit-coverage.xml \
+          --cov-report=html:test-reports/unit-coverage-html
+      continue-on-error: false
+        
+    - name: Run integration tests
+      run: |
+        python -m pytest v2/tests/integration/ -v \
+          --junitxml=test-reports/integration-junit.xml \
+          --cov=v2 --cov-append \
+          --cov-report=xml:test-reports/integration-coverage.xml \
+          --cov-report=html:test-reports/integration-coverage-html
+      continue-on-error: false
+        
+    - name: Run meta tests
+      run: |
+        python -m pytest v2/tests/meta/ -v \
+          --junitxml=test-reports/meta-junit.xml \
+          --cov=v2 --cov-append \
+          --cov-report=xml:test-reports/meta-coverage.xml \
+          --cov-report=html:test-reports/meta-coverage-html
+      continue-on-error: false
+      
+    - name: Generate test summary
+      if: always()
+      run: |
+        cat > test-summary.py << 'EOF'
+        #!/usr/bin/env python3
+        import xml.etree.ElementTree as ET
+        import glob
+        import os
+        
+        def parse_junit_results():
+            results = {
+                'total': 0,
+                'passed': 0,
+                'failed': 0,
+                'errors': 0,
+                'skipped': 0,
+                'suites': []
+            }
+            
+            junit_files = glob.glob('test-reports/*-junit.xml')
+            print(f"Found {len(junit_files)} JUnit files:")
+            
+            for junit_file in junit_files:
+                print(f"  Processing: {junit_file}")
+                try:
+                    tree = ET.parse(junit_file)
+                    root = tree.getroot()
+                    
+                    tests = int(root.get('tests', 0))
+                    failures = int(root.get('failures', 0))
+                    errors = int(root.get('errors', 0))
+                    skipped = int(root.get('skipped', 0))
+                    passed = tests - failures - errors - skipped
+                    
+                    suite_name = os.path.basename(junit_file).replace('-junit.xml', '')
+                    
+                    results['total'] += tests
+                    results['passed'] += passed
+                    results['failed'] += failures
+                    results['errors'] += errors
+                    results['skipped'] += skipped
+                    
+                    results['suites'].append({
+                        'name': suite_name,
+                        'tests': tests,
+                        'passed': passed,
+                        'failed': failures,
+                        'errors': errors,
+                        'skipped': skipped
+                    })
+                    
+                    print(f"    Tests: {tests}, Passed: {passed}, Failed: {failures}, Errors: {errors}")
+                    
+                except Exception as e:
+                    print(f"Error parsing {junit_file}: {e}")
+            
+            return results
+        
+        def generate_summary(results):
+            print("\n" + "="*60)
+            print("🎯 CI测试结果汇总")
+            print("="*60)
+            print(f"总测试数: {results['total']}")
+            print(f"✅ 通过: {results['passed']}")
+            print(f"❌ 失败: {results['failed']}")
+            print(f"⚠️ 错误: {results['errors']}")
+            print(f"⏭️ 跳过: {results['skipped']}")
+            
+            if results['total'] > 0:
+                pass_rate = (results['passed'] / results['total']) * 100
+                print(f"📊 通过率: {pass_rate:.1f}%")
+            
+            print("\n📋 测试套件详情:")
+            for suite in results['suites']:
+                status = "✅" if suite['failed'] == 0 and suite['errors'] == 0 else "❌"
+                print(f"  {status} {suite['name']}: {suite['tests']} 测试")
+            
+            # 判断总体结果
+            all_passed = results['failed'] == 0 and results['errors'] == 0
+            overall_status = "✅ 通过" if all_passed else "❌ 失败"
+            
+            print(f"\n🏆 总体结果: {overall_status}")
+            
+            # 设置GitHub Actions输出
+            if 'GITHUB_OUTPUT' in os.environ:
+                with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                    f.write(f"tests_passed={str(all_passed).lower()}\n")
+                    f.write(f"total_tests={results['total']}\n")
+                    f.write(f"failed_tests={results['failed']}\n")
+                    f.write(f"error_tests={results['errors']}\n")
+            
+            return all_passed
+        
+        def main():
+            results = parse_junit_results()
+            success = generate_summary(results)
+            
+            if not success:
+                print("\n❌ 测试失败，CI将退出并返回错误码")
+                exit(1)
+            else:
+                print("\n✅ 所有测试通过，CI成功完成")
+        
+        if __name__ == '__main__':
+            main()
+        EOF
+        
+        python test-summary.py
+      
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: test-reports/
+        retention-days: 30
+        
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+          
+          try {
+            // 运行测试汇总脚本获取结果
+            const output = execSync('python test-summary.py', { encoding: 'utf8' });
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🎯 CI测试结果\n\n\`\`\`\n${output}\n\`\`\``
+            });
+          } catch (error) {
+            console.log('Failed to generate test summary for PR comment:', error);
+          }

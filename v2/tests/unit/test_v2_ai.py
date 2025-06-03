@@ -14,9 +14,13 @@ from v2.core import (
 )
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestSimpleAI:
     """Test cases for SimpleAI strategy."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_ai_creation(self):
         """Test AI strategy creation with default config."""
         ai = SimpleAI()
@@ -24,6 +28,8 @@ class TestSimpleAI:
         assert ai.config.conservativeness == 0.8
         assert ai.decision_count == 0
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_ai_creation_with_custom_config(self):
         """Test AI strategy creation with custom config."""
         config = SimpleAIConfig(
@@ -36,6 +42,8 @@ class TestSimpleAI:
         assert ai.config.conservativeness == 0.5
         assert ai.config.fold_threshold == 0.4
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_decide_invalid_player(self):
         """Test decision making with invalid player ID."""
         ai = SimpleAI()
@@ -44,6 +52,8 @@ class TestSimpleAI:
         with pytest.raises(ValueError, match="Player 999 not found"):
             ai.decide(snapshot, 999)
             
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_decide_high_cost_fold(self):
         """Test that AI folds when call cost is too high."""
         config = SimpleAIConfig(fold_threshold=0.2)  # Low threshold
@@ -60,6 +70,8 @@ class TestSimpleAI:
         assert action.action_type == ActionType.FOLD
         assert ai.decision_count == 1
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_decide_check_when_no_bet(self):
         """Test that AI checks when there's no bet to call."""
         ai = SimpleAI()
@@ -77,6 +89,8 @@ class TestSimpleAI:
         # Should check most of the time due to conservativeness
         assert action.action_type in [ActionType.CHECK, ActionType.BET]
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_decide_call_acceptable_cost(self):
         """Test that AI calls when cost is acceptable."""
         config = SimpleAIConfig(fold_threshold=0.5)  # High threshold
@@ -95,6 +109,8 @@ class TestSimpleAI:
         if action.action_type == ActionType.CALL:
             assert action.amount == 20  # Call amount
             
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_analyze_situation(self):
         """Test situation analysis functionality."""
         ai = SimpleAI()
@@ -114,6 +130,8 @@ class TestSimpleAI:
         assert context['cost_ratio'] == 0.2  # 20 / 100
         assert 'reasoning' in context
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_bet_amount_calculation(self):
         """Test bet amount calculation."""
         ai = SimpleAI()
@@ -127,6 +145,8 @@ class TestSimpleAI:
         assert 10 <= bet_amount <= 30
         assert bet_amount <= player.chips
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_raise_amount_calculation(self):
         """Test raise amount calculation."""
         ai = SimpleAI()
@@ -175,9 +195,13 @@ class TestSimpleAI:
         return snapshot
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestAlwaysFoldAI:
     """Test case for an AI that always folds - used for testing game flow."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_always_fold_ai(self):
         """Test an AI strategy that always folds."""
         

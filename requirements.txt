@@ -9,6 +9,9 @@ pydantic>=2.0.0
 # Testing Dependencies
 pytest>=8.0.0
 pytest-cov>=4.0.0
+pytest-xdist>=3.0.0  # 并行测试执行
+pytest-html>=4.0.0   # HTML测试报告
+pytest-benchmark>=4.0.0  # 性能基准测试
 psutil>=5.9.0  # 用于性能测试中的内存监控
 
 # Development Dependencies
@@ -21,4 +24,9 @@ pydocstyle>=6.3.0
 
 # Web Interface Dependencies
 streamlit>=1.28.0
-click>=8.0.0  # 用于CLI输入处理 
+click>=8.0.0  # 用于CLI输入处理
+
+# Result Aggregation Dependencies (for CI)
+jinja2>=3.0.0
+lxml>=4.9.0
+beautifulsoup4>=4.12.0 

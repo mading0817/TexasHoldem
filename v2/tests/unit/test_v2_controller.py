@@ -14,9 +14,13 @@ from v2.core import GameState, Player, Action, ActionType, SeatStatus, Phase
 from v2.core.events import EventBus, EventType
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestPokerController:
     """Test the PokerController class."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_controller_initialization(self):
         """Test controller initialization with default parameters."""
         controller = PokerController()
@@ -27,6 +31,8 @@ class TestPokerController:
         assert controller._validator is not None
         assert controller._hand_in_progress is False
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_controller_initialization_with_custom_params(self):
         """Test controller initialization with custom parameters."""
         game_state = GameState()
@@ -39,6 +45,8 @@ class TestPokerController:
         assert controller._ai_strategy is ai_strategy
         assert controller._logger is logger
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_start_new_hand_insufficient_players(self):
         """Test starting new hand with insufficient players."""
         controller = PokerController()
@@ -51,6 +59,8 @@ class TestPokerController:
         assert result is False
         assert controller._hand_in_progress is False
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_start_new_hand_success(self):
         """Test successfully starting a new hand."""
         controller = PokerController()
@@ -66,6 +76,8 @@ class TestPokerController:
         assert controller._hand_in_progress is True
         assert controller._game_state.phase == Phase.PRE_FLOP
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_start_new_hand_already_in_progress(self):
         """Test starting new hand when one is already in progress."""
         controller = PokerController()
@@ -74,6 +86,8 @@ class TestPokerController:
         with pytest.raises(RuntimeError, match="当前已有手牌在进行中"):
             controller.start_new_hand()
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_snapshot(self):
         """Test getting game state snapshot."""
         controller = PokerController()
@@ -85,12 +99,16 @@ class TestPokerController:
         assert snapshot.pot == 0
         assert len(snapshot.players) == 0
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_is_hand_over_no_hand_in_progress(self):
         """Test is_hand_over when no hand is in progress."""
         controller = PokerController()
         
         assert controller.is_hand_over() is True
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_is_hand_over_hand_in_progress(self):
         """Test is_hand_over when hand is in progress."""
         controller = PokerController()
@@ -104,12 +122,16 @@ class TestPokerController:
         
         assert controller.is_hand_over() is False
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_current_player_id_no_hand(self):
         """Test getting current player ID when no hand is in progress."""
         controller = PokerController()
         
         assert controller.get_current_player_id() is None
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_current_player_id_with_hand(self):
         """Test getting current player ID when hand is in progress."""
         controller = PokerController()
@@ -125,6 +147,8 @@ class TestPokerController:
         
         assert controller.get_current_player_id() == 0
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_execute_action_no_hand_in_progress(self):
         """Test executing action when no hand is in progress."""
         controller = PokerController()
@@ -133,6 +157,8 @@ class TestPokerController:
         with pytest.raises(RuntimeError, match="当前没有手牌在进行中"):
             controller.execute_action(action)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_process_ai_action_no_strategy(self):
         """Test processing AI action without strategy."""
         controller = PokerController()
@@ -142,6 +168,8 @@ class TestPokerController:
         result = controller.process_ai_action()
         assert result is False
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_process_ai_action_no_current_player(self):
         """Test processing AI action without current player."""
         controller = PokerController()
@@ -151,6 +179,8 @@ class TestPokerController:
         result = controller.process_ai_action()
         assert result is False
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_end_hand_no_hand_in_progress(self):
         """Test ending hand when no hand is in progress."""
         controller = PokerController()
@@ -158,6 +188,8 @@ class TestPokerController:
         result = controller.end_hand()
         assert result is None
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_end_hand_success(self):
         """Test successfully ending a hand."""
         controller = PokerController()
@@ -172,12 +204,18 @@ class TestPokerController:
         assert controller._hand_in_progress is False
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestAIStrategy:
     """Test the AIStrategy protocol."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_ai_strategy_protocol(self):
         """Test that AIStrategy is a proper protocol."""
         # 创建一个实现AIStrategy的类
+        @pytest.mark.unit
+        @pytest.mark.fast
         class TestAI:
             def decide(self, game_snapshot, player_id):
                 return Action(ActionType.FOLD, 0, player_id)
@@ -185,6 +223,8 @@ class TestAIStrategy:
         ai = TestAI()
         assert isinstance(ai, AIStrategy)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_ai_strategy_mock(self):
         """Test using mock for AIStrategy."""
         ai_mock = Mock(spec=AIStrategy)
@@ -195,9 +235,13 @@ class TestAIStrategy:
         assert action.action_type == ActionType.FOLD
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestHandResult:
     """Test the HandResult dataclass."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_hand_result_creation(self):
         """Test creating HandResult instance."""
         result = HandResult(
@@ -212,6 +256,8 @@ class TestHandResult:
         assert result.winning_hand_description == "Two Pair"
         assert len(result.side_pots) == 1
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_hand_result_immutable(self):
         """Test that HandResult is immutable."""
         result = HandResult(

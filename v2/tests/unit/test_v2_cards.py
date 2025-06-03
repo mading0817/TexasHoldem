@@ -12,15 +12,21 @@ from v2.core.enums import Suit, Rank
 pytestmark = pytest.mark.v2
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestCard:
     """测试Card类的功能。"""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_card_creation(self):
         """测试Card对象的创建。"""
         card = Card(Suit.HEARTS, Rank.ACE)
         assert card.suit == Suit.HEARTS
         assert card.rank == Rank.ACE
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_card_string_representation(self):
         """测试Card的字符串表示。"""
         card = Card(Suit.SPADES, Rank.KING)
@@ -32,11 +38,15 @@ class TestCard:
         card3 = Card(Suit.DIAMONDS, Rank.ACE)
         assert str(card3) == "AD"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_card_repr(self):
         """测试Card的详细表示。"""
         card = Card(Suit.DIAMONDS, Rank.QUEEN)
         assert repr(card) == "Card(QUEEN, DIAMONDS)"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_card_equality(self):
         """测试Card的相等性比较。"""
         card1 = Card(Suit.CLUBS, Rank.JACK)
@@ -49,6 +59,8 @@ class TestCard:
         assert card1 != card4  # 不同点数
         assert card1 != "not a card"  # 不同类型
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_card_comparison(self):
         """测试Card的大小比较。"""
         two = Card(Suit.HEARTS, Rank.TWO)
@@ -59,6 +71,8 @@ class TestCard:
         assert three < ace
         assert not ace < two
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_card_hash(self):
         """测试Card可以用作字典键和集合元素。"""
         card1 = Card(Suit.HEARTS, Rank.ACE)
@@ -76,6 +90,8 @@ class TestCard:
         card_set = {card1, card2, card3}
         assert len(card_set) == 2  # card1和card2是同一张牌
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_card_immutable(self):
         """测试Card是不可变的。"""
         card = Card(Suit.HEARTS, Rank.ACE)
@@ -83,9 +99,13 @@ class TestCard:
             card.suit = Suit.SPADES  # 应该无法修改
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestDeck:
     """测试Deck类的功能。"""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deck_creation(self):
         """测试Deck的创建。"""
         deck = Deck()
@@ -93,12 +113,16 @@ class TestDeck:
         assert deck.cards_remaining == 52
         assert not deck.is_empty
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deck_with_custom_rng(self):
         """测试使用自定义随机数生成器的Deck。"""
         rng = random.Random(42)
         deck = Deck(rng=rng)
         assert len(deck) == 52
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deck_contains_all_cards(self):
         """测试Deck包含所有52张牌且无重复。"""
         deck = Deck()
@@ -115,6 +139,8 @@ class TestDeck:
         actual_cards = set(dealt_cards)
         assert actual_cards == expected_cards
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deal_single_card(self):
         """测试发单张牌。"""
         deck = Deck()
@@ -125,6 +151,8 @@ class TestDeck:
         assert len(deck) == initial_count - 1
         assert deck.cards_remaining == initial_count - 1
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deal_multiple_cards(self):
         """测试发多张牌。"""
         deck = Deck()
@@ -137,6 +165,8 @@ class TestDeck:
         # 检查发出的牌不重复
         assert len(set(cards)) == 5
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deal_from_empty_deck(self):
         """测试从空牌堆发牌应该抛出异常。"""
         deck = Deck()
@@ -147,6 +177,8 @@ class TestDeck:
         with pytest.raises(IndexError, match="Cannot deal from empty deck"):
             deck.deal_card()
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deal_too_many_cards(self):
         """测试发牌数量超过剩余牌数应该抛出异常。"""
         deck = Deck()
@@ -154,6 +186,8 @@ class TestDeck:
         with pytest.raises(ValueError, match="Cannot deal 53 cards, only 52 remaining"):
             deck.deal_cards(53)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deal_negative_cards(self):
         """测试发负数张牌应该抛出异常。"""
         deck = Deck()
@@ -161,6 +195,8 @@ class TestDeck:
         with pytest.raises(ValueError, match="Count must be non-negative"):
             deck.deal_cards(-1)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_shuffle(self):
         """测试洗牌功能。"""
         # 使用固定种子确保测试可重现
@@ -186,6 +222,8 @@ class TestDeck:
         cards2_after = deck2.deal_cards(52)
         assert cards1_after == cards2_after
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_peek_top(self):
         """测试查看顶部牌功能。"""
         deck = Deck()
@@ -200,6 +238,8 @@ class TestDeck:
         assert dealt_card == top_card
         assert len(deck) == 51
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_peek_empty_deck(self):
         """测试查看空牌堆的顶部牌。"""
         deck = Deck()
@@ -207,6 +247,8 @@ class TestDeck:
         
         assert deck.peek_top() is None
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_reset(self):
         """测试重置牌堆功能。"""
         deck = Deck()
@@ -220,6 +262,8 @@ class TestDeck:
         assert len(deck) == 52
         assert not deck.is_empty
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deck_string_representation(self):
         """测试Deck的字符串表示。"""
         deck = Deck()
@@ -228,6 +272,8 @@ class TestDeck:
         deck.deal_cards(10)
         assert str(deck) == "Deck(42 cards remaining)"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deck_repr(self):
         """测试Deck的详细表示。"""
         deck = Deck()
@@ -240,9 +286,13 @@ class TestDeck:
         assert repr_str.startswith("Deck(cards_remaining=47, rng=")
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestCardDeckIntegration:
     """测试Card和Deck的集成功能。"""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deterministic_shuffle(self):
         """测试使用固定种子的确定性洗牌。"""
         # 使用相同种子的两个牌堆洗牌后应该产生相同的顺序
@@ -257,6 +307,8 @@ class TestCardDeckIntegration:
             card2 = deck2.deal_card()
             assert card1 == card2
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_card_uniqueness_in_deck(self):
         """测试牌堆中每张牌的唯一性。"""
         deck = Deck()
@@ -268,6 +320,8 @@ class TestCardDeckIntegration:
                 if i != j:
                     assert card1 != card2, f"Duplicate card found: {card1}"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deal_zero_cards(self):
         """测试发0张牌。"""
         deck = Deck()

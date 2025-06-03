@@ -17,6 +17,8 @@ from v2.controller import PokerController
 from v2.ai import SimpleAI
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestControllerEventEmission:
     """Test that controller emits events correctly."""
     
@@ -43,6 +45,8 @@ class TestControllerEventEmission:
         for event_type in EventType:
             self.event_bus.subscribe(event_type, event_collector)
             
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_hand_started_event(self):
         """Test that HAND_STARTED event is emitted when starting a new hand."""
         # Start new hand
@@ -57,6 +61,8 @@ class TestControllerEventEmission:
         assert event.data["active_players"] == 2
         assert "dealer_position" in event.data
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_blinds_posted_event(self):
         """Test that BLINDS_POSTED event is emitted when posting blinds."""
         # Start new hand (which posts blinds)
@@ -72,6 +78,8 @@ class TestControllerEventEmission:
         assert "big_blind_player_id" in event.data
         assert "big_blind_amount" in event.data
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_player_action_events(self):
         """Test that player action events are emitted correctly."""
         # Start new hand
@@ -95,6 +103,8 @@ class TestControllerEventEmission:
         assert event.data["action_type"] == "call"
         assert event.data["amount"] > 0  # Should be calling the big blind
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_player_fold_event(self):
         """Test that PLAYER_FOLDED event is emitted when player folds."""
         # Start new hand
@@ -114,6 +124,8 @@ class TestControllerEventEmission:
         assert event.data["player_id"] == current_player_id
         assert "player_name" in event.data
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_bet_placed_event(self):
         """Test that BET_PLACED event is emitted when player bets."""
         # Start new hand
@@ -135,6 +147,8 @@ class TestControllerEventEmission:
         assert "amount" in event.data
         assert "new_current_bet" in event.data
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_pot_updated_event(self):
         """Test that POT_UPDATED event is emitted after player actions."""
         # Start new hand
@@ -154,6 +168,8 @@ class TestControllerEventEmission:
         assert "pot_amount" in event.data
         assert "current_bet" in event.data
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_all_in_event(self):
         """Test that PLAYER_ALL_IN event is emitted when player goes all-in."""
         # Start new hand
@@ -175,6 +191,8 @@ class TestControllerEventEmission:
         assert "amount" in event.data
         assert "new_current_bet" in event.data
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_hand_ended_event(self):
         """Test that HAND_ENDED event is emitted when hand ends."""
         # Start new hand
@@ -194,6 +212,8 @@ class TestControllerEventEmission:
         assert "winning_hand_description" in event.data
         assert "side_pots" in event.data
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_phase_transition_events(self):
         """Test that phase transition events are emitted correctly."""
         # Add more players to ensure we can progress through phases
@@ -238,6 +258,8 @@ class TestControllerEventEmission:
             assert "cards_count" in event.data
             assert "community_cards_count" in event.data
             
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_order(self):
         """Test that events are emitted in the correct order."""
         # Start new hand
@@ -257,6 +279,8 @@ class TestControllerEventEmission:
         assert blinds_posted_index is not None, "BLINDS_POSTED event not found"
         assert hand_started_index < blinds_posted_index, f"HAND_STARTED at {hand_started_index}, BLINDS_POSTED at {blinds_posted_index}"
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_data_consistency(self):
         """Test that event data is consistent and complete."""
         # Start new hand
@@ -269,6 +293,8 @@ class TestControllerEventEmission:
             assert event.timestamp is not None
             assert isinstance(event.data, dict)
             
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_multiple_listeners(self):
         """Test that multiple listeners receive the same events."""
         # Add another event collector

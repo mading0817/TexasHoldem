@@ -29,9 +29,13 @@ from v2.core import (
 )
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestPublicAPIImports:
     """Test that all public API components can be imported."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_enums_import(self):
         """Test that all enums are properly imported."""
         assert Suit.HEARTS.value == "♥"
@@ -43,6 +47,8 @@ class TestPublicAPIImports:
         assert GameEventType.HAND_STARTED.value == "hand_started"
         assert ValidationResult.VALID.value == "valid"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_action_dataclasses_import(self):
         """Test that action data classes are properly imported."""
         action = Action(ActionType.BET, 100)
@@ -57,6 +63,8 @@ class TestPublicAPIImports:
         assert validated.original_action == action
         assert validated.final_action.action_type == ActionType.BET
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_cards_import(self):
         """Test that card classes are properly imported."""
         card = Card(Suit.SPADES, Rank.ACE)
@@ -66,6 +74,8 @@ class TestPublicAPIImports:
         deck = Deck()
         assert len(deck) == 52
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_evaluator_import(self):
         """Test that evaluator classes are properly imported."""
         evaluator = SimpleEvaluator()
@@ -84,6 +94,8 @@ class TestPublicAPIImports:
         assert isinstance(result, HandResult)
         assert result.rank == HandRank.ROYAL_FLUSH
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_player_import(self):
         """Test that player class is properly imported."""
         player = Player(1, "Test Player", 1000)
@@ -91,6 +103,8 @@ class TestPublicAPIImports:
         assert player.chips == 1000
         assert player.status == SeatStatus.ACTIVE
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_validator_import(self):
         """Test that validator classes are properly imported."""
         validator = ActionValidator()
@@ -99,6 +113,8 @@ class TestPublicAPIImports:
         assert issubclass(InvalidActionError, Exception)
         assert issubclass(InsufficientChipsError, Exception)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_pot_management_import(self):
         """Test that pot management classes are properly imported."""
         side_pot = SidePot(100, ["player1", "player2"])
@@ -116,6 +132,8 @@ class TestPublicAPIImports:
         assert isinstance(summary, dict)
         assert 'side_pots' in summary
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_state_management_import(self):
         """Test that state management classes are properly imported."""
         game_state = GameState()
@@ -124,6 +142,8 @@ class TestPublicAPIImports:
         snapshot = game_state.create_snapshot()
         assert isinstance(snapshot, GameSnapshot)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_utility_functions_import(self):
         """Test that utility functions are properly imported."""
         suits = get_all_suits()
@@ -139,9 +159,13 @@ class TestPublicAPIImports:
         assert ActionType.FOLD in actions
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestPublicAPIUsage:
     """Test that public APIs work together correctly."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_create_and_evaluate_hand(self):
         """Test creating cards and evaluating a hand."""
         deck = Deck()
@@ -158,6 +182,8 @@ class TestPublicAPIUsage:
         assert isinstance(result, HandResult)
         assert result.rank in get_all_hand_ranks()
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_player_and_action_workflow(self):
         """Test player creation and action validation workflow."""
         player = Player(1, "Test Player", 1000)
@@ -168,6 +194,8 @@ class TestPublicAPIUsage:
         
         assert player.chips >= action.amount
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_pot_calculation_workflow(self):
         """Test pot calculation with multiple players."""
         contributions = {

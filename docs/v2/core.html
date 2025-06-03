@@ -258,6 +258,57 @@
 
             </li>
             <li>
+                    <a class="class" href="#GameEventType">GameEventType</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="variable" href="#GameEventType.HAND_STARTED">HAND_STARTED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEventType.CARDS_DEALT">CARDS_DEALT</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEventType.PLAYER_ACTION">PLAYER_ACTION</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEventType.PHASE_CHANGED">PHASE_CHANGED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEventType.POT_AWARDED">POT_AWARDED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEventType.HAND_ENDED">HAND_ENDED</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GameEventType.GAME_ENDED">GAME_ENDED</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#ValidationResult">ValidationResult</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="variable" href="#ValidationResult.VALID">VALID</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ValidationResult.INVALID_AMOUNT">INVALID_AMOUNT</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ValidationResult.INSUFFICIENT_CHIPS">INSUFFICIENT_CHIPS</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ValidationResult.OUT_OF_TURN">OUT_OF_TURN</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ValidationResult.INVALID_ACTION">INVALID_ACTION</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ValidationResult.GAME_NOT_ACTIVE">GAME_NOT_ACTIVE</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
                     <a class="class" href="#Card">Card</a>
                             <ul class="memberlist">
                         <li>
@@ -947,6 +998,15 @@
             <li>
                     <a class="function" href="#create_player">create_player</a>
             </li>
+            <li>
+                    <a class="function" href="#get_all_suits">get_all_suits</a>
+            </li>
+            <li>
+                    <a class="function" href="#get_all_ranks">get_all_ranks</a>
+            </li>
+            <li>
+                    <a class="function" href="#get_valid_actions">get_valid_actions</a>
+            </li>
     </ul>
 
 
@@ -980,7 +1040,7 @@ game state management, and rule validation.</p>
 </span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="sd">game state management, and rule validation.</span>
 </span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a>
-</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.enums</span><span class="w"> </span><span class="kn">import</span> <span class="n">Suit</span><span class="p">,</span> <span class="n">Rank</span><span class="p">,</span> <span class="n">ActionType</span><span class="p">,</span> <span class="n">Phase</span><span class="p">,</span> <span class="n">SeatStatus</span><span class="p">,</span> <span class="n">HandRank</span><span class="p">,</span> <span class="n">Action</span><span class="p">,</span> <span class="n">ValidatedAction</span><span class="p">,</span> <span class="n">ValidationResultData</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.enums</span><span class="w"> </span><span class="kn">import</span> <span class="n">Suit</span><span class="p">,</span> <span class="n">Rank</span><span class="p">,</span> <span class="n">ActionType</span><span class="p">,</span> <span class="n">Phase</span><span class="p">,</span> <span class="n">SeatStatus</span><span class="p">,</span> <span class="n">HandRank</span><span class="p">,</span> <span class="n">Action</span><span class="p">,</span> <span class="n">ValidatedAction</span><span class="p">,</span> <span class="n">ValidationResultData</span><span class="p">,</span> <span class="n">GameEventType</span><span class="p">,</span> <span class="n">ValidationResult</span><span class="p">,</span> <span class="n">get_all_suits</span><span class="p">,</span> <span class="n">get_all_ranks</span><span class="p">,</span> <span class="n">get_valid_actions</span>
 </span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.cards</span><span class="w"> </span><span class="kn">import</span> <span class="n">Card</span><span class="p">,</span> <span class="n">Deck</span>
 </span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.evaluator</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleEvaluator</span><span class="p">,</span> <span class="n">HandResult</span>
 </span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.player</span><span class="w"> </span><span class="kn">import</span> <span class="n">Player</span>
@@ -1041,7 +1101,7 @@ game state management, and rule validation.</p>
 </span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>
 </span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
 </span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>    <span class="c1"># Enums</span>
-</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>    <span class="s1">&#39;Suit&#39;</span><span class="p">,</span> <span class="s1">&#39;Rank&#39;</span><span class="p">,</span> <span class="s1">&#39;ActionType&#39;</span><span class="p">,</span> <span class="s1">&#39;Phase&#39;</span><span class="p">,</span> <span class="s1">&#39;SeatStatus&#39;</span><span class="p">,</span> <span class="s1">&#39;HandRank&#39;</span><span class="p">,</span> <span class="s1">&#39;Action&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidatedAction&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidationResultData&#39;</span><span class="p">,</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos">69</span></a>    <span class="s1">&#39;Suit&#39;</span><span class="p">,</span> <span class="s1">&#39;Rank&#39;</span><span class="p">,</span> <span class="s1">&#39;ActionType&#39;</span><span class="p">,</span> <span class="s1">&#39;Phase&#39;</span><span class="p">,</span> <span class="s1">&#39;SeatStatus&#39;</span><span class="p">,</span> <span class="s1">&#39;HandRank&#39;</span><span class="p">,</span> <span class="s1">&#39;Action&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidatedAction&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidationResultData&#39;</span><span class="p">,</span> <span class="s1">&#39;GameEventType&#39;</span><span class="p">,</span> <span class="s1">&#39;ValidationResult&#39;</span><span class="p">,</span>
 </span><span id="L-70"><a href="#L-70"><span class="linenos">70</span></a>    
 </span><span id="L-71"><a href="#L-71"><span class="linenos">71</span></a>    <span class="c1"># Core classes</span>
 </span><span id="L-72"><a href="#L-72"><span class="linenos">72</span></a>    <span class="s1">&#39;Card&#39;</span><span class="p">,</span> <span class="s1">&#39;Deck&#39;</span><span class="p">,</span> <span class="s1">&#39;Player&#39;</span><span class="p">,</span> <span class="s1">&#39;GameState&#39;</span><span class="p">,</span> <span class="s1">&#39;GameSnapshot&#39;</span><span class="p">,</span>
@@ -1062,8 +1122,11 @@ game state management, and rule validation.</p>
 </span><span id="L-87"><a href="#L-87"><span class="linenos">87</span></a>    <span class="s1">&#39;GameStateHealthChecker&#39;</span><span class="p">,</span> <span class="s1">&#39;HealthIssue&#39;</span><span class="p">,</span> <span class="s1">&#39;HealthCheckResult&#39;</span><span class="p">,</span> <span class="s1">&#39;HealthIssueType&#39;</span><span class="p">,</span> <span class="s1">&#39;HealthIssueSeverity&#39;</span><span class="p">,</span>
 </span><span id="L-88"><a href="#L-88"><span class="linenos">88</span></a>    
 </span><span id="L-89"><a href="#L-89"><span class="linenos">89</span></a>    <span class="c1"># Convenience functions</span>
-</span><span id="L-90"><a href="#L-90"><span class="linenos">90</span></a>    <span class="s1">&#39;new_deck&#39;</span><span class="p">,</span> <span class="s1">&#39;evaluate&#39;</span><span class="p">,</span> <span class="s1">&#39;create_player&#39;</span>
-</span><span id="L-91"><a href="#L-91"><span class="linenos">91</span></a><span class="p">]</span> 
+</span><span id="L-90"><a href="#L-90"><span class="linenos">90</span></a>    <span class="s1">&#39;new_deck&#39;</span><span class="p">,</span> <span class="s1">&#39;evaluate&#39;</span><span class="p">,</span> <span class="s1">&#39;create_player&#39;</span><span class="p">,</span>
+</span><span id="L-91"><a href="#L-91"><span class="linenos">91</span></a>    
+</span><span id="L-92"><a href="#L-92"><span class="linenos">92</span></a>    <span class="c1"># Utility functions</span>
+</span><span id="L-93"><a href="#L-93"><span class="linenos">93</span></a>    <span class="s1">&#39;get_all_suits&#39;</span><span class="p">,</span> <span class="s1">&#39;get_all_ranks&#39;</span><span class="p">,</span> <span class="s1">&#39;get_valid_actions&#39;</span>
+</span><span id="L-94"><a href="#L-94"><span class="linenos">94</span></a><span class="p">]</span> 
 </span></pre></div>
 
 
@@ -2115,6 +2178,231 @@ game state management, and rule validation.</p>
         
     </div>
     <a class="headerlink" href="#ValidationResultData.suggested_action"></a>
+    
+    
+
+                            </div>
+                </section>
+                <section id="GameEventType">
+                            <input id="GameEventType-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">GameEventType</span><wbr>(<span class="base">enum.Enum</span>):
+
+                <label class="view-source-button" for="GameEventType-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#GameEventType"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="GameEventType-113"><a href="#GameEventType-113"><span class="linenos">113</span></a><span class="k">class</span><span class="w"> </span><span class="nc">GameEventType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+</span><span id="GameEventType-114"><a href="#GameEventType-114"><span class="linenos">114</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="GameEventType-115"><a href="#GameEventType-115"><span class="linenos">115</span></a><span class="sd">    游戏事件类型枚举.</span>
+</span><span id="GameEventType-116"><a href="#GameEventType-116"><span class="linenos">116</span></a><span class="sd">    </span>
+</span><span id="GameEventType-117"><a href="#GameEventType-117"><span class="linenos">117</span></a><span class="sd">    定义游戏过程中可能发生的各种事件类型，用于日志记录和事件处理.</span>
+</span><span id="GameEventType-118"><a href="#GameEventType-118"><span class="linenos">118</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="GameEventType-119"><a href="#GameEventType-119"><span class="linenos">119</span></a>
+</span><span id="GameEventType-120"><a href="#GameEventType-120"><span class="linenos">120</span></a>    <span class="n">HAND_STARTED</span> <span class="o">=</span> <span class="s2">&quot;hand_started&quot;</span>      <span class="c1"># 新手牌开始</span>
+</span><span id="GameEventType-121"><a href="#GameEventType-121"><span class="linenos">121</span></a>    <span class="n">CARDS_DEALT</span> <span class="o">=</span> <span class="s2">&quot;cards_dealt&quot;</span>        <span class="c1"># 发牌</span>
+</span><span id="GameEventType-122"><a href="#GameEventType-122"><span class="linenos">122</span></a>    <span class="n">PLAYER_ACTION</span> <span class="o">=</span> <span class="s2">&quot;player_action&quot;</span>    <span class="c1"># 玩家行动</span>
+</span><span id="GameEventType-123"><a href="#GameEventType-123"><span class="linenos">123</span></a>    <span class="n">PHASE_CHANGED</span> <span class="o">=</span> <span class="s2">&quot;phase_changed&quot;</span>    <span class="c1"># 阶段变更</span>
+</span><span id="GameEventType-124"><a href="#GameEventType-124"><span class="linenos">124</span></a>    <span class="n">POT_AWARDED</span> <span class="o">=</span> <span class="s2">&quot;pot_awarded&quot;</span>        <span class="c1"># 底池奖励</span>
+</span><span id="GameEventType-125"><a href="#GameEventType-125"><span class="linenos">125</span></a>    <span class="n">HAND_ENDED</span> <span class="o">=</span> <span class="s2">&quot;hand_ended&quot;</span>          <span class="c1"># 手牌结束</span>
+</span><span id="GameEventType-126"><a href="#GameEventType-126"><span class="linenos">126</span></a>    <span class="n">GAME_ENDED</span> <span class="o">=</span> <span class="s2">&quot;game_ended&quot;</span>          <span class="c1"># 游戏结束</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>游戏事件类型枚举.</p>
+
+<p>定义游戏过程中可能发生的各种事件类型，用于日志记录和事件处理.</p>
+</div>
+
+
+                            <div id="GameEventType.HAND_STARTED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">HAND_STARTED</span>        =
+<span class="default_value">&lt;<a href="#GameEventType.HAND_STARTED">GameEventType.HAND_STARTED</a>: &#39;hand_started&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEventType.HAND_STARTED"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEventType.CARDS_DEALT" class="classattr">
+                                <div class="attr variable">
+            <span class="name">CARDS_DEALT</span>        =
+<span class="default_value">&lt;<a href="#GameEventType.CARDS_DEALT">GameEventType.CARDS_DEALT</a>: &#39;cards_dealt&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEventType.CARDS_DEALT"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEventType.PLAYER_ACTION" class="classattr">
+                                <div class="attr variable">
+            <span class="name">PLAYER_ACTION</span>        =
+<span class="default_value">&lt;<a href="#GameEventType.PLAYER_ACTION">GameEventType.PLAYER_ACTION</a>: &#39;player_action&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEventType.PLAYER_ACTION"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEventType.PHASE_CHANGED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">PHASE_CHANGED</span>        =
+<span class="default_value">&lt;<a href="#GameEventType.PHASE_CHANGED">GameEventType.PHASE_CHANGED</a>: &#39;phase_changed&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEventType.PHASE_CHANGED"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEventType.POT_AWARDED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">POT_AWARDED</span>        =
+<span class="default_value">&lt;<a href="#GameEventType.POT_AWARDED">GameEventType.POT_AWARDED</a>: &#39;pot_awarded&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEventType.POT_AWARDED"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEventType.HAND_ENDED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">HAND_ENDED</span>        =
+<span class="default_value">&lt;<a href="#GameEventType.HAND_ENDED">GameEventType.HAND_ENDED</a>: &#39;hand_ended&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEventType.HAND_ENDED"></a>
+    
+    
+
+                            </div>
+                            <div id="GameEventType.GAME_ENDED" class="classattr">
+                                <div class="attr variable">
+            <span class="name">GAME_ENDED</span>        =
+<span class="default_value">&lt;<a href="#GameEventType.GAME_ENDED">GameEventType.GAME_ENDED</a>: &#39;game_ended&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GameEventType.GAME_ENDED"></a>
+    
+    
+
+                            </div>
+                </section>
+                <section id="ValidationResult">
+                            <input id="ValidationResult-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">ValidationResult</span><wbr>(<span class="base">enum.Enum</span>):
+
+                <label class="view-source-button" for="ValidationResult-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#ValidationResult"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="ValidationResult-129"><a href="#ValidationResult-129"><span class="linenos">129</span></a><span class="k">class</span><span class="w"> </span><span class="nc">ValidationResult</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+</span><span id="ValidationResult-130"><a href="#ValidationResult-130"><span class="linenos">130</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="ValidationResult-131"><a href="#ValidationResult-131"><span class="linenos">131</span></a><span class="sd">    行动验证结果枚举.</span>
+</span><span id="ValidationResult-132"><a href="#ValidationResult-132"><span class="linenos">132</span></a><span class="sd">    </span>
+</span><span id="ValidationResult-133"><a href="#ValidationResult-133"><span class="linenos">133</span></a><span class="sd">    定义行动验证的各种可能结果.</span>
+</span><span id="ValidationResult-134"><a href="#ValidationResult-134"><span class="linenos">134</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="ValidationResult-135"><a href="#ValidationResult-135"><span class="linenos">135</span></a>
+</span><span id="ValidationResult-136"><a href="#ValidationResult-136"><span class="linenos">136</span></a>    <span class="n">VALID</span> <span class="o">=</span> <span class="s2">&quot;valid&quot;</span>                        <span class="c1"># 有效行动</span>
+</span><span id="ValidationResult-137"><a href="#ValidationResult-137"><span class="linenos">137</span></a>    <span class="n">INVALID_AMOUNT</span> <span class="o">=</span> <span class="s2">&quot;invalid_amount&quot;</span>      <span class="c1"># 无效金额</span>
+</span><span id="ValidationResult-138"><a href="#ValidationResult-138"><span class="linenos">138</span></a>    <span class="n">INSUFFICIENT_CHIPS</span> <span class="o">=</span> <span class="s2">&quot;insufficient_chips&quot;</span>  <span class="c1"># 筹码不足</span>
+</span><span id="ValidationResult-139"><a href="#ValidationResult-139"><span class="linenos">139</span></a>    <span class="n">OUT_OF_TURN</span> <span class="o">=</span> <span class="s2">&quot;out_of_turn&quot;</span>            <span class="c1"># 不轮到该玩家</span>
+</span><span id="ValidationResult-140"><a href="#ValidationResult-140"><span class="linenos">140</span></a>    <span class="n">INVALID_ACTION</span> <span class="o">=</span> <span class="s2">&quot;invalid_action&quot;</span>      <span class="c1"># 无效行动</span>
+</span><span id="ValidationResult-141"><a href="#ValidationResult-141"><span class="linenos">141</span></a>    <span class="n">GAME_NOT_ACTIVE</span> <span class="o">=</span> <span class="s2">&quot;game_not_active&quot;</span>    <span class="c1"># 游戏未激活</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>行动验证结果枚举.</p>
+
+<p>定义行动验证的各种可能结果.</p>
+</div>
+
+
+                            <div id="ValidationResult.VALID" class="classattr">
+                                <div class="attr variable">
+            <span class="name">VALID</span>        =
+<span class="default_value">&lt;<a href="#ValidationResult.VALID">ValidationResult.VALID</a>: &#39;valid&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ValidationResult.VALID"></a>
+    
+    
+
+                            </div>
+                            <div id="ValidationResult.INVALID_AMOUNT" class="classattr">
+                                <div class="attr variable">
+            <span class="name">INVALID_AMOUNT</span>        =
+<span class="default_value">&lt;<a href="#ValidationResult.INVALID_AMOUNT">ValidationResult.INVALID_AMOUNT</a>: &#39;invalid_amount&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ValidationResult.INVALID_AMOUNT"></a>
+    
+    
+
+                            </div>
+                            <div id="ValidationResult.INSUFFICIENT_CHIPS" class="classattr">
+                                <div class="attr variable">
+            <span class="name">INSUFFICIENT_CHIPS</span>        =
+<span class="default_value">&lt;<a href="#ValidationResult.INSUFFICIENT_CHIPS">ValidationResult.INSUFFICIENT_CHIPS</a>: &#39;insufficient_chips&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ValidationResult.INSUFFICIENT_CHIPS"></a>
+    
+    
+
+                            </div>
+                            <div id="ValidationResult.OUT_OF_TURN" class="classattr">
+                                <div class="attr variable">
+            <span class="name">OUT_OF_TURN</span>        =
+<span class="default_value">&lt;<a href="#ValidationResult.OUT_OF_TURN">ValidationResult.OUT_OF_TURN</a>: &#39;out_of_turn&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ValidationResult.OUT_OF_TURN"></a>
+    
+    
+
+                            </div>
+                            <div id="ValidationResult.INVALID_ACTION" class="classattr">
+                                <div class="attr variable">
+            <span class="name">INVALID_ACTION</span>        =
+<span class="default_value">&lt;<a href="#ValidationResult.INVALID_ACTION">ValidationResult.INVALID_ACTION</a>: &#39;invalid_action&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ValidationResult.INVALID_ACTION"></a>
+    
+    
+
+                            </div>
+                            <div id="ValidationResult.GAME_NOT_ACTIVE" class="classattr">
+                                <div class="attr variable">
+            <span class="name">GAME_NOT_ACTIVE</span>        =
+<span class="default_value">&lt;<a href="#ValidationResult.GAME_NOT_ACTIVE">ValidationResult.GAME_NOT_ACTIVE</a>: &#39;game_not_active&#39;&gt;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ValidationResult.GAME_NOT_ACTIVE"></a>
     
     
 
@@ -10283,6 +10571,102 @@ If None, chip conservation will not be validated.</li>
 
 <blockquote>
   <p>A new Player instance.</p>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="get_all_suits">
+                            <input id="get_all_suits-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_all_suits</span><span class="signature pdoc-code condensed">(<span class="return-annotation">) -> <span class="n">List</span><span class="p">[</span><span class="n"><a href="#Suit">Suit</a></span><span class="p">]</span>:</span></span>
+
+                <label class="view-source-button" for="get_all_suits-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#get_all_suits"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="get_all_suits-213"><a href="#get_all_suits-213"><span class="linenos">213</span></a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_suits</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Suit</span><span class="p">]:</span>
+</span><span id="get_all_suits-214"><a href="#get_all_suits-214"><span class="linenos">214</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get all card suits.</span>
+</span><span id="get_all_suits-215"><a href="#get_all_suits-215"><span class="linenos">215</span></a><span class="sd">    </span>
+</span><span id="get_all_suits-216"><a href="#get_all_suits-216"><span class="linenos">216</span></a><span class="sd">    Returns:</span>
+</span><span id="get_all_suits-217"><a href="#get_all_suits-217"><span class="linenos">217</span></a><span class="sd">        List of all Suit enum values.</span>
+</span><span id="get_all_suits-218"><a href="#get_all_suits-218"><span class="linenos">218</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="get_all_suits-219"><a href="#get_all_suits-219"><span class="linenos">219</span></a>    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">Suit</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Get all card suits.</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>List of all Suit enum values.</p>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="get_all_ranks">
+                            <input id="get_all_ranks-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_all_ranks</span><span class="signature pdoc-code condensed">(<span class="return-annotation">) -> <span class="n">List</span><span class="p">[</span><span class="n"><a href="#Rank">Rank</a></span><span class="p">]</span>:</span></span>
+
+                <label class="view-source-button" for="get_all_ranks-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#get_all_ranks"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="get_all_ranks-222"><a href="#get_all_ranks-222"><span class="linenos">222</span></a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_ranks</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Rank</span><span class="p">]:</span>
+</span><span id="get_all_ranks-223"><a href="#get_all_ranks-223"><span class="linenos">223</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get all card ranks.</span>
+</span><span id="get_all_ranks-224"><a href="#get_all_ranks-224"><span class="linenos">224</span></a><span class="sd">    </span>
+</span><span id="get_all_ranks-225"><a href="#get_all_ranks-225"><span class="linenos">225</span></a><span class="sd">    Returns:</span>
+</span><span id="get_all_ranks-226"><a href="#get_all_ranks-226"><span class="linenos">226</span></a><span class="sd">        List of all Rank enum values.</span>
+</span><span id="get_all_ranks-227"><a href="#get_all_ranks-227"><span class="linenos">227</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="get_all_ranks-228"><a href="#get_all_ranks-228"><span class="linenos">228</span></a>    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">Rank</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Get all card ranks.</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>List of all Rank enum values.</p>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="get_valid_actions">
+                            <input id="get_valid_actions-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_valid_actions</span><span class="signature pdoc-code condensed">(<span class="return-annotation">) -> <span class="n">List</span><span class="p">[</span><span class="n"><a href="#ActionType">ActionType</a></span><span class="p">]</span>:</span></span>
+
+                <label class="view-source-button" for="get_valid_actions-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#get_valid_actions"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="get_valid_actions-231"><a href="#get_valid_actions-231"><span class="linenos">231</span></a><span class="k">def</span><span class="w"> </span><span class="nf">get_valid_actions</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ActionType</span><span class="p">]:</span>
+</span><span id="get_valid_actions-232"><a href="#get_valid_actions-232"><span class="linenos">232</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get all valid player actions.</span>
+</span><span id="get_valid_actions-233"><a href="#get_valid_actions-233"><span class="linenos">233</span></a><span class="sd">    </span>
+</span><span id="get_valid_actions-234"><a href="#get_valid_actions-234"><span class="linenos">234</span></a><span class="sd">    Returns:</span>
+</span><span id="get_valid_actions-235"><a href="#get_valid_actions-235"><span class="linenos">235</span></a><span class="sd">        List of all ActionType enum values.</span>
+</span><span id="get_valid_actions-236"><a href="#get_valid_actions-236"><span class="linenos">236</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="get_valid_actions-237"><a href="#get_valid_actions-237"><span class="linenos">237</span></a>    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">ActionType</span><span class="p">)</span> 
+</span></pre></div>
+
+
+            <div class="docstring"><p>Get all valid player actions.</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>List of all ActionType enum values.</p>
 </blockquote>
 </div>
 

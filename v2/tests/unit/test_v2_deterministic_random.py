@@ -10,9 +10,13 @@ import random
 from v2.core import GameState, Deck, Player
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestDeterministicRandomness:
     """Test deterministic behavior with controlled randomness."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_game_state_with_fixed_seed(self):
         """Test that GameState produces deterministic results with fixed seed."""
         # Create two game states with the same seed
@@ -29,6 +33,8 @@ class TestDeterministicRandomness:
         
         assert cards1 == cards2, "Cards should be identical with same seed"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_deck_with_fixed_rng(self):
         """Test that Deck produces deterministic results with fixed RNG."""
         # Create two decks with the same RNG seed
@@ -48,6 +54,8 @@ class TestDeterministicRandomness:
         
         assert cards1 == cards2, "Shuffled decks should be identical with same RNG seed"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_different_seeds_produce_different_results(self):
         """Test that different seeds produce different results."""
         # Create two game states with different seeds
@@ -64,6 +72,8 @@ class TestDeterministicRandomness:
         
         assert cards1 != cards2, "Cards should be different with different seeds"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_reproducible_hole_card_dealing(self):
         """Test that hole card dealing is reproducible with fixed seed."""
         # Create two identical game setups
@@ -91,6 +101,8 @@ class TestDeterministicRandomness:
             assert player1.hole_cards == player2.hole_cards, \
                 f"Player {i} should have identical hole cards"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_reproducible_community_cards(self):
         """Test that community card dealing is reproducible with fixed seed."""
         # Create two identical game setups
@@ -122,6 +134,8 @@ class TestDeterministicRandomness:
         assert state1.community_cards == state2.community_cards, \
             "Community cards should remain identical after river"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_snapshot_preserves_determinism(self):
         """Test that snapshots preserve deterministic state."""
         # Create game state with fixed seed
@@ -148,6 +162,8 @@ class TestDeterministicRandomness:
         restored_player = new_state.get_player_by_seat(0)
         assert restored_player.hole_cards == original_player.hole_cards
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_multiple_shuffles_with_same_seed(self):
         """Test that multiple shuffles with same seed produce same sequence."""
         # Test multiple shuffle operations
@@ -169,6 +185,8 @@ class TestDeterministicRandomness:
         
         assert results1 == results2, "Multiple shuffle sequences should be identical"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_rng_state_independence(self):
         """Test that different GameState instances have independent RNG."""
         # Create two states with different RNG instances but same seed

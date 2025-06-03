@@ -705,9 +705,13 @@ class PokerController:
             self._logger.debug(f"行动数不足: {self._game_state.actions_this_round} < {min_actions_needed}")
             return False
         
-        # 行动数足够，且所有玩家都匹配了下注，下注轮完成
-        # 修复：简化逻辑，当满足基本条件时，下注轮就应该完成
-        # 不再检查复杂的"轮回到加注者后第一个玩家"逻辑，因为这会导致误判
+        # 修复：检查是否所有活跃玩家都已经行动过
+        # 在德州扑克中，每个活跃玩家在每轮下注中都必须有机会行动
+        players_acted = set()
+        
+        # 通过事件历史或其他方式跟踪已行动的玩家
+        # 这里我们使用一个简化的逻辑：如果行动数等于活跃玩家数，且所有玩家都匹配下注
+        # 那么下注轮就应该完成
         
         # 特殊情况：在PRE_FLOP阶段，如果是初始状态（只有盲注），大盲注玩家有最后行动权
         if (self._game_state.phase == Phase.PRE_FLOP and 
@@ -732,6 +736,21 @@ class PokerController:
                 else:
                     self._logger.debug("PRE_FLOP阶段，大盲注玩家还有最后行动权")
                     return False
+        
+        # 修复：增加额外的检查逻辑
+        # 如果当前玩家已经轮回到第一个行动的玩家，且所有玩家都匹配下注，则下注轮完成
+        if self._game_state.actions_this_round >= len(active_players):
+            # 检查是否有加注者
+            if self._game_state.last_raiser is not None:
+                # 如果有加注者，需要确保轮回到加注者后的第一个玩家
+                # 这里简化处理：如果行动数超过活跃玩家数，且所有玩家都匹配下注，则完成
+                if self._game_state.actions_this_round >= len(active_players) * 2:
+                    self._logger.debug("有加注者，行动数足够，下注轮完成")
+                    return True
+            else:
+                # 没有加注者，每个玩家行动一次即可
+                self._logger.debug("没有加注者，每个玩家都已行动，下注轮完成")
+                return True
         
         # 正常情况：所有玩家都匹配下注且行动数足够，下注轮完成
         self._logger.debug("所有条件满足，下注轮完成")
@@ -1033,3 +1052,12 @@ class PokerController:
             old_dealer_position=current_dealer,
             new_dealer_position=self._game_state.dealer_position
         ) 
+
+    def force_reset_hand_state(self) -> None:
+        """强制重置手牌状态.
+        
+        这个方法用于处理状态异常情况，强制将手牌状态重置为未进行中。
+        应该只在出现状态不一致时使用。
+        """
+        self._hand_in_progress = False
+        self._logger.warning("强制重置手牌状态") 

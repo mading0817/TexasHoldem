@@ -15,6 +15,8 @@ from unittest.mock import Mock, patch, MagicMock
 from v2.ui.streamlit.app import setup_file_logging, read_log_file_tail
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestLogVisualization:
     """Test log visualization functionality."""
     
@@ -24,6 +26,8 @@ class TestLogVisualization:
         self.mock_session_state = MagicMock()
         self.mock_session_state.log_file_path = None
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_setup_file_logging_creates_log_file(self):
         """Test that setup_file_logging creates a log file and configures handlers."""
         with patch('v2.ui.streamlit.app.st') as mock_st:
@@ -42,6 +46,8 @@ class TestLogVisualization:
             assert mock_st.session_state.log_file_path is not None
             assert 'texas_holdem_debug.log' in mock_st.session_state.log_file_path
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_setup_file_logging_idempotent(self):
         """Test that setup_file_logging is idempotent (can be called multiple times)."""
         with patch('v2.ui.streamlit.app.st') as mock_st:
@@ -54,6 +60,8 @@ class TestLogVisualization:
             # Verify the path wasn't changed
             assert mock_st.session_state.log_file_path == '/existing/path/log.txt'
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_read_log_file_tail_nonexistent_file(self):
         """Test reading from a non-existent log file."""
         result = read_log_file_tail('/nonexistent/path/log.txt')
@@ -61,6 +69,8 @@ class TestLogVisualization:
         assert len(result) == 1
         assert "日志文件不存在" in result[0]
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_read_log_file_tail_empty_file(self):
         """Test reading from an empty log file."""
         with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as f:
@@ -73,6 +83,8 @@ class TestLogVisualization:
         finally:
             os.unlink(temp_path)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_read_log_file_tail_with_content(self):
         """Test reading from a log file with content."""
         log_content = [
@@ -99,6 +111,8 @@ class TestLogVisualization:
         finally:
             os.unlink(temp_path)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_read_log_file_tail_max_lines_limit(self):
         """Test that max_lines parameter limits the output."""
         log_content = [f"Line {i}" for i in range(20)]
@@ -117,6 +131,8 @@ class TestLogVisualization:
         finally:
             os.unlink(temp_path)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_read_log_file_tail_handles_unicode(self):
         """Test that log file reading handles Unicode characters correctly."""
         log_content = [
@@ -139,6 +155,8 @@ class TestLogVisualization:
         finally:
             os.unlink(temp_path)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_read_log_file_tail_handles_read_error(self):
         """Test that read_log_file_tail handles file read errors gracefully."""
         # Create a file and then make it unreadable
@@ -177,6 +195,8 @@ class TestLogVisualization:
             except (OSError, PermissionError):
                 pass
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_file_logging_integration(self):
         """Test integration of file logging with actual logging."""
         with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
@@ -220,6 +240,8 @@ class TestLogVisualization:
             except OSError:
                 pass
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_log_visualization_debug_mode_only(self):
         """Test that log visualization is only shown in debug mode."""
         # This test would require mocking Streamlit components

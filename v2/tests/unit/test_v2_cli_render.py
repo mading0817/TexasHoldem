@@ -12,9 +12,13 @@ from v2.core import (
 from v2.controller import HandResult
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestCLIRenderer:
     """CLI渲染器测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_game_header(self):
         """测试游戏头部渲染."""
         header = CLIRenderer.render_game_header(
@@ -30,6 +34,8 @@ class TestCLIRenderer:
         assert "您是玩家 0" in header
         assert "第 1 手牌" in header
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_game_state_basic(self):
         """测试基本游戏状态渲染."""
         # 创建测试快照
@@ -71,6 +77,8 @@ class TestCLIRenderer:
         assert "AI_1: 筹码=950" in result
         assert "<-- 当前" in result
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_game_state_with_community_cards(self):
         """测试包含公共牌的游戏状态渲染."""
         community_cards = [
@@ -111,6 +119,8 @@ class TestCLIRenderer:
         assert "Q♦" in result
         assert "手牌: J♣ 10♥" in result
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_player_status_variations(self):
         """测试不同玩家状态的渲染."""
         # 测试弃牌状态
@@ -152,6 +162,8 @@ class TestCLIRenderer:
         result = CLIRenderer._render_player_status(current_player, 3, 0)
         assert "<-- 当前" in result
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_format_card(self):
         """测试扑克牌格式化."""
         # 测试各种牌面
@@ -167,6 +179,8 @@ class TestCLIRenderer:
         two_clubs = Card(Suit.CLUBS, Rank.TWO)
         assert CLIRenderer._format_card(two_clubs) == "2♣"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_action_prompt(self):
         """测试行动提示渲染."""
         available_actions = [
@@ -188,6 +202,8 @@ class TestCLIRenderer:
         assert "2. 跟注 (50)" in result
         assert "3. 加注" in result
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_hand_result_single_winner(self):
         """测试单个获胜者的手牌结果渲染."""
         players = [
@@ -227,6 +243,8 @@ class TestCLIRenderer:
         assert "获胜者: Winner" in result
         assert "获胜牌型: 一对A" in result
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_hand_result_multiple_winners(self):
         """测试多个获胜者的手牌结果渲染."""
         players = [
@@ -263,26 +281,36 @@ class TestCLIRenderer:
         
         assert "平局获胜者: Winner1, Winner2" in result
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_ai_action(self):
         """测试AI行动渲染."""
         result = CLIRenderer.render_ai_action("AI_1", "跟注 50")
         assert result == "AI_1 跟注 50"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_phase_transition(self):
         """测试阶段转换渲染."""
         result = CLIRenderer.render_phase_transition(Phase.PRE_FLOP, Phase.FLOP)
         assert result == "阶段转换: PRE_FLOP -> FLOP"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_error_message(self):
         """测试错误信息渲染."""
         result = CLIRenderer.render_error_message("无效的行动")
         assert result == "错误: 无效的行动"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_game_over(self):
         """测试游戏结束渲染."""
         result = CLIRenderer.render_game_over("活跃玩家不足")
         assert result == "游戏结束: 活跃玩家不足"
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_render_game_state_public_cards_count(self):
         """测试公共牌数量正确渲染."""
         # 测试FLOP阶段（3张公共牌）

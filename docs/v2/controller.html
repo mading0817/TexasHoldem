@@ -65,6 +65,9 @@
                         <li>
                                 <a class="function" href="#PokerController.import_snapshot">import_snapshot</a>
                         </li>
+                        <li>
+                                <a class="function" href="#PokerController.force_reset_hand_state">force_reset_hand_state</a>
+                        </li>
                 </ul>
 
             </li>
@@ -1370,6 +1373,15 @@ the core game logic with the user interface layers.</p>
 </span><span id="PokerController-1034"><a href="#PokerController-1034"><span class="linenos">1034</span></a>            <span class="n">old_dealer_position</span><span class="o">=</span><span class="n">current_dealer</span><span class="p">,</span>
 </span><span id="PokerController-1035"><a href="#PokerController-1035"><span class="linenos">1035</span></a>            <span class="n">new_dealer_position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_game_state</span><span class="o">.</span><span class="n">dealer_position</span>
 </span><span id="PokerController-1036"><a href="#PokerController-1036"><span class="linenos">1036</span></a>        <span class="p">)</span> 
+</span><span id="PokerController-1037"><a href="#PokerController-1037"><span class="linenos">1037</span></a>
+</span><span id="PokerController-1038"><a href="#PokerController-1038"><span class="linenos">1038</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">force_reset_hand_state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="PokerController-1039"><a href="#PokerController-1039"><span class="linenos">1039</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;强制重置手牌状态.</span>
+</span><span id="PokerController-1040"><a href="#PokerController-1040"><span class="linenos">1040</span></a><span class="sd">        </span>
+</span><span id="PokerController-1041"><a href="#PokerController-1041"><span class="linenos">1041</span></a><span class="sd">        这个方法用于处理状态异常情况，强制将手牌状态重置为未进行中。</span>
+</span><span id="PokerController-1042"><a href="#PokerController-1042"><span class="linenos">1042</span></a><span class="sd">        应该只在出现状态不一致时使用。</span>
+</span><span id="PokerController-1043"><a href="#PokerController-1043"><span class="linenos">1043</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PokerController-1044"><a href="#PokerController-1044"><span class="linenos">1044</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_hand_in_progress</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="PokerController-1045"><a href="#PokerController-1045"><span class="linenos">1045</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;强制重置手牌状态&quot;</span><span class="p">)</span> 
 </span></pre></div>
 
 
@@ -2227,6 +2239,36 @@ the core game logic with the user interface layers.</p>
   <li>恢复控制器状态</li>
   </ul>
 </blockquote>
+</div>
+
+
+                            </div>
+                            <div id="PokerController.force_reset_hand_state" class="classattr">
+                                        <input id="PokerController.force_reset_hand_state-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">force_reset_hand_state</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+                <label class="view-source-button" for="PokerController.force_reset_hand_state-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#PokerController.force_reset_hand_state"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="PokerController.force_reset_hand_state-1038"><a href="#PokerController.force_reset_hand_state-1038"><span class="linenos">1038</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">force_reset_hand_state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="PokerController.force_reset_hand_state-1039"><a href="#PokerController.force_reset_hand_state-1039"><span class="linenos">1039</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;强制重置手牌状态.</span>
+</span><span id="PokerController.force_reset_hand_state-1040"><a href="#PokerController.force_reset_hand_state-1040"><span class="linenos">1040</span></a><span class="sd">        </span>
+</span><span id="PokerController.force_reset_hand_state-1041"><a href="#PokerController.force_reset_hand_state-1041"><span class="linenos">1041</span></a><span class="sd">        这个方法用于处理状态异常情况，强制将手牌状态重置为未进行中。</span>
+</span><span id="PokerController.force_reset_hand_state-1042"><a href="#PokerController.force_reset_hand_state-1042"><span class="linenos">1042</span></a><span class="sd">        应该只在出现状态不一致时使用。</span>
+</span><span id="PokerController.force_reset_hand_state-1043"><a href="#PokerController.force_reset_hand_state-1043"><span class="linenos">1043</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PokerController.force_reset_hand_state-1044"><a href="#PokerController.force_reset_hand_state-1044"><span class="linenos">1044</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_hand_in_progress</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="PokerController.force_reset_hand_state-1045"><a href="#PokerController.force_reset_hand_state-1045"><span class="linenos">1045</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;强制重置手牌状态&quot;</span><span class="p">)</span> 
+</span></pre></div>
+
+
+            <div class="docstring"><p>强制重置手牌状态.</p>
+
+<p>这个方法用于处理状态异常情况，强制将手牌状态重置为未进行中。
+应该只在出现状态不一致时使用。</p>
 </div>
 
 

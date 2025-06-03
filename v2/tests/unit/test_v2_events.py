@@ -11,6 +11,8 @@ from unittest.mock import Mock, call
 from v2.core.events import EventBus, EventType, GameEvent
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestEventBus:
     """事件总线测试类."""
     
@@ -19,6 +21,8 @@ class TestEventBus:
         self.event_bus = EventBus()
         self.mock_listener = Mock()
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_subscribe_and_emit(self):
         """测试订阅和发射事件."""
         # 订阅事件
@@ -34,6 +38,8 @@ class TestEventBus:
         # 验证监听器被调用
         self.mock_listener.assert_called_once_with(event)
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_emit_simple(self):
         """测试简单事件发射."""
         # 订阅事件
@@ -57,6 +63,8 @@ class TestEventBus:
         assert called_event.data['action_type'] == "call"
         assert called_event.data['amount'] == 50
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_multiple_listeners(self):
         """测试多个监听器."""
         listener1 = Mock()
@@ -73,6 +81,8 @@ class TestEventBus:
         listener1.assert_called_once()
         listener2.assert_called_once()
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_unsubscribe(self):
         """测试取消订阅."""
         # 订阅事件
@@ -90,11 +100,15 @@ class TestEventBus:
         self.event_bus.emit_simple(EventType.HAND_ENDED)
         assert self.mock_listener.call_count == 1  # 仍然是1，没有增加
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_unsubscribe_nonexistent(self):
         """测试取消订阅不存在的监听器."""
         result = self.event_bus.unsubscribe(EventType.HAND_ENDED, self.mock_listener)
         assert result is False
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_listeners_count(self):
         """测试获取监听器数量."""
         # 初始状态
@@ -109,6 +123,8 @@ class TestEventBus:
         self.event_bus.subscribe(EventType.PLAYER_FOLDED, listener2)
         assert self.event_bus.get_listeners_count(EventType.PLAYER_FOLDED) == 2
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_clear_listeners(self):
         """测试清除监听器."""
         # 添加监听器
@@ -124,6 +140,8 @@ class TestEventBus:
         self.event_bus.clear_listeners()
         assert self.event_bus.get_listeners_count(EventType.POT_UPDATED) == 0
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_history(self):
         """测试事件历史记录."""
         # 发射几个事件
@@ -138,6 +156,8 @@ class TestEventBus:
         assert history[1].event_type == EventType.PLAYER_ACTION
         assert history[2].event_type == EventType.HAND_ENDED
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_history_filtered(self):
         """测试过滤的事件历史记录."""
         # 发射不同类型的事件
@@ -151,6 +171,8 @@ class TestEventBus:
         assert len(player_actions) == 2
         assert all(e.event_type == EventType.PLAYER_ACTION for e in player_actions)
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_history_limited(self):
         """测试限制数量的事件历史记录."""
         # 发射多个事件
@@ -166,6 +188,8 @@ class TestEventBus:
         assert limited_history[1].data['action_id'] == 3
         assert limited_history[2].data['action_id'] == 4
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_clear_history(self):
         """测试清除事件历史."""
         # 发射事件
@@ -176,6 +200,8 @@ class TestEventBus:
         self.event_bus.clear_history()
         assert len(self.event_bus.get_event_history()) == 0
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_listener_exception_handling(self):
         """测试监听器异常处理."""
         # 创建会抛异常的监听器
@@ -192,6 +218,8 @@ class TestEventBus:
         # 验证正常的监听器仍然被调用
         self.mock_listener.assert_called_once()
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_timestamp(self):
         """测试事件时间戳."""
         import time
@@ -207,9 +235,13 @@ class TestEventBus:
         assert before_time <= event_time <= after_time
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestGameEvent:
     """游戏事件测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_game_event_creation(self):
         """测试游戏事件创建."""
         event = GameEvent(
@@ -223,6 +255,8 @@ class TestGameEvent:
         assert event.timestamp is not None
         assert event.source is None
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_game_event_with_source(self):
         """测试带来源的游戏事件."""
         event = GameEvent(
@@ -233,6 +267,8 @@ class TestGameEvent:
         
         assert event.source == 'controller'
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_game_event_custom_timestamp(self):
         """测试自定义时间戳的游戏事件."""
         custom_time = 1234567890.0
@@ -245,9 +281,13 @@ class TestGameEvent:
         assert event.timestamp == custom_time
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestEventType:
     """事件类型测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_type_values(self):
         """测试事件类型值."""
         assert EventType.GAME_STARTED.value == "game_started"
@@ -255,6 +295,8 @@ class TestEventType:
         assert EventType.PLAYER_ACTION.value == "player_action"
         assert EventType.BET_PLACED.value == "bet_placed"
         
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_event_type_enumeration(self):
         """测试事件类型枚举."""
         # 验证所有事件类型都有值

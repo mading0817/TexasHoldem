@@ -11,9 +11,13 @@ from v2.core import ActionType, Phase, SeatStatus
 from v2.controller import ActionInput
 
 
+@pytest.mark.unit
+@pytest.mark.fast
 class TestCLIInputHandler:
     """CLI输入处理器测试类."""
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_available_actions_preflop_no_bet(self):
         """测试翻牌前无下注时的可用行动."""
         # 创建测试快照
@@ -42,6 +46,8 @@ class TestCLIInputHandler:
         assert ActionType.CALL not in action_types
         assert ActionType.RAISE not in action_types
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_available_actions_with_bet_to_call(self):
         """测试有下注需要跟注时的可用行动."""
         player = type('Player', (), {
@@ -69,6 +75,8 @@ class TestCLIInputHandler:
         assert ActionType.CHECK not in action_types
         assert ActionType.BET not in action_types
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_available_actions_insufficient_chips_for_call(self):
         """测试筹码不足跟注时的可用行动."""
         player = type('Player', (), {
@@ -94,6 +102,8 @@ class TestCLIInputHandler:
         assert ActionType.CALL not in action_types
         assert ActionType.RAISE not in action_types
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_available_actions_small_stack(self):
         """测试小筹码时的可用行动."""
         player = type('Player', (), {
@@ -121,6 +131,8 @@ class TestCLIInputHandler:
     
     @patch('click.prompt')
     @patch('click.echo')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_player_action_fold(self, mock_echo, mock_prompt):
         """测试玩家选择弃牌."""
         mock_prompt.return_value = 1  # 选择第一个选项（弃牌）
@@ -148,6 +160,8 @@ class TestCLIInputHandler:
     
     @patch('click.prompt')
     @patch('click.echo')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_player_action_call(self, mock_echo, mock_prompt):
         """测试玩家选择跟注."""
         mock_prompt.return_value = 2  # 选择第二个选项（跟注）
@@ -176,6 +190,8 @@ class TestCLIInputHandler:
     @patch('v2.ui.cli.input_handler.CLIInputHandler.get_bet_amount_input')
     @patch('click.prompt')
     @patch('click.echo')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_player_action_bet(self, mock_echo, mock_prompt, mock_bet_input):
         """测试玩家选择下注."""
         mock_prompt.return_value = 3  # 选择第三个选项（下注）
@@ -206,6 +222,8 @@ class TestCLIInputHandler:
     @patch('v2.ui.cli.input_handler.CLIInputHandler.get_bet_amount_input')
     @patch('click.prompt')
     @patch('click.echo')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_player_action_raise(self, mock_echo, mock_prompt, mock_bet_input):
         """测试玩家选择加注."""
         mock_prompt.return_value = 3  # 选择第三个选项（加注）
@@ -235,6 +253,8 @@ class TestCLIInputHandler:
     
     @patch('click.prompt')
     @patch('click.echo')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_player_action_invalid_choice_retry(self, mock_echo, mock_prompt):
         """测试无效选择后重试."""
         # 第一次输入无效，第二次选择弃牌
@@ -262,6 +282,8 @@ class TestCLIInputHandler:
         assert mock_prompt.call_count == 2
     
     @patch('click.confirm')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_continue_choice_yes(self, mock_confirm):
         """测试选择继续游戏."""
         mock_confirm.return_value = True
@@ -272,6 +294,8 @@ class TestCLIInputHandler:
         mock_confirm.assert_called_once_with("是否继续下一手牌?", default=True)
     
     @patch('click.confirm')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_continue_choice_no(self, mock_confirm):
         """测试选择退出游戏."""
         mock_confirm.return_value = False
@@ -281,6 +305,8 @@ class TestCLIInputHandler:
         assert result is False
     
     @patch('click.confirm')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_continue_choice_abort(self, mock_confirm):
         """测试用户取消选择."""
         mock_confirm.side_effect = click.Abort()
@@ -290,6 +316,8 @@ class TestCLIInputHandler:
         assert result is False
     
     @patch('click.prompt')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_bet_amount_input_valid(self, mock_prompt):
         """测试有效的下注金额输入."""
         mock_prompt.return_value = 100
@@ -300,6 +328,8 @@ class TestCLIInputHandler:
         mock_prompt.assert_called_once()
     
     @patch('click.prompt')
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_bet_amount_input_with_range(self, mock_prompt):
         """测试带范围限制的下注金额输入."""
         mock_prompt.return_value = 75
@@ -312,6 +342,8 @@ class TestCLIInputHandler:
         assert kwargs['type'].min == 50
         assert kwargs['type'].max == 100
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_bet_amount_bet_action(self):
         """测试下注行动的金额计算."""
         player = type('Player', (), {
@@ -330,6 +362,8 @@ class TestCLIInputHandler:
             assert result == 100
             mock_input.assert_called_once_with(20, 1000, "下注")
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_bet_amount_raise_action(self):
         """测试加注行动的金额计算."""
         player = type('Player', (), {
@@ -350,6 +384,8 @@ class TestCLIInputHandler:
             # 最小加注到80 (50 + 30)，最大到1020 (1000 + 20)
             mock_input.assert_called_once_with(80, 1020, "加注到")
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_get_bet_amount_invalid_action_type(self):
         """测试无效的行动类型."""
         player = type('Player', (), {
@@ -364,6 +400,8 @@ class TestCLIInputHandler:
         with pytest.raises(ValueError, match="不支持的行动类型"):
             CLIInputHandler._get_bet_amount(ActionType.FOLD, snapshot, player)
     
+    @pytest.mark.unit
+    @pytest.mark.fast
     def test_input_validation_error(self):
         """测试输入验证错误异常."""
         error = InputValidationError("测试错误")
