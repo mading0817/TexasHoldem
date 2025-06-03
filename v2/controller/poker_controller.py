@@ -481,6 +481,15 @@ class PokerController:
             big_blind_player.is_big_blind = True
             self._game_state.current_bet = self._game_state.big_blind
             self._game_state.add_event(f"{phase_prefix}{big_blind_player.name} 下大盲注 {self._game_state.big_blind}")
+        
+        # 修复：不要立即收集盲注到底池！
+        # 盲注应该保持在玩家的current_bet中，用于后续的跟注计算
+        # 只有在阶段转换时才收集所有下注到底池
+        # 
+        # 注释掉以下代码：
+        # collected = self._game_state.collect_bets_to_pot()
+        # if collected > 0:
+        #     self._game_state.add_event(f"{phase_prefix}盲注 {collected} 筹码已收集到底池")
             
         # 发射盲注事件
         self._event_bus.emit_simple(
@@ -621,6 +630,11 @@ class PokerController:
         # 增加行动计数
         self._game_state.increment_action_count()
         
+        # 立即检查手牌是否结束，如果结束则清除当前玩家
+        if self.is_hand_over():
+            self._game_state.current_player = None
+            self._logger.debug("行动后检查：手牌结束，清除当前玩家")
+        
         # 发射底池更新事件
         self._event_bus.emit_simple(
             EventType.POT_UPDATED,
@@ -652,11 +666,14 @@ class PokerController:
         """检查并处理游戏阶段转换."""
         # 首先检查手牌是否应该结束
         if self.is_hand_over():
+            # 手牌结束，清除当前玩家并自动结束手牌
+            self._game_state.current_player = None
+            self._logger.debug("手牌结束，清除当前玩家")
             return  # 手牌结束，不进入下一阶段
             
         if self._all_actions_complete():
             self._advance_to_next_phase()
-            
+        
     def _all_actions_complete(self) -> bool:
         """检查当前阶段是否所有行动都已完成.
         

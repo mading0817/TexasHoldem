@@ -1009,11 +1009,14 @@ def main():
         # 手牌结束，处理摊牌逻辑
         snapshot = controller.get_snapshot()
         
-        # 检查是否需要处理摊牌
-        if (snapshot and snapshot.phase == Phase.SHOWDOWN and 
-            not st.session_state.showdown_processed):
+        # 检查是否需要处理摊牌或手牌结束
+        if not st.session_state.showdown_processed:
             
-            st.info("🎯 摊牌阶段，正在计算结果...")
+            if snapshot and snapshot.phase == Phase.SHOWDOWN:
+                st.info("🎯 摊牌阶段，正在计算结果...")
+            else:
+                st.info("🎯 手牌结束，正在计算结果...")
+            
             try:
                 result = controller.end_hand()
                 if result:
@@ -1031,11 +1034,11 @@ def main():
                     
                     st.rerun()  # 刷新页面显示结果
                 else:
-                    st.error("❌ 摊牌计算失败")
+                    st.error("❌ 手牌结束计算失败")
                     st.session_state.showdown_processed = True
                     st.rerun()
             except Exception as e:
-                st.error(f"摊牌阶段处理失败: {e}")
+                st.error(f"手牌结束处理失败: {e}")
                 st.session_state.showdown_processed = True
                 st.rerun()
         
