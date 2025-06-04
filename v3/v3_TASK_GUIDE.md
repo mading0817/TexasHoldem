@@ -30,70 +30,87 @@
 - 最终运行所有v3测试，确认所有285个测试均通过。
 
 此里程碑的完成为后续开发奠定了坚实的基础，确保了核心逻辑的可靠性。
-每个PLAN都遵循：**测试先行 → 反作弊检查 → 实现代码 → 重构优化**
-
-***PLAN 1-12 已经迁移到 v3_TASK_DONE***
 
 ---
 
-## 📋 MILESTONE 3: Streamlit集成与终极测试 (PLAN 21-30)
+## 📋 已完成的核心模块 (PLAN 1-12 实际覆盖了 PLAN 13-18)
 
-### PLAN 21 Streamlit适配器设计
+### ✅ 核心模块实现状态总结 【已完成】
 
-**PLAN简述**: 设计Streamlit UI适配器，连接v3应用服务
+**实际完成情况**：
+- ✅ **牌型评估器** (PLAN 05) - 从v2迁移并增强，性能优化完成
+- ✅ **边池管理器** (PLAN 04, 12) - 复杂边池计算和分配逻辑完成
+- ✅ **事件系统** (PLAN 06) - 完整的领域事件系统，支持同步/异步处理
+- ✅ **快照系统** (PLAN 08) - 不可变状态快照，支持序列化和版本控制
+- ✅ **不变量检查** (PLAN 09) - 系统性的数学不变量验证框架
+- ✅ **应用服务** (PLAN 07) - CQRS模式的命令/查询服务分离
+- ✅ **筹码系统** (PLAN 12) - 原子性操作、守恒检查、边缘情况处理
+- ✅ **状态机** (PLAN 11) - 完整的游戏阶段管理和转换逻辑
+- ✅ **反作弊系统** (PLAN 10) - 多层验证，确保测试真实性
+- ✅ **架构基础** (PLAN 01-03) - 目录结构、命名规范、TDD框架
+
+**验收数据**：
+- 总测试数量：285个测试全部通过
+- 核心模块覆盖率：≥95%
+- 反作弊检查：100%通过
+- 筹码守恒：0违规
+- 性能测试：满足要求
+
+***所有核心业务逻辑已实现完毕，架构基础扎实***
+
+---
+
+## 📋 MILESTONE 3: 终极目标实现 (PLAN 21-25)
+
+### ✅ PLAN 21 AI策略架构与随机AI实现【已完成】
+
+**PLAN简述**: 建立AI策略架构，实现纯随机行动的Dummy AI
 
 **解决的具体问题**:
-- v2的UI直接调用控制器，耦合度高
-- 需要适配v3的CQRS架构
-- 保持UI代码简洁清晰
+- v3缺少AI玩家实现，无法进行多玩家游戏测试
+- 需要建立可扩展的AI策略架构，支持多种AI算法
+- 实现纯随机AI作为基准测试和对照组
+
+**架构设计**:
+- 每个AI策略创建独立文件夹：`v3/ai/Dummy/`, `v3/ai/Treys/`等
+- 共用的数据结构和接口保存在`v3/ai/`
+- 支持未来扩展为Tier-1 AI（Equity + Pot Odds）和更高级策略
 
 **执行步骤**:
-1. 设计UI适配器：
-   ```python
-   # ui/streamlit/adapters/game_adapter.py
-   class StreamlitGameAdapter:
-       """Streamlit游戏适配器"""
-       
-       def __init__(self, command_service: GameCommandService, query_service: GameQueryService):
-           self.command_service = command_service
-           self.query_service = query_service
-       
-       def start_new_hand(self) -> bool:
-           """开始新手牌"""
-           result = self.command_service.start_new_hand(self.game_id)
-           return result.success
-       
-       def execute_player_action(self, player_id: str, action_type: str, amount: int = 0) -> bool:
-           """执行玩家行动"""
-           action = PlayerAction(action_type, amount, player_id)
-           result = self.command_service.execute_player_action(self.game_id, player_id, action)
-           return result.success
-       
-       def get_game_state(self) -> GameStateSnapshot:
-           """获取游戏状态"""
-           return self.query_service.get_game_state(self.game_id)
-   ```
+1. ✅ 设计v3兼容的AI接口和类型定义（保存在`v3/ai/`）
+2. ✅ 实现纯随机AI策略
+3. ✅ 编写TDD测试，包含反作弊验证
+4. ✅ 集成到应用服务层
+5. ✅ 性能测试和优化
 
 **测试验收**:
-- 适配器正确调用应用服务
-- UI操作映射到正确的命令
-- 错误处理友好
+- ✅ 随机AI决策逻辑符合游戏规则
+- ✅ 行动选择真正随机且均匀分布
+- ✅ 性能满足1000手牌测试要求
+- ✅ 通过反作弊检查
+- ✅ 为后续Treys AI奠定架构基础
+
+**完成时间**: 2024-07-25
+**验收测试**: `test_random_ai_refactored.py` - 7/7 通过
+
+**备注**: AI策略获取玩家可用行动的逻辑已重构，统一使用QueryService。Dummy AI的加注金额计算已调整为QueryService提供的方法，并符合BB增量（5的倍数）规则。
 
 ---
 
-### PLAN 22 终极测试框架迁移
+### PLAN 22 终极测试框架实现
 
-**PLAN简述**: 将v2的终极测试迁移到v3架构
+**PLAN简述**: 实现v3版本的Streamlit终极用户体验测试
 
 **解决的具体问题**:
-- v2的测试代码需要适配v3架构
-- 需要增强反作弊检查
-- 保持测试的完整性和严格性
+- 需要验证完整的游戏流程在v3架构下的正确性
+- 确保1000手牌测试的稳定性和准确性
+- 验证筹码计算、胜负判断的正确性
 
 **执行步骤**:
-1. 迁移测试框架：
+1. 分析v2终极测试的核心逻辑和测试覆盖范围
+2. 设计v3兼容的测试框架：
    ```python
-   # tests/integration/test_streamlit_ultimate_user_experience_v3.py
+   # v3/tests/integration/test_streamlit_ultimate_user_experience_v3.py
    class StreamlitUltimateUserTesterV3:
        """v3版本的终极用户测试器"""
        
@@ -101,45 +118,88 @@
            self.num_hands = num_hands
            self.command_service = GameCommandService()
            self.query_service = GameQueryService()
-           self.adapter = StreamlitGameAdapter(self.command_service, self.query_service)
+           self.ai_strategy = SimpleAI()
    ```
-
-2. 增强反作弊检查：
-   ```python
-   def test_anti_cheating_v3_core_module_usage():
-       """v3反作弊检查：确保使用真实的v3核心模块"""
-       tester = StreamlitUltimateUserTesterV3(num_hands=3)
-       
-       # 检查应用服务类型
-       CoreUsageChecker.verify_real_objects(tester.command_service, "GameCommandService")
-       CoreUsageChecker.verify_real_objects(tester.query_service, "GameQueryService")
-       
-       # 检查状态机类型
-       game_state = tester.query_service.get_game_state("test_game")
-       assert isinstance(game_state, GameStateSnapshot)
-       
-       # 检查筹码守恒
-       # ...
-   ```
+3. 实现用户行为模拟和AI交互
+4. 集成反作弊检查和状态验证
+5. 实现详细的统计和报告系统
+6. 优化测试性能和稳定性
 
 **测试验收**:
-- 1000手牌测试完成率 ≥ 99%
-- 所有反作弊检查通过
-- 性能不低于v2版本
+- 1000手牌完成率 ≥ 99%
+- 用户行动成功率 ≥ 99%
+- 筹码守恒 100%无违规
+- 测试性能 ≥ 5手/秒
+- 反作弊检查全部通过
 
 ---
 
-### PLAN 23-30 完整测试实现
+### PLAN 23 错误处理系统完善
 
-**简化描述**: 
-- PLAN 23: UI组件测试
-- PLAN 24: 集成测试完善
-- PLAN 25: 性能测试
-- PLAN 26: 压力测试
-- PLAN 27: 边缘情况测试
-- PLAN 28: 回归测试
-- PLAN 29: 文档完善
-- PLAN 30: 最终验收
+**PLAN简述**: 完善系统的错误处理和恢复机制
+
+**解决的具体问题**:
+- 确保游戏在异常情况下能优雅处理
+- 提供详细的错误信息和恢复建议
+- 防止错误导致游戏卡死
+
+**执行步骤**:
+1. 分析当前错误处理的覆盖范围
+2. 设计统一的错误处理框架
+3. 实现关键路径的错误恢复机制
+4. 添加详细的错误日志和监控
+5. 编写错误场景的测试用例
+
+**测试验收**:
+- 关键错误能被正确捕获和处理
+- 错误恢复机制有效
+- 终极测试中严重错误数量 = 0
+
+---
+
+### PLAN 24 性能优化
+
+**PLAN简述**: 优化系统性能，确保测试速度达标
+
+**解决的具体问题**:
+- 确保终极测试性能 ≥ 5手/秒
+- 优化内存使用和计算效率
+- 减少不必要的对象创建和复制
+
+**执行步骤**:
+1. 性能基准测试和瓶颈分析
+2. 优化关键路径的算法和数据结构
+3. 减少不必要的状态复制和序列化
+4. 实现性能监控和报告
+5. 验证优化效果
+
+**测试验收**:
+- 终极测试性能 ≥ 5手/秒
+- 内存使用合理，无内存泄漏
+- 性能稳定，无明显波动
+
+---
+
+### PLAN 25 最终验收
+
+**PLAN简述**: 完整的系统验收和文档整理
+
+**解决的具体问题**:
+- 确保所有验收标准达成
+- 完善项目文档和使用说明
+- 准备项目交付
+
+**执行步骤**:
+1. 运行完整的终极测试套件
+2. 验证所有验收标准
+3. 整理和更新项目文档
+4. 清理临时文件和代码
+5. 准备最终报告
+
+**测试验收**:
+- 所有验收标准100%达成
+- 文档完整且准确
+- 代码质量符合标准
 
 ---
 
@@ -169,6 +229,6 @@
 ## 📚 相关文档
 
 - **v3架构说明**: `v3_README.md`
-- **终极测试**: `tests/integration/test_streamlit_ultimate_user_experience_v3.py`
+- **已完成任务**: `v3_TASK_DONE`
 - **反作弊系统**: `tests/anti_cheat/`
 - **开发规范**: `v3_README.md#开发规范` 

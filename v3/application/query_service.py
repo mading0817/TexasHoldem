@@ -338,18 +338,35 @@ class GameQueryService:
         if player_data.get('active', False):
             # 根据当前阶段确定可用行动
             if context.current_phase in [GamePhase.PRE_FLOP, GamePhase.FLOP, GamePhase.TURN, GamePhase.RIVER]:
-                actions.extend(['fold', 'call'])
+                # 总是可以弃牌
+                actions.append('fold')
                 
-                # 如果当前没有下注，可以check
-                if context.current_bet == 0:
+                current_bet = context.current_bet
+                player_chips = player_data.get('chips', 0)
+                player_current_bet = player_data.get('current_bet', 0)
+                
+                # 计算需要跟注的金额
+                call_amount = max(0, current_bet - player_current_bet)
+                
+                # 如果当前没有下注，可以过牌或下注
+                if current_bet == 0:
                     actions.append('check')
+                    if player_chips > 0:
+                        actions.append('raise')  # 第一次下注也算加注
+                else:
+                    # 如果有下注，可以跟注或加注
+                    if player_chips >= call_amount:
+                        actions.append('call')
+                        
+                        # 如果还有足够筹码，可以加注
+                        # 获取大盲注金额作为最小加注增量
+                        big_blind = getattr(context, 'big_blind_amount', 20)  # 默认20
+                        min_raise = big_blind
+                        if player_chips > call_amount + min_raise:
+                            actions.append('raise')
                 
-                # 如果有足够筹码，可以raise
-                if player_data.get('chips', 0) > context.current_bet:
-                    actions.append('raise')
-                
-                # 如果可以全下
-                if player_data.get('chips', 0) > 0:
+                # 如果有筹码，总是可以全押
+                if player_chips > 0:
                     actions.append('all_in')
         
         return AvailableActions(
@@ -358,6 +375,103 @@ class GameQueryService:
             min_bet=context.current_bet,
             max_bet=player_data.get('chips', 0)
         )
+    
+    def calculate_random_raise_amount(self, game_id: str, player_id: str, 
+                                    min_ratio: float = 0.25, max_ratio: float = 2.0) -> QueryResult[int]:
+        """
+        为随机AI计算符合规则的加注金额
+        
+        Args:
+            game_id: 游戏ID
+            player_id: 玩家ID
+            min_ratio: 相对于底池的最小下注比例
+            max_ratio: 相对于底池的最大下注比例
+            
+        Returns:
+            查询结果，包含符合规则的加注金额
+        """
+        try:
+            import random
+            
+            if self._command_service is None:
+                return QueryResult.failure_result(
+                    "命令服务未初始化",
+                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
+                )
+            
+            # 获取游戏会话
+            session = self._command_service._get_session(game_id)
+            if session is None:
+                return QueryResult.failure_result(
+                    f"游戏 {game_id} 不存在",
+                    error_code="GAME_NOT_FOUND"
+                )
+            
+            # 检查玩家是否存在
+            if player_id not in session.context.players:
+                return QueryResult.failure_result(
+                    f"玩家 {player_id} 不在游戏中",
+                    error_code="PLAYER_NOT_IN_GAME"
+                )
+            
+            player_data = session.context.players[player_id]
+            current_bet = session.context.current_bet
+            player_chips = player_data.get('chips', 0)
+            player_current_bet = player_data.get('current_bet', 0)
+            pot_total = session.context.pot_total
+            big_blind = getattr(session.context, 'big_blind_amount', 20)
+            
+            # 计算加注范围
+            min_raise_amount = current_bet + big_blind
+            max_raise_amount = player_current_bet + player_chips
+            
+            if min_raise_amount > max_raise_amount:
+                return QueryResult.failure_result(
+                    "玩家筹码不足以进行加注",
+                    error_code="INSUFFICIENT_CHIPS_FOR_RAISE"
+                )
+            
+            # 基于底池大小计算期望范围
+            desired_min = max(min_raise_amount, int(pot_total * min_ratio))
+            desired_max = min(max_raise_amount, int(pot_total * max_ratio))
+            
+            # 确保范围有效
+            if desired_min > desired_max:
+                desired_min = min_raise_amount
+                desired_max = max_raise_amount
+            
+            # 调整到5BB增量的倍数
+            increment = 5 * big_blind
+            desired_min = ((desired_min + increment - 1) // increment) * increment
+            desired_max = ((desired_max + increment - 1) // increment) * increment
+            
+            # 确保在有效范围内
+            desired_min = max(desired_min, min_raise_amount)
+            desired_max = min(desired_max, max_raise_amount)
+            
+            if desired_min > desired_max:
+                amount = min_raise_amount
+            else:
+                # 生成5BB增量的候选金额
+                candidates = []
+                current = desired_min
+                while current <= desired_max:
+                    if current >= min_raise_amount and current <= max_raise_amount:
+                        candidates.append(current)
+                    current += increment
+                
+                if not candidates:
+                    amount = min_raise_amount
+                else:
+                    amount = random.choice(candidates)
+            
+            return QueryResult.success_result(amount)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"计算随机加注金额失败: {str(e)}",
+                error_code="CALCULATE_RANDOM_RAISE_FAILED"
+            )
     
     def _can_advance_phase(self, context: GameContext) -> bool:
         """

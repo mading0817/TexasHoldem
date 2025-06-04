@@ -7,11 +7,13 @@
 from .betting_engine import BettingEngine, BetResult
 from .betting_validator import BettingValidator
 from .betting_types import BetType, BetAction
+from .action_provider import ActionProvider
 
 __all__ = [
     'BettingEngine',
     'BetResult',
     'BettingValidator', 
     'BetType',
-    'BetAction'
+    'BetAction',
+    'ActionProvider'
 ] 
