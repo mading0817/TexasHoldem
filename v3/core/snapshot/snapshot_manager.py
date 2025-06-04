@@ -1,0 +1,303 @@
+"""
+快照管理器
+
+实现游戏状态快照的创建、恢复和管理功能。
+"""
+
+from typing import Dict, List, Optional, Any
+import time
+import copy
+
+from .types import (
+    GameStateSnapshot, PlayerSnapshot, PotSnapshot, SnapshotMetadata, 
+    SnapshotVersion
+)
+from ..state_machine.types import GameContext, GamePhase
+from ..deck.card import Card
+from ..chips.chip_transaction import ChipTransaction
+
+__all__ = ['SnapshotManager', 'SnapshotCreationError', 'SnapshotRestoreError']
+
+
+class SnapshotCreationError(Exception):
+    """快照创建错误"""
+    pass
+
+
+class SnapshotRestoreError(Exception):
+    """快照恢复错误"""
+    pass
+
+
+class SnapshotManager:
+    """
+    快照管理器
+    
+    负责游戏状态快照的创建、恢复和管理。
+    支持版本控制和快照历史记录。
+    """
+    
+    def __init__(self):
+        """初始化快照管理器"""
+        self._snapshots: Dict[str, GameStateSnapshot] = {}
+        self._snapshot_history: List[str] = []  # 按时间顺序存储快照ID
+        self._max_history_size: int = 100  # 最大历史记录数量
+    
+    def create_snapshot(self, game_context: GameContext, 
+                       hand_number: int = 1,
+                       description: Optional[str] = None) -> GameStateSnapshot:
+        """
+        从游戏上下文创建状态快照
+        
+        Args:
+            game_context: 当前游戏上下文
+            hand_number: 手牌编号
+            description: 快照描述
+            
+        Returns:
+            GameStateSnapshot: 创建的游戏状态快照
+            
+        Raises:
+            SnapshotCreationError: 快照创建失败时抛出
+        """
+        try:
+            # 创建元数据
+            timestamp = time.time()
+            metadata = SnapshotMetadata(
+                snapshot_id=f"snapshot_{game_context.game_id}_{int(timestamp * 1000000)}",
+                version=SnapshotVersion.CURRENT,
+                created_at=timestamp,
+                game_duration=0.0,  # 需要从游戏上下文计算
+                hand_number=hand_number,
+                description=description or f"游戏快照 - {game_context.current_phase.name}"
+            )
+            
+            # 创建玩家快照
+            players = self._create_player_snapshots(game_context.players)
+            
+            # 创建奖池快照
+            pot = self._create_pot_snapshot(game_context)
+            
+            # 创建社区牌快照
+            community_cards = tuple(game_context.community_cards) if game_context.community_cards else ()
+            
+            # 计算位置信息
+            player_count = len(players)
+            dealer_position = 0
+            small_blind_position = 1 % player_count if player_count > 1 else 0
+            big_blind_position = 2 % player_count if player_count > 2 else (1 if player_count > 1 else 0)
+            
+            # 创建游戏状态快照
+            snapshot = GameStateSnapshot(
+                metadata=metadata,
+                game_id=game_context.game_id,
+                phase=game_context.current_phase,
+                players=players,
+                pot=pot,
+                community_cards=community_cards,
+                current_bet=game_context.current_bet,
+                dealer_position=dealer_position,
+                small_blind_position=small_blind_position,
+                big_blind_position=big_blind_position,
+                active_player_position=self._get_active_player_position(game_context),
+                small_blind_amount=game_context.small_blind,  # 从游戏上下文获取小盲注
+                big_blind_amount=game_context.big_blind,      # 从游戏上下文获取大盲注
+                recent_transactions=()  # 需要从游戏上下文获取
+            )
+            
+            # 存储快照
+            self._store_snapshot(snapshot)
+            
+            return snapshot
+            
+        except Exception as e:
+            raise SnapshotCreationError(f"创建快照失败: {str(e)}") from e
+    
+    def restore_from_snapshot(self, snapshot: GameStateSnapshot) -> GameContext:
+        """
+        从快照恢复游戏上下文
+        
+        Args:
+            snapshot: 游戏状态快照
+            
+        Returns:
+            GameContext: 恢复的游戏上下文
+            
+        Raises:
+            SnapshotRestoreError: 快照恢复失败时抛出
+        """
+        try:
+            # 恢复玩家信息
+            players = self._restore_players_from_snapshot(snapshot.players)
+            
+            # 恢复社区牌
+            community_cards = list(snapshot.community_cards)
+            
+            # 创建游戏上下文
+            context = GameContext(
+                game_id=snapshot.game_id,
+                current_phase=snapshot.phase,
+                players=players,
+                community_cards=community_cards,
+                pot_total=snapshot.pot.total_pot,
+                current_bet=snapshot.current_bet,
+                small_blind=snapshot.small_blind_amount,  # 从快照恢复小盲注
+                big_blind=snapshot.big_blind_amount,      # 从快照恢复大盲注
+                active_player_id=self._get_active_player_id(snapshot)
+            )
+            
+            return context
+            
+        except Exception as e:
+            raise SnapshotRestoreError(f"从快照恢复失败: {str(e)}") from e
+    
+    def get_snapshot(self, snapshot_id: str) -> Optional[GameStateSnapshot]:
+        """
+        获取指定ID的快照
+        
+        Args:
+            snapshot_id: 快照ID
+            
+        Returns:
+            Optional[GameStateSnapshot]: 快照对象，如果不存在则返回None
+        """
+        return self._snapshots.get(snapshot_id)
+    
+    def get_latest_snapshot(self) -> Optional[GameStateSnapshot]:
+        """
+        获取最新的快照
+        
+        Returns:
+            Optional[GameStateSnapshot]: 最新的快照，如果没有则返回None
+        """
+        if not self._snapshot_history:
+            return None
+        
+        latest_id = self._snapshot_history[-1]
+        return self._snapshots.get(latest_id)
+    
+    def get_snapshot_history(self, limit: int = 10) -> List[GameStateSnapshot]:
+        """
+        获取快照历史记录
+        
+        Args:
+            limit: 返回的快照数量限制
+            
+        Returns:
+            List[GameStateSnapshot]: 快照列表，按时间倒序排列
+        """
+        history_ids = self._snapshot_history[-limit:] if limit > 0 else self._snapshot_history
+        snapshots = []
+        
+        for snapshot_id in reversed(history_ids):
+            snapshot = self._snapshots.get(snapshot_id)
+            if snapshot:
+                snapshots.append(snapshot)
+        
+        return snapshots
+    
+    def clear_old_snapshots(self, keep_count: int = 50):
+        """
+        清理旧的快照，保留指定数量的最新快照
+        
+        Args:
+            keep_count: 保留的快照数量
+        """
+        if len(self._snapshot_history) <= keep_count:
+            return
+        
+        # 计算需要删除的快照数量
+        to_remove_count = len(self._snapshot_history) - keep_count
+        to_remove_ids = self._snapshot_history[:to_remove_count]
+        
+        # 删除旧快照
+        for snapshot_id in to_remove_ids:
+            self._snapshots.pop(snapshot_id, None)
+        
+        # 更新历史记录
+        self._snapshot_history = self._snapshot_history[to_remove_count:]
+    
+    def _create_player_snapshots(self, players: Dict[str, Any]) -> tuple:
+        """从游戏上下文的玩家信息创建玩家快照"""
+        player_snapshots = []
+        
+        for player_id, player_data in players.items():
+            # 处理手牌
+            hole_cards = ()
+            if 'hole_cards' in player_data and player_data['hole_cards']:
+                hole_cards = tuple(player_data['hole_cards'])
+            
+            player_snapshot = PlayerSnapshot(
+                player_id=player_id,
+                name=player_data.get('name', player_id),
+                chips=player_data.get('chips', 0),
+                hole_cards=hole_cards,
+                position=player_data.get('position', 0),
+                is_active=player_data.get('is_active', True),
+                is_all_in=player_data.get('is_all_in', False),
+                current_bet=player_data.get('current_bet', 0),
+                total_bet_this_hand=player_data.get('total_bet_this_hand', 0),
+                last_action=player_data.get('last_action')
+            )
+            player_snapshots.append(player_snapshot)
+        
+        return tuple(player_snapshots)
+    
+    def _create_pot_snapshot(self, game_context: GameContext) -> PotSnapshot:
+        """从游戏上下文创建奖池快照"""
+        return PotSnapshot(
+            main_pot=game_context.pot_total,
+            side_pots=(),  # 需要从游戏上下文获取边池信息
+            total_pot=game_context.pot_total,
+            eligible_players=tuple(game_context.players.keys())
+        )
+    
+    def _get_active_player_position(self, game_context: GameContext) -> Optional[int]:
+        """获取当前活跃玩家的位置"""
+        if not game_context.active_player_id:
+            return None
+        
+        for player_id, player_data in game_context.players.items():
+            if player_id == game_context.active_player_id:
+                return player_data.get('position', 0)
+        
+        return None
+    
+    def _restore_players_from_snapshot(self, player_snapshots: tuple) -> Dict[str, Any]:
+        """从玩家快照恢复玩家信息"""
+        players = {}
+        
+        for player_snapshot in player_snapshots:
+            players[player_snapshot.player_id] = {
+                'name': player_snapshot.name,
+                'chips': player_snapshot.chips,
+                'hole_cards': list(player_snapshot.hole_cards),
+                'position': player_snapshot.position,
+                'is_active': player_snapshot.is_active,
+                'is_all_in': player_snapshot.is_all_in,
+                'current_bet': player_snapshot.current_bet,
+                'total_bet_this_hand': player_snapshot.total_bet_this_hand,
+                'last_action': player_snapshot.last_action
+            }
+        
+        return players
+    
+    def _get_active_player_id(self, snapshot: GameStateSnapshot) -> Optional[str]:
+        """从快照获取当前活跃玩家ID"""
+        if snapshot.active_player_position is None:
+            return None
+        
+        for player in snapshot.players:
+            if player.position == snapshot.active_player_position:
+                return player.player_id
+        
+        return None
+    
+    def _store_snapshot(self, snapshot: GameStateSnapshot):
+        """存储快照到内存"""
+        self._snapshots[snapshot.metadata.snapshot_id] = snapshot
+        self._snapshot_history.append(snapshot.metadata.snapshot_id)
+        
+        # 如果历史记录超过限制，清理旧快照
+        if len(self._snapshot_history) > self._max_history_size:
+            self.clear_old_snapshots(self._max_history_size // 2) 

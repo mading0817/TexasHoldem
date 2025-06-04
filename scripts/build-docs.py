@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-文档生成脚本 - Texas Hold'em Poker Game v2
+文档生成脚本 - Texas Hold'em Poker Game
 
-使用pdoc生成API文档，采用模块化方式避免双层v2目录结构。
+使用pdoc生成API文档，支持v2和v3版本。
 支持GitHub Pages发布。
 
 使用方法:
     python scripts/build-docs.py
+    python scripts/build-docs.py --version v3  # 生成v3文档
     python scripts/build-docs.py --check  # 检查文档是否需要更新
 """
 
@@ -25,7 +26,7 @@ def run_command(cmd, check=True):
         sys.exit(1)
     return result
 
-def clean_docs():
+def clean_docs(version="v2"):
     """清理旧的文档目录"""
     docs_dir = Path("docs")
     
@@ -38,10 +39,10 @@ def clean_docs():
         if file_path.exists():
             preserved_content[file] = file_path.read_text(encoding='utf-8')
     
-    # 清理v2目录和其他生成的文件
-    v2_dir = docs_dir / "v2"
-    if v2_dir.exists():
-        shutil.rmtree(v2_dir)
+    # 清理指定版本目录和其他生成的文件
+    version_dir = docs_dir / version
+    if version_dir.exists():
+        shutil.rmtree(version_dir)
     
     # 清理其他pdoc生成的文件
     for file in ["index.html", "search.js"]:
@@ -53,23 +54,30 @@ def clean_docs():
     for file, content in preserved_content.items():
         (docs_dir / file).write_text(content, encoding='utf-8')
     
-    print("✅ 清理旧文档完成")
+    print(f"✅ 清理{version}旧文档完成")
 
-def generate_docs():
+def generate_docs(version="v2"):
     """生成新的文档"""
     # 确保docs目录存在
     Path("docs").mkdir(exist_ok=True)
+    
+    # 根据版本选择模块
+    if version == "v2":
+        modules = ["v2.core", "v2.controller", "v2.ui"]
+    elif version == "v3":
+        modules = ["v3.core", "v3.application"]
+    else:
+        raise ValueError(f"不支持的版本: {version}")
     
     # 生成文档
     cmd = [
         sys.executable, "-m", "pdoc",
         "-o", "docs",
         "-d", "google",
-        "v2.core", "v2.controller", "v2.ui"
-    ]
+    ] + modules
     
     run_command(cmd)
-    print("✅ 文档生成完成")
+    print(f"✅ {version}文档生成完成")
 
 def ensure_github_pages_ready():
     """确保GitHub Pages配置正确"""
@@ -97,21 +105,23 @@ def main():
     """主函数"""
     import argparse
     
-    parser = argparse.ArgumentParser(description="生成v2项目API文档")
+    parser = argparse.ArgumentParser(description="生成项目API文档")
+    parser.add_argument("--version", choices=["v2", "v3"], default="v2",
+                       help="指定要生成文档的版本 (默认: v2)")
     parser.add_argument("--check", action="store_true", 
                        help="检查文档是否需要更新（用于CI）")
     
     args = parser.parse_args()
     
-    print("🚀 开始生成Texas Hold'em Poker v2文档...")
+    print(f"🚀 开始生成Texas Hold'em Poker {args.version}文档...")
     
     # 切换到项目根目录
     os.chdir(Path(__file__).parent.parent)
     
     if args.check:
         # CI模式：生成文档并检查是否有变更
-        clean_docs()
-        generate_docs()
+        clean_docs(args.version)
+        generate_docs(args.version)
         ensure_github_pages_ready()
         
         if not check_git_status():
@@ -121,11 +131,11 @@ def main():
             print("✅ 文档检查通过")
     else:
         # 正常模式：生成文档
-        clean_docs()
-        generate_docs()
+        clean_docs(args.version)
+        generate_docs(args.version)
         ensure_github_pages_ready()
         
-        print("\n🎉 文档生成完成！")
+        print(f"\n🎉 {args.version}文档生成完成！")
         print("📁 文档位置: docs/")
         print("🌐 本地预览: 打开 docs/index.html")
         print("📚 GitHub Pages: 推送到main分支后自动发布")
