@@ -855,43 +855,42 @@ class GameQueryService:
                 error_code="ALL_PLAYERS_ACTION_COMPLETE_FAILED"
             )
     
-    def get_game_rules_config(self, game_id: str) -> QueryResult[Dict[str, Any]]:
+    def get_game_rules_config(self, game_id: str, profile: str = "default") -> QueryResult[Dict[str, Any]]:
         """
-        获取游戏规则配置
+        获取游戏规则配置 (通过ConfigService)
         
         Args:
-            game_id: 游戏ID
+            game_id: 游戏ID  
+            profile: 配置配置文件名
             
         Returns:
             查询结果，包含游戏规则配置
         """
         try:
-            if self._command_service is None:
+            # 使用ConfigService获取配置
+            from .config_service import ConfigService, ConfigType
+            config_service = ConfigService()
+            
+            config_result = config_service.get_merged_config(
+                ConfigType.GAME_RULES, profile
+            )
+            
+            if config_result.success:
+                # 如果有游戏会话，用会话中的实际值覆盖配置
+                if self._command_service is not None:
+                    session = self._command_service._get_session(game_id)
+                    if session is not None:
+                        config_result.data.update({
+                            'small_blind': session.context.small_blind,
+                            'big_blind': session.context.big_blind
+                        })
+                
+                return config_result
+            else:
                 return QueryResult.failure_result(
-                    "命令服务未初始化",
-                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
+                    f"获取游戏规则配置失败: {config_result.message}",
+                    error_code="GET_GAME_RULES_CONFIG_FAILED"
                 )
-            
-            # 获取游戏会话
-            session = self._command_service._get_session(game_id)
-            if session is None:
-                return QueryResult.failure_result(
-                    f"游戏 {game_id} 不存在",
-                    error_code="GAME_NOT_FOUND"
-                )
-            
-            # 构建游戏规则配置
-            rules_config = {
-                'small_blind': session.context.small_blind,
-                'big_blind': session.context.big_blind,
-                'initial_chips': 1000,  # 默认初始筹码
-                'max_players': 10,
-                'min_players': 2,
-                'betting_phases': ["PRE_FLOP", "FLOP", "TURN", "RIVER"],
-                'non_betting_phases': ["INIT", "SHOWDOWN", "FINISHED"]
-            }
-            
-            return QueryResult.success_result(rules_config)
             
         except Exception as e:
             return QueryResult.failure_result(
@@ -901,41 +900,29 @@ class GameQueryService:
 
     def get_ai_config(self, player_id: str = "default") -> QueryResult[Dict[str, Any]]:
         """
-        获取AI配置
+        获取AI配置 (通过ConfigService)
         
         Args:
-            player_id: 玩家ID，用于个性化配置
+            player_id: 玩家ID，用于个性化配置 (default, aggressive, conservative)
             
         Returns:
             查询结果，包含AI配置
         """
         try:
-            # 默认AI配置 - 应该从配置文件或数据库读取
-            ai_config = {
-                'fold_weight': 0.15,
-                'check_weight': 0.35,
-                'call_weight': 0.35,
-                'raise_weight': 0.125,
-                'all_in_weight': 0.025,
-                'min_bet_ratio': 0.3,
-                'max_bet_ratio': 0.7
-            }
+            # 使用ConfigService获取配置
+            from .config_service import ConfigService, ConfigType
+            config_service = ConfigService()
             
-            # 可以根据player_id定制配置
-            if player_id == "aggressive":
-                ai_config.update({
-                    'raise_weight': 0.3,
-                    'all_in_weight': 0.1,
-                    'fold_weight': 0.1
-                })
-            elif player_id == "conservative":
-                ai_config.update({
-                    'fold_weight': 0.3,
-                    'check_weight': 0.4,
-                    'raise_weight': 0.05
-                })
+            # 根据player_id选择配置配置文件
+            profile = "default"
+            if player_id in ["aggressive", "conservative"]:
+                profile = player_id
             
-            return QueryResult.success_result(ai_config)
+            config_result = config_service.get_merged_config(
+                ConfigType.AI_DECISION, profile
+            )
+            
+            return config_result
             
         except Exception as e:
             return QueryResult.failure_result(
@@ -954,46 +941,15 @@ class GameQueryService:
             查询结果，包含UI测试配置
         """
         try:
-            # 基础配置
-            base_config = {
-                'default_player_ids': ["player_0", "player_1", "player_2", "player_3", "player_4", "player_5"],
-                'initial_chips_per_player': 1000,
-                'max_actions_per_hand': 50,
-                'max_consecutive_same_states': 3,
-                'log_level': 'DEBUG',
-                'enable_detailed_logging': True,
-                'enable_chip_conservation_check': True,
-                'enable_invariant_violation_check': True
-            }
+            # 使用ConfigService获取配置
+            from .config_service import ConfigService, ConfigType
+            config_service = ConfigService()
             
-            # 根据测试类型定制配置
-            if test_type == "ultimate":
-                base_config.update({
-                    'num_hands': 100,
-                    'initial_chips_per_player': 10000,  # 增加到100BB以支持长期测试
-                    'max_actions_per_hand': 50,
-                    'enable_performance_metrics': True,
-                    'enable_stress_testing': True
-                })
-            elif test_type == "quick":
-                base_config.update({
-                    'num_hands': 15,
-                    'initial_chips_per_player': 1000,  # 保持15BB对快速测试
-                    'max_actions_per_hand': 30,
-                    'enable_performance_metrics': False,
-                    'log_level': 'INFO'
-                })
-            elif test_type == "stress":
-                base_config.update({
-                    'num_hands': 1000,
-                    'initial_chips_per_player': 50000,  # 500BB支持超长期测试
-                    'max_actions_per_hand': 100,
-                    'enable_performance_metrics': True,
-                    'enable_stress_testing': True,
-                    'log_level': 'WARNING'
-                })
+            config_result = config_service.get_merged_config(
+                ConfigType.UI_TEST, test_type
+            )
             
-            return QueryResult.success_result(base_config)
+            return config_result
             
         except Exception as e:
             return QueryResult.failure_result(

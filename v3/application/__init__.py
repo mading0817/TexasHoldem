@@ -32,6 +32,8 @@ from .command_service import GameCommandService, GameSession
 from .query_service import GameQueryService, GameStateSnapshot, PlayerInfo, AvailableActions
 from .test_stats_service import TestStatsService, TestStatsSnapshot
 from .game_flow_service import GameFlowService, HandFlowConfig
+from .config_service import ConfigService, ConfigType, GameRulesConfig, AIDecisionConfig, UITestConfig, PerformanceConfig, LoggingConfig
+from .validation_service import ValidationService, ValidationError, ValidationResult
 
 __version__ = "3.0.0"
 
@@ -51,6 +53,8 @@ __all__ = [
     "GameQueryService",
     "TestStatsService",
     "GameFlowService",
+    "ConfigService",
+    "ValidationService",
     
     # 数据类
     "GameSession",
@@ -59,4 +63,11 @@ __all__ = [
     "AvailableActions",
     "TestStatsSnapshot",
     "HandFlowConfig",
+    "ConfigType",
+    "GameRulesConfig",
+    "AIDecisionConfig",
+    "UITestConfig",
+    "PerformanceConfig",
+    "LoggingConfig",
+    "ValidationResult",
 ] 
