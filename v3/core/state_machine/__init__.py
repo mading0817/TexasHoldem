@@ -127,6 +127,7 @@ class GameStateMachine:
                 GamePhase.FLOP: GamePhase.TURN,
                 GamePhase.TURN: GamePhase.RIVER,
                 GamePhase.RIVER: GamePhase.SHOWDOWN,
+                GamePhase.SHOWDOWN: GamePhase.FINISHED,
             },
             'HAND_START': {
                 GamePhase.INIT: GamePhase.PRE_FLOP,
@@ -134,6 +135,12 @@ class GameStateMachine:
             },
             'SHOWDOWN_COMPLETE': {
                 GamePhase.SHOWDOWN: GamePhase.FINISHED,
+            },
+            'HAND_AUTO_FINISH': {
+                GamePhase.PRE_FLOP: GamePhase.FINISHED,
+                GamePhase.FLOP: GamePhase.FINISHED,
+                GamePhase.TURN: GamePhase.FINISHED,
+                GamePhase.RIVER: GamePhase.FINISHED,
             }
         }
         

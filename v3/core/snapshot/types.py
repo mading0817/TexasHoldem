@@ -37,7 +37,7 @@ class PlayerSnapshot:
     chips: int
     hole_cards: Tuple[Card, ...]  # 手牌，最多2张
     position: int  # 座位位置
-    is_active: bool  # 是否还在游戏中
+    is_active: bool  # 是否在游戏中且未弃牌（包括all-in玩家）
     is_all_in: bool  # 是否全押
     current_bet: int  # 当前轮下注金额
     total_bet_this_hand: int  # 本手牌总下注金额

@@ -6,7 +6,7 @@ RandomAI - 纯随机决策AI
 """
 
 import random
-from typing import Optional
+from typing import Optional, List
 
 from ..types import AIDecision, AIDecisionType, AIStrategy, RandomAIConfig
 from ...core.snapshot.types import GameStateSnapshot
@@ -15,11 +15,13 @@ from ...core.snapshot.types import GameStateSnapshot
 class RandomAI:
     """纯随机AI玩家
     
-    对所有可执行的行动进行等概率随机选择，不考虑牌力、位置等因素。
+    对所有可执行的行动进行概率选择：
+    - all-in: 0.1概率
+    - 其他行动: 平均分配剩余0.9概率
     主要用于：
     1. 作为其他AI策略的基准对照组
     2. 测试游戏逻辑的鲁棒性
-    3. 提供完全不可预测的对手行为
+    3. 提供概率可控的对手行为
     """
     
     def __init__(self, config: Optional[RandomAIConfig] = None, query_service=None):
@@ -37,6 +39,9 @@ class RandomAI:
             self._random = random.Random(self.config.seed)
         else:
             self._random = random.Random()
+        
+        # 行动概率配置
+        self.ALL_IN_PROBABILITY = 0.05  # all-in概率固定为0.1
     
     def get_strategy_name(self) -> str:
         """获取策略名称
@@ -81,9 +86,11 @@ class RandomAI:
                 reasoning="无可用行动，默认弃牌"
             )
         
-        # 转换为AI决策类型并随机选择
+        # 转换为AI决策类型
         available_ai_types = [self._action_str_to_ai_type(action) for action in available_actions]
-        chosen_ai_type = self._random.choice(available_ai_types)
+        
+        # 使用概率选择行动
+        chosen_ai_type = self._choose_action_with_probability(available_ai_types)
         
         # 计算行动金额
         amount = self._calculate_action_amount(game_state, player_id, chosen_ai_type)
@@ -92,8 +99,42 @@ class RandomAI:
             decision_type=chosen_ai_type,
             amount=amount,
             confidence=1.0,
-            reasoning=f"随机选择: {chosen_ai_type.name}"
+            reasoning=f"概率选择: {chosen_ai_type.name} (all-in概率=0.1)"
         )
+    
+    def _choose_action_with_probability(self, available_actions: List[AIDecisionType]) -> AIDecisionType:
+        """根据设定概率选择行动
+        
+        Args:
+            available_actions: 可用行动列表
+            
+        Returns:
+            选择的行动类型
+        """
+        # 如果没有可用行动，返回弃牌
+        if not available_actions:
+            return AIDecisionType.FOLD
+        
+        # 如果只有一个行动，直接返回
+        if len(available_actions) == 1:
+            return available_actions[0]
+        
+        # 检查是否有all-in可用
+        has_all_in = AIDecisionType.ALL_IN in available_actions
+        
+        # 生成随机数决定是否选择all-in
+        if has_all_in and self._random.random() < self.ALL_IN_PROBABILITY:
+            return AIDecisionType.ALL_IN
+        
+        # 从非all-in行动中选择
+        non_all_in_actions = [action for action in available_actions if action != AIDecisionType.ALL_IN]
+        
+        # 如果没有非all-in行动（理论上不应该发生），返回all-in
+        if not non_all_in_actions:
+            return AIDecisionType.ALL_IN
+        
+        # 从非all-in行动中随机选择
+        return self._random.choice(non_all_in_actions)
     
     def _action_str_to_ai_type(self, action_str: str) -> AIDecisionType:
         """将字符串行动转换为AI决策类型"""
@@ -172,15 +213,17 @@ class RandomAI:
         if player.chips > 0:
             actions.append('all_in')
         
-        chosen_action = self._random.choice(actions)
-        ai_type = self._action_str_to_ai_type(chosen_action)
-        amount = self._calculate_action_amount_fallback(game_state, player_id, ai_type)
+        # 转换为AI类型并应用概率选择
+        available_ai_types = [self._action_str_to_ai_type(action) for action in actions]
+        chosen_ai_type = self._choose_action_with_probability(available_ai_types)
+        
+        amount = self._calculate_action_amount_fallback(game_state, player_id, chosen_ai_type)
         
         return AIDecision(
-            decision_type=ai_type,
+            decision_type=chosen_ai_type,
             amount=amount,
             confidence=1.0,
-            reasoning=f"回退逻辑随机选择: {ai_type.name}"
+            reasoning=f"回退逻辑概率选择: {chosen_ai_type.name} (all-in概率=0.1)"
         )
     
     def _calculate_call_amount_fallback(self, game_state: GameStateSnapshot, player_id: str) -> int:

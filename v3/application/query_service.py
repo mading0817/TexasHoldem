@@ -519,4 +519,123 @@ class GameQueryService:
         except (ValueError, IndexError):
             pass
         
-        return None 
+        return None
+    
+    def is_game_over(self, game_id: str) -> QueryResult[bool]:
+        """
+        检查游戏是否已结束
+        
+        在德州扑克中，游戏在以下情况结束：
+        1. 只剩下1个或0个有筹码的玩家
+        2. 游戏被手动终止
+        
+        Args:
+            game_id: 游戏ID
+            
+        Returns:
+            查询结果，包含游戏是否已结束的布尔值
+        """
+        try:
+            if self._command_service is None:
+                return QueryResult.failure_result(
+                    "命令服务未初始化",
+                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
+                )
+            
+            # 获取游戏会话
+            session = self._command_service._get_session(game_id)
+            if session is None:
+                return QueryResult.failure_result(
+                    f"游戏 {game_id} 不存在",
+                    error_code="GAME_NOT_FOUND"
+                )
+            
+            # 计算有筹码的玩家数量
+            players_with_chips = [
+                player_id for player_id, player_data in session.context.players.items()
+                if player_data.get('chips', 0) > 0
+            ]
+            
+            # 如果少于2个玩家有筹码，游戏结束
+            game_over = len(players_with_chips) < 2
+            
+            result = QueryResult.success_result(game_over)
+            # 手动设置额外数据
+            result.__dict__['data_details'] = {
+                'players_with_chips_count': len(players_with_chips),
+                'players_with_chips': players_with_chips,
+                'reason': 'insufficient_players' if game_over else 'ongoing'
+            }
+            return result
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"检查游戏结束状态失败: {str(e)}",
+                error_code="CHECK_GAME_OVER_FAILED"
+            )
+    
+    def get_game_winner(self, game_id: str) -> QueryResult[Optional[str]]:
+        """
+        获取游戏获胜者
+        
+        Args:
+            game_id: 游戏ID
+            
+        Returns:
+            查询结果，包含获胜者ID（如果游戏未结束则返回None）
+        """
+        try:
+            # 首先检查游戏是否结束
+            game_over_result = self.is_game_over(game_id)
+            if not game_over_result.success:
+                return QueryResult.failure_result(
+                    game_over_result.message,
+                    error_code=game_over_result.error_code
+                )
+            
+            if not game_over_result.data:
+                # 游戏未结束，没有获胜者
+                result = QueryResult.success_result(None)
+                result.__dict__['data_details'] = {'reason': 'game_not_over'}
+                return result
+            
+            # 获取游戏会话
+            session = self._command_service._get_session(game_id)
+            if session is None:
+                return QueryResult.failure_result(
+                    f"游戏 {game_id} 不存在",
+                    error_code="GAME_NOT_FOUND"
+                )
+            
+            # 找到最后一个有筹码的玩家
+            players_with_chips = [
+                (player_id, player_data.get('chips', 0))
+                for player_id, player_data in session.context.players.items()
+                if player_data.get('chips', 0) > 0
+            ]
+            
+            if len(players_with_chips) == 1:
+                winner_id = players_with_chips[0][0]
+                winner_chips = players_with_chips[0][1]
+                result = QueryResult.success_result(winner_id)
+                result.__dict__['data_details'] = {
+                    'winner_chips': winner_chips,
+                    'reason': 'last_player_standing'
+                }
+                return result
+            elif len(players_with_chips) == 0:
+                # 所有玩家都没有筹码，这种情况不应该发生
+                result = QueryResult.success_result(None)
+                result.__dict__['data_details'] = {'reason': 'no_players_with_chips'}
+                return result
+            else:
+                # 多个玩家有筹码，游戏未结束
+                result = QueryResult.success_result(None)
+                result.__dict__['data_details'] = {'reason': 'multiple_players_remaining'}
+                return result
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"获取游戏获胜者失败: {str(e)}",
+                error_code="GET_GAME_WINNER_FAILED"
+            ) 

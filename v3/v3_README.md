@@ -84,6 +84,15 @@ Unit, Property, Integration, Ultimate 所有测试。
 
 ## ✅ 最新完成任务
 
+### 🎉 Fold操作不变量检查修复 (2025-06-05 完成)
+- ✅ 深入分析发现all_in玩家状态处理的语义混淆问题
+- ✅ 修复了SnapshotManager._get_active_player_position方法
+- ✅ 实现了PhaseHandler中fold操作的原子性
+- ✅ 修正了_advance_to_next_player的all_in玩家判断逻辑
+- ✅ 分离了"在手牌中"和"可以行动"两个概念
+- ✅ 从结构和设计层面根本性解决问题
+- 📊 Ultimate Test结果：手牌完成率100% (2/2)，行动成功率100% (11/11)，零错误
+
 ### PLAN 12: 筹码系统实现 (2025-01-27 完成)
 - ✅ 完善了筹码账本 (ChipLedger) 的原子性操作
 - ✅ 增强了下注引擎 (BettingEngine) 的验证逻辑

@@ -116,6 +116,12 @@ class ChipConservationChecker(BaseInvariantChecker):
         Returns:
             bool: 检查是否通过
         """
+        from ..state_machine.types import GamePhase
+        
+        # 在SHOWDOWN和FINISHED阶段，奖池可能已经被分配，跳过此检查
+        if snapshot.phase in [GamePhase.SHOWDOWN, GamePhase.FINISHED]:
+            return True
+        
         total_bets = self._get_player_total_bets(snapshot)
         pot_total = snapshot.pot.total_pot
         

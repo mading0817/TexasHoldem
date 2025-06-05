@@ -97,44 +97,78 @@
 
 ---
 
-### PLAN 22 终极测试框架实现
+### PLAN 22 终极测试框架修复与完善
 
-**PLAN简述**: 实现v3版本的Streamlit终极用户体验测试
+**PLAN简述**: 修复当前v3终极测试的严重问题，实现真正的端到端测试
 
 **解决的具体问题**:
-- 需要验证完整的游戏流程在v3架构下的正确性
-- 确保1000手牌测试的稳定性和准确性
-- 验证筹码计算、胜负判断的正确性
+- 修复当前测试中同一玩家重复行动的无限循环问题
+- 实现真正的6玩家（1用户+5AI）对战模拟
+- 确保游戏流程正确，手牌能正常结束
+- 验证筹码计算、胜负判断的准确性
 
 **执行步骤**:
-1. 分析v2终极测试的核心逻辑和测试覆盖范围
-2. 设计v3兼容的测试框架：
-   ```python
-   # v3/tests/integration/test_streamlit_ultimate_user_experience_v3.py
-   class StreamlitUltimateUserTesterV3:
-       """v3版本的终极用户测试器"""
-       
-       def __init__(self, num_hands: int = 1000):
-           self.num_hands = num_hands
-           self.command_service = GameCommandService()
-           self.query_service = GameQueryService()
-           self.ai_strategy = SimpleAI()
-   ```
-3. 实现用户行为模拟和AI交互
-4. 集成反作弊检查和状态验证
-5. 实现详细的统计和报告系统
-6. 优化测试性能和稳定性
+1. 🔧 **修复核心问题**:
+   - 分析并修复活跃玩家轮换逻辑
+   - 确保手牌能正常推进到FINISHED状态
+   - 修复状态机转换问题
+2. 🎮 **实现6玩家对战**:
+   - 扩展为6个玩家：player_0(用户) + player_1~5(AI)
+   - 实现真正的用户vs AI对战模拟
+3. 🧪 **完善测试验证**:
+   - 确保100手牌能稳定完成
+   - 验证筹码守恒和胜负判断
+   - 添加详细的游戏流程验证
 
 **测试验收**:
-- 1000手牌完成率 ≥ 99%
+- 100手牌完成率 ≥ 99%（无强制结束）
 - 用户行动成功率 ≥ 99%
 - 筹码守恒 100%无违规
-- 测试性能 ≥ 5手/秒
+- 6玩家轮换正确
 - 反作弊检查全部通过
 
 ---
 
-### PLAN 23 错误处理系统完善
+### PLAN 23 v3 Streamlit Web UI实现
+
+**PLAN简述**: 基于v2经验，实现v3架构的Streamlit Web界面
+
+**解决的具体问题**:
+- v3缺少Web UI，无法通过浏览器访问
+- 需要适配v3的CQRS架构和应用服务
+- 提供用户友好的游戏界面
+
+**执行步骤**:
+1. 📋 **分析v2 UI架构**:
+   - 研究v2/ui/streamlit/app.py的实现
+   - 提取可复用的UI组件和布局
+2. 🏗️ **设计v3 UI架构**:
+   ```python
+   # v3/ui/streamlit/app.py
+   class StreamlitGameUI:
+       def __init__(self):
+           self.command_service = GameCommandService()
+           self.query_service = GameQueryService()
+   ```
+3. 🎨 **实现核心功能**:
+   - 游戏状态显示
+   - 用户行动界面
+   - AI玩家状态
+   - 实时统计和日志
+4. 🔗 **集成v3服务**:
+   - 使用GameCommandService处理用户行动
+   - 使用GameQueryService获取游戏状态
+   - 集成RandomAI进行AI决策
+
+**测试验收**:
+- 可通过http://localhost:8501访问
+- 支持完整的6玩家游戏
+- UI响应流畅，无卡顿
+- 与终极测试结果一致
+
+---
+
+### PLAN 24 错误处理系统完善
 
 **PLAN简述**: 完善系统的错误处理和恢复机制
 
@@ -157,7 +191,7 @@
 
 ---
 
-### PLAN 24 性能优化
+### PLAN 25 性能优化
 
 **PLAN简述**: 优化系统性能，确保测试速度达标
 
@@ -180,7 +214,7 @@
 
 ---
 
-### PLAN 25 最终验收
+### PLAN 26 最终验收
 
 **PLAN简述**: 完整的系统验收和文档整理
 

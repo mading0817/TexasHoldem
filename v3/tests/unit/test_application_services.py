@@ -434,6 +434,129 @@ class TestGameQueryService:
         
         assert phase_info['current_phase'] == "PRE_FLOP"
         assert phase_info['next_phase'] == "FLOP"
+    
+    def test_is_game_over_ongoing_game(self):
+        """测试正在进行的游戏未结束"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        # 创建游戏，所有玩家都有筹码
+        self.command_service.create_new_game("game_over_test", ["p1", "p2", "p3"])
+        
+        # 检查游戏是否结束
+        result = self.query_service.is_game_over("game_over_test")
+        
+        assert result.success is True
+        assert result.status == ResultStatus.SUCCESS
+        assert result.data is False  # 游戏未结束
+        assert result.data_details['players_with_chips_count'] == 3
+        assert result.data_details['reason'] == 'ongoing'
+    
+    def test_is_game_over_finished_game(self):
+        """测试只剩一个玩家时游戏结束"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        # 创建游戏
+        self.command_service.create_new_game("finished_game_test", ["p1", "p2", "p3"])
+        
+        # 手动设置玩家筹码，模拟只剩一个玩家有筹码的情况
+        session = self.command_service._get_session("finished_game_test")
+        session.context.players["p2"]['chips'] = 0
+        session.context.players["p3"]['chips'] = 0
+        # p1仍有筹码
+        
+        # 检查游戏是否结束
+        result = self.query_service.is_game_over("finished_game_test")
+        
+        assert result.success is True
+        assert result.status == ResultStatus.SUCCESS
+        assert result.data is True  # 游戏已结束
+        assert result.data_details['players_with_chips_count'] == 1
+        assert result.data_details['reason'] == 'insufficient_players'
+    
+    def test_is_game_over_no_players_with_chips(self):
+        """测试没有玩家有筹码时游戏结束"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        # 创建游戏
+        self.command_service.create_new_game("no_chips_test", ["p1", "p2"])
+        
+        # 手动设置所有玩家筹码为0
+        session = self.command_service._get_session("no_chips_test")
+        session.context.players["p1"]['chips'] = 0
+        session.context.players["p2"]['chips'] = 0
+        
+        # 检查游戏是否结束
+        result = self.query_service.is_game_over("no_chips_test")
+        
+        assert result.success is True
+        assert result.status == ResultStatus.SUCCESS
+        assert result.data is True  # 游戏已结束
+        assert result.data_details['players_with_chips_count'] == 0
+        assert result.data_details['reason'] == 'insufficient_players'
+    
+    def test_get_game_winner_ongoing_game(self):
+        """测试正在进行的游戏没有获胜者"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        # 创建游戏，所有玩家都有筹码
+        self.command_service.create_new_game("winner_test_ongoing", ["p1", "p2", "p3"])
+        
+        # 获取游戏获胜者
+        result = self.query_service.get_game_winner("winner_test_ongoing")
+        
+        assert result.success is True
+        assert result.status == ResultStatus.SUCCESS
+        assert result.data is None  # 没有获胜者
+        assert result.data_details['reason'] == 'game_not_over'
+    
+    def test_get_game_winner_finished_game(self):
+        """测试只剩一个玩家时的获胜者"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        # 创建游戏
+        self.command_service.create_new_game("winner_test_finished", ["p1", "p2", "p3"])
+        
+        # 手动设置玩家筹码，模拟只剩p1有筹码的情况
+        session = self.command_service._get_session("winner_test_finished")
+        session.context.players["p1"]['chips'] = 2500  # 获胜者有所有筹码
+        session.context.players["p2"]['chips'] = 0
+        session.context.players["p3"]['chips'] = 0
+        
+        # 获取游戏获胜者
+        result = self.query_service.get_game_winner("winner_test_finished")
+        
+        assert result.success is True
+        assert result.status == ResultStatus.SUCCESS
+        assert result.data == "p1"  # p1是获胜者
+        assert result.data_details['winner_chips'] == 2500
+        assert result.data_details['reason'] == 'last_player_standing'
+    
+    def test_is_game_over_game_not_found(self):
+        """测试检查不存在游戏的结束状态"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        result = self.query_service.is_game_over("nonexistent_game")
+        
+        assert result.success is False
+        assert result.status == ResultStatus.FAILURE
+        assert result.error_code == "GAME_NOT_FOUND"
+    
+    def test_get_game_winner_game_not_found(self):
+        """测试获取不存在游戏的获胜者"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        result = self.query_service.get_game_winner("nonexistent_game")
+        
+        assert result.success is False
+        assert result.status == ResultStatus.FAILURE
+        assert result.error_code == "GAME_NOT_FOUND"
 
 
 class TestApplicationServiceIntegration:

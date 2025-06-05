@@ -216,7 +216,13 @@ class TestGameStateMachine:
         ctx = GameContext(
             game_id="test_game",
             current_phase=GamePhase.PRE_FLOP,
-            players={"player1": {"chips": 1000}},
+            players={
+                "player1": {
+                    "chips": 1000,
+                    "total_bet_this_hand": 30,  # 添加总下注字段以保持筹码守恒
+                    "current_bet": 20
+                }
+            },
             community_cards=[],
             pot_total=30,
             current_bet=20
@@ -226,7 +232,7 @@ class TestGameStateMachine:
         state_machine._current_phase = GamePhase.PRE_FLOP
         
         # 测试玩家弃牌行动
-        action = {"type": "fold"}
+        action = {"action_type": "fold"}
         event = state_machine.handle_player_action(ctx, "player1", action)
         
         assert event.event_type == "PLAYER_FOLDED"

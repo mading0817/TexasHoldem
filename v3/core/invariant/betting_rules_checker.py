@@ -293,8 +293,8 @@ class BettingRulesChecker(BaseInvariantChecker):
             
             # 在翻牌前，盲注不算违规
             is_preflop_blinds = (snapshot.phase == GamePhase.PRE_FLOP and 
-                                 second_highest == snapshot.small_blind_amount and
-                                 highest_bet == snapshot.big_blind_amount)
+                                 ((second_highest == 0 and highest_bet == snapshot.small_blind_amount) or
+                                  (second_highest == snapshot.small_blind_amount and highest_bet == snapshot.big_blind_amount)))
             
             if raise_amount < min_raise and raise_amount > 0 and not is_preflop_blinds:
                 # 找出加注玩家
@@ -334,15 +334,17 @@ class BettingRulesChecker(BaseInvariantChecker):
         all_valid = True
         
         for player in snapshot.players:
+            # 非活跃玩家不应该有当前下注
             if not player.is_active and player.current_bet > 0:
                 self._create_violation(
                     f"非活跃玩家{player.name}({player.player_id})不应该有当前下注: {player.current_bet}",
-                    'WARNING',
+                    'CRITICAL',
                     {
                         'player_id': player.player_id,
                         'player_name': player.name,
                         'current_bet': player.current_bet,
-                        'is_active': player.is_active
+                        'is_active': player.is_active,
+                        'is_all_in': player.is_all_in
                     }
                 )
                 all_valid = False

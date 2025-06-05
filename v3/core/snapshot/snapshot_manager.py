@@ -218,7 +218,11 @@ class SnapshotManager:
         self._snapshot_history = self._snapshot_history[to_remove_count:]
     
     def _create_player_snapshots(self, players: Dict[str, Any]) -> tuple:
-        """从游戏上下文的玩家信息创建玩家快照"""
+        """从游戏上下文的玩家信息创建玩家快照
+        
+        平衡修复：is_active表示"在游戏中且未弃牌"，但增强active_player_position逻辑
+        这保持了原有语义的同时，通过active_player_position确保状态一致性
+        """
         player_snapshots = []
         
         for player_id, player_data in players.items():
@@ -227,13 +231,21 @@ class SnapshotManager:
             if 'hole_cards' in player_data and player_data['hole_cards']:
                 hole_cards = tuple(player_data['hole_cards'])
             
+            # 平衡修复：is_active保持原有语义（在游戏中且未弃牌），
+            # 但通过增强的active_player_position逻辑确保状态一致性
+            base_active = player_data.get('active', False)
+            player_status = player_data.get('status', 'active')
+            
+            # is_active表示"在游戏中且未弃牌"
+            is_in_hand = base_active and player_status not in ['folded', 'out']
+            
             player_snapshot = PlayerSnapshot(
                 player_id=player_id,
                 name=player_data.get('name', player_id),
                 chips=player_data.get('chips', 0),
                 hole_cards=hole_cards,
                 position=player_data.get('position', 0),
-                is_active=player_data.get('is_active', True),
+                is_active=is_in_hand,  # 修复：在游戏中且未弃牌
                 is_all_in=player_data.get('is_all_in', False),
                 current_bet=player_data.get('current_bet', 0),
                 total_bet_this_hand=player_data.get('total_bet_this_hand', 0),
@@ -253,31 +265,71 @@ class SnapshotManager:
         )
     
     def _get_active_player_position(self, game_context: GameContext) -> Optional[int]:
-        """获取当前活跃玩家的位置"""
-        if not game_context.active_player_id:
-            return None
+        """获取当前活跃玩家的位置
         
+        修复：与状态机保持完全一致的可行动性检查逻辑
+        """
+        # 首先尝试使用game_context.active_player_id，但要严格验证
+        if game_context.active_player_id:
+            player_data = game_context.players.get(game_context.active_player_id)
+            if player_data and self._is_player_actionable(game_context, game_context.active_player_id):
+                return player_data.get('position', 0)
+        
+        # 如果active_player_id指向的玩家不活跃，或者没有active_player_id，
+        # 则寻找第一个真正活跃的玩家
         for player_id, player_data in game_context.players.items():
-            if player_id == game_context.active_player_id:
+            if self._is_player_actionable(game_context, player_id):
                 return player_data.get('position', 0)
         
         return None
     
+    def _is_player_actionable(self, game_context: GameContext, player_id: str) -> bool:
+        """检查玩家是否可以行动（与状态机逻辑完全一致）
+        
+        可行动条件：
+        1. 玩家存在于游戏中
+        2. active=True（仍在手牌中）
+        3. chips > 0（有筹码可下注）
+        4. status不是folded/out（未弃牌或出局）
+        
+        注意：all_in玩家虽然active=True，但chips=0，所以不可行动
+        """
+        if player_id not in game_context.players:
+            return False
+            
+        player_data = game_context.players[player_id]
+        
+        return (
+            player_data.get('active', False) and 
+            player_data.get('chips', 0) > 0 and 
+            player_data.get('status', 'active') not in ['folded', 'out']
+        )
+    
     def _restore_players_from_snapshot(self, player_snapshots: tuple) -> Dict[str, Any]:
-        """从玩家快照恢复玩家信息"""
+        """从玩家快照恢复玩家信息
+        
+        修复：正确处理is_active到active字段的映射
+        is_active现在表示"可行动性"，需要正确恢复到GameContext结构
+        """
         players = {}
         
         for player_snapshot in player_snapshots:
+            # 恢复基础active状态：如果玩家可行动，肯定active=True
+            # 如果玩家不可行动，可能是all-in（active=True, chips=0）或者folded（active=False）
+            # 根据is_all_in和chips来判断真实的active状态
+            base_active = player_snapshot.is_active or player_snapshot.is_all_in
+            
             players[player_snapshot.player_id] = {
                 'name': player_snapshot.name,
                 'chips': player_snapshot.chips,
                 'hole_cards': list(player_snapshot.hole_cards),
                 'position': player_snapshot.position,
-                'is_active': player_snapshot.is_active,
+                'active': base_active,  # 修复：正确恢复active状态
                 'is_all_in': player_snapshot.is_all_in,
                 'current_bet': player_snapshot.current_bet,
                 'total_bet_this_hand': player_snapshot.total_bet_this_hand,
-                'last_action': player_snapshot.last_action
+                'last_action': player_snapshot.last_action,
+                'status': 'all_in' if player_snapshot.is_all_in else 'active'  # 确保状态一致
             }
         
         return players

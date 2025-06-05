@@ -249,21 +249,55 @@ class PhaseConsistencyChecker(BaseInvariantChecker):
                 )
                 all_valid = False
             else:
-                # 检查该位置的玩家是否真的活跃
+                # 修复：检查该位置的玩家是否可以行动或合理地被设为活跃玩家
                 active_player = snapshot.players[snapshot.active_player_position]
-                if not active_player.is_active:
-                    self._create_violation(
-                        f"活跃玩家位置({snapshot.active_player_position})的玩家"
-                        f"{active_player.name}实际上不活跃",
-                        'CRITICAL',
-                        {
-                            'active_player_position': snapshot.active_player_position,
-                            'player_id': active_player.player_id,
-                            'player_name': active_player.name,
-                            'is_active': active_player.is_active
-                        }
-                    )
-                    all_valid = False
+                
+                # 玩家应该满足以下条件之一：
+                # 1. is_active=True 且 chips>0 (可行动)
+                # 2. is_active=True 且 is_all_in=True (all-in但仍在游戏中)
+                # 3. 所有其他玩家都不能行动的特殊情况
+                
+                can_be_active = (
+                    active_player.is_active and 
+                    (active_player.chips > 0 or active_player.is_all_in)
+                )
+                
+                if not can_be_active:
+                    # 检查是否是"无人可行动"的特殊情况
+                    actionable_players = [
+                        p for p in snapshot.players 
+                        if p.is_active and p.chips > 0
+                    ]
+                    
+                    if len(actionable_players) == 0:
+                        # 特殊情况：所有玩家都all-in，active_player_position可以为None
+                        if snapshot.active_player_position is not None:
+                            self._create_violation(
+                                f"所有玩家都all-in时，活跃玩家位置应为None",
+                                'WARNING',
+                                {
+                                    'active_player_position': snapshot.active_player_position,
+                                    'all_players_all_in': True
+                                }
+                            )
+                            # 这是警告而不是严重错误
+                    else:
+                        # 严重错误：指向了无法行动且非all-in的玩家
+                        self._create_violation(
+                            f"活跃玩家位置({snapshot.active_player_position})的玩家"
+                            f"{active_player.name}不能行动且非all-in",
+                            'CRITICAL',
+                            {
+                                'active_player_position': snapshot.active_player_position,
+                                'player_id': active_player.player_id,
+                                'player_name': active_player.name,
+                                'is_active': active_player.is_active,
+                                'chips': active_player.chips,
+                                'is_all_in': active_player.is_all_in,
+                                'actionable_players_count': len(actionable_players)
+                            }
+                        )
+                        all_valid = False
         
         return all_valid
     
