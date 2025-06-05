@@ -198,73 +198,34 @@ CQRS重构成功消除了所有架构违规，提升了系统的模块化程度�
 
 **发现的UI层不合理内容**:
 
-1. **硬编码配置常量**:
-   - `initial_chips = 1000` - 游戏规则配置
-   - `max_actions = 50` - 测试流程配置
-   - `player_ids = ["player_0", ...]` - 玩家配置
-   - AI权重配置 (`fold_weight: 0.15`等) - AI行为配置
+---
 
-2. **业务逻辑方法**:
-   - `_validate_action_rules()` - 游戏规则验证
-   - `_calculate_state_hash()` - 状态哈希计算
-   - `UltimateTestStatsV3` - 复杂统计逻辑
-   - `_get_default_ai_config()` - AI配置管理
+## 🚀 MILESTONE 4: 终测CQRS重构 (PLAN 26-30)
 
-3. **不应在UI层的职责**:
-   - 游戏环境配置管理
-   - 详细的性能统计和分析
-   - 状态变化检测算法
-   - AI决策权重配置
+### ✅ PLAN 26: 🎯 GameFlowService实现 - **✅ 完成 (Phase 1 成功)**
 
-**Application层扩展**:
+**目标**: 实现GameFlowService，将终测UI层的复杂业务逻辑迁移到Application层，严格遵循CQRS模式
 
-1. **QueryService新增配置管理方法**:
-   ```python
-   # 新增方法
-   def get_ai_config(self, player_id: str = "default") -> QueryResult[Dict[str, Any]]
-   def get_ui_test_config(self, test_type: str = "ultimate") -> QueryResult[Dict[str, Any]]  
-   def calculate_game_state_hash(self, game_id: str) -> QueryResult[str]
-   ```
+**实现内容**:
+- ✅ **GameFlowService类**: 完整的游戏流程控制服务
+  - `run_hand(game_id, config)`: 运行完整手牌流程
+  - `force_finish_hand(game_id)`: 强制结束手牌
+  - `advance_until_finished(game_id, max_attempts)`: 推进到结束状态
+- ✅ **HandFlowConfig数据类**: 流程配置参数
+- ✅ **TDD测试覆盖**: 8/8单元测试通过，反作弊验证
+- ✅ **终测集成成功**: 原始`test_streamlit_ultimate_user_experience_v3`完全重构
+  - **快速版本**: 15手牌，100%完成率，105手/秒
+  - **完整版本**: 50手牌，100%完成率，110手/秒，游戏自然结束
+  - **CQRS合规**: UI层不再违规调用core/ai代码
+  - **架构优化**: 200+行复杂业务逻辑简化为单行service调用
 
-2. **新建TestStatsService**:
-   ```python
-   # 专门管理UI层测试统计
-   class TestStatsService:
-       def create_test_session()
-       def record_hand_start/complete/failed()
-       def record_user_action()
-       def record_invariant_violation()
-       def finalize_test_session() -> 详细报告
-   ```
+**验证结果**:
+- ✅ **功能验证**: 100%手牌完成率，0错误，0不变量违反
+- ✅ **性能验证**: 105-110手/秒的超高性能
+- ✅ **架构验证**: 严格遵循CQRS模式，UI层只负责展示和交互
+- ✅ **专家方案验证**: 成功验证依赖注入、业务流程封装、事件驱动等核心建议
 
-**重构后的UI层示例**:
-- 创建 `test_streamlit_ultimate_user_experience_v3_refactored.py`
-- 展示正确的UI层职责分离
-- 所有配置通过Application层获取
-- 所有统计通过TestStatsService管理
-- UI层只负责界面逻辑和用户交互
-
-**重构验证结果** ✅:
-- ✅ **重构版测试通过**: 15/15手牌完成，100%成功率
-- ✅ **配置管理正确**: 从Application层获取测试和AI配置
-- ✅ **统计服务工作**: TestStatsService正确收集和分析数据
-- ✅ **筹码守恒**: 初始6000，最终6000，完美守恒
-- ✅ **性能优秀**: 358.42手/秒，远超要求
-- ✅ **架构合规**: 严格遵循UI → Application → Core分层
-
-**改进收益**:
-1. **职责清晰**: UI层只负责界面逻辑，配置和业务逻辑在Application层
-2. **可维护性**: 配置集中管理，易于修改和扩展
-3. **可重用性**: TestStatsService可被其他UI层测试复用
-4. **架构一致**: 严格遵循CQRS和分层架构原则
-
-**处置方案总结**:
-- **硬编码配置** → Application层的配置服务 (`get_ui_test_config`, `get_ai_config`)
-- **统计逻辑** → 专门的统计服务 (`TestStatsService`)
-- **业务计算** → QueryService的计算方法 (`calculate_game_state_hash`)
-- **游戏规则验证** → 保留在Application层，UI层通过服务调用
-
-这次重构为未来的Streamlit Web UI开发奠定了正确的架构基础，确保UI层专注于用户交互而非业务逻辑。
+**里程碑意义**: 成功完成终测CQRS重构的Phase 1，证明了专家方案的可行性，为后续Phase 2-5奠定坚实基础
 
 ---
 

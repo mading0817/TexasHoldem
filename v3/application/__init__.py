@@ -31,6 +31,7 @@ from .types import (
 from .command_service import GameCommandService, GameSession
 from .query_service import GameQueryService, GameStateSnapshot, PlayerInfo, AvailableActions
 from .test_stats_service import TestStatsService, TestStatsSnapshot
+from .game_flow_service import GameFlowService, HandFlowConfig
 
 __version__ = "3.0.0"
 
@@ -49,6 +50,7 @@ __all__ = [
     "GameCommandService",
     "GameQueryService",
     "TestStatsService",
+    "GameFlowService",
     
     # 数据类
     "GameSession",
@@ -56,4 +58,5 @@ __all__ = [
     "PlayerInfo",
     "AvailableActions",
     "TestStatsSnapshot",
+    "HandFlowConfig",
 ] 
