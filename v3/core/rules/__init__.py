@@ -12,6 +12,11 @@ Classes:
     RuleConfiguration: 规则配置
 """
 
+from .types import CorePermissibleActionsData, ActionConstraints
+from .action_logic import determine_permissible_actions
+
 __all__ = [
-    # 将在实现后添加具体的类和函数
+    'CorePermissibleActionsData',
+    'ActionConstraints', 
+    'determine_permissible_actions'
 ] 

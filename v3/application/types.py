@@ -90,6 +90,11 @@ class QueryResult(Generic[T]):
             message=message,
             error_code=error_code
         )
+    
+    @classmethod
+    def business_rule_violation(cls, message: str, error_code: Optional[str] = None) -> 'QueryResult[T]':
+        """创建业务规则违反结果"""
+        return cls.failure_result(message, error_code, ResultStatus.BUSINESS_RULE_VIOLATION)
 
 
 @dataclass(frozen=True)

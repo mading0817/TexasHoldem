@@ -103,7 +103,12 @@ class GameFlowService:
             if not flow_result.success:
                 return flow_result
             
-            # 确保手牌正确结束
+            # 检查是否需要玩家行动
+            if flow_result.data and flow_result.data.get('requires_player_action', False):
+                # 需要玩家行动，直接返回结果，不要强制结束手牌
+                return flow_result
+            
+            # 只有在不需要玩家行动时，才确保手牌正确结束
             finish_result = self._ensure_hand_finished(game_id)
             if not finish_result.success:
                 return finish_result

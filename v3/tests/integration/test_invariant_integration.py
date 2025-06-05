@@ -95,7 +95,7 @@ class TestInvariantIntegration:
                 timestamp=1.0
             )]
         )
-        mock_invariants_class.create_for_game.return_value = mock_invariants
+        mock_invariants_class.return_value = mock_invariants
         
         service = GameCommandService(enable_invariant_checks=True)
         

@@ -143,6 +143,9 @@ class ConfigService:
             # UI测试配置
             self._configs[ConfigType.UI_TEST] = {
                 'ultimate': UITestConfig(
+                    # PLAN 47要求：模拟6个玩家对战，每人筹码1000，小盲5，大盲10
+                    default_player_ids=["player_0", "player_1", "player_2", "player_3", "player_4", "player_5"],
+                    initial_chips_per_player=1000,
                     max_actions_per_hand=100,
                     enable_detailed_logging=True,
                     timeout_per_hand_seconds=60

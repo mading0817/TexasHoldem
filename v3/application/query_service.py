@@ -64,20 +64,28 @@ class AvailableActions:
 class GameQueryService:
     """游戏查询服务"""
     
-    def __init__(self, command_service=None, event_bus: Optional[EventBus] = None):
+    def __init__(self, command_service=None, event_bus: Optional[EventBus] = None, 
+                 config_service=None):
         """
-        初始化查询服务
+        初始化查询服务（PLAN 37：注入ConfigService）
         
         Args:
             command_service: 命令服务实例，用于访问游戏会话
             event_bus: 事件总线，如果为None则使用全局事件总线
+            config_service: 配置服务，如果为None则创建新实例
         """
         self._command_service = command_service
         self._event_bus = event_bus or get_event_bus()
+        
+        # PLAN 37: 依赖注入ConfigService
+        if config_service is None:
+            from .config_service import ConfigService
+            config_service = ConfigService()
+        self._config_service = config_service
     
     def get_game_state(self, game_id: str) -> QueryResult[GameStateSnapshot]:
         """
-        获取游戏状态快照
+        获取游戏状态快照 (PLAN 40: 使用快照接口)
         
         Args:
             game_id: 游戏ID
@@ -85,44 +93,18 @@ class GameQueryService:
         Returns:
             查询结果，包含游戏状态快照
         """
-        try:
-            if self._command_service is None:
-                return QueryResult.failure_result(
-                    "命令服务未初始化",
-                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
-                )
-            
-            # 获取游戏会话
-            session = self._command_service._get_session(game_id)
-            if session is None:
-                return QueryResult.failure_result(
-                    f"游戏 {game_id} 不存在",
-                    error_code="GAME_NOT_FOUND"
-                )
-            
-            # 创建状态快照
-            snapshot = GameStateSnapshot(
-                game_id=session.context.game_id,
-                current_phase=session.state_machine.current_phase.name,
-                players=session.context.players.copy(),
-                community_cards=session.context.community_cards.copy(),
-                pot_total=session.context.pot_total,
-                current_bet=session.context.current_bet,
-                active_player_id=session.context.active_player_id,
-                timestamp=session.last_updated
-            )
-            
-            return QueryResult.success_result(snapshot)
-            
-        except Exception as e:
+        if self._command_service is None:
             return QueryResult.failure_result(
-                f"获取游戏状态失败: {str(e)}",
-                error_code="GET_GAME_STATE_FAILED"
+                "命令服务未初始化",
+                error_code="COMMAND_SERVICE_NOT_INITIALIZED"
             )
+        
+        # PLAN 40: 使用命令服务的快照接口而不是直接访问session
+        return self._command_service.get_game_state_snapshot(game_id)
     
     def get_player_info(self, game_id: str, player_id: str) -> QueryResult[PlayerInfo]:
         """
-        获取玩家信息
+        获取玩家信息 (PLAN 40: 使用快照接口)
         
         Args:
             game_id: 游戏ID
@@ -131,48 +113,43 @@ class GameQueryService:
         Returns:
             查询结果，包含玩家信息
         """
-        try:
-            if self._command_service is None:
-                return QueryResult.failure_result(
-                    "命令服务未初始化",
-                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
-                )
-            
-            # 获取游戏会话
-            session = self._command_service._get_session(game_id)
-            if session is None:
-                return QueryResult.failure_result(
-                    f"游戏 {game_id} 不存在",
-                    error_code="GAME_NOT_FOUND"
-                )
-            
-            # 检查玩家是否存在
-            if player_id not in session.context.players:
-                return QueryResult.failure_result(
-                    f"玩家 {player_id} 不在游戏中",
-                    error_code="PLAYER_NOT_IN_GAME"
-                )
-            
-            player_data = session.context.players[player_id]
-            player_info = PlayerInfo(
-                player_id=player_id,
-                chips=player_data.get('chips', 0),
-                active=player_data.get('active', False),
-                current_bet=player_data.get('current_bet', 0),
-                hole_cards=player_data.get('hole_cards', [])
-            )
-            
-            return QueryResult.success_result(player_info)
-            
-        except Exception as e:
+        if self._command_service is None:
             return QueryResult.failure_result(
-                f"获取玩家信息失败: {str(e)}",
-                error_code="GET_PLAYER_INFO_FAILED"
+                "命令服务未初始化",
+                error_code="COMMAND_SERVICE_NOT_INITIALIZED"
             )
+        
+        # PLAN 40: 使用快照接口获取游戏状态
+        snapshot_result = self._command_service.get_game_state_snapshot(game_id)
+        if not snapshot_result.success:
+            return QueryResult.failure_result(
+                snapshot_result.message,
+                error_code=snapshot_result.error_code
+            )
+        
+        snapshot = snapshot_result.data
+        
+        # 检查玩家是否存在
+        if player_id not in snapshot.players:
+            return QueryResult.failure_result(
+                f"玩家 {player_id} 不在游戏中",
+                error_code="PLAYER_NOT_IN_GAME"
+            )
+        
+        player_data = snapshot.players[player_id]
+        player_info = PlayerInfo(
+            player_id=player_id,
+            chips=player_data.get('chips', 0),
+            active=player_data.get('active', False),
+            current_bet=player_data.get('current_bet', 0),
+            hole_cards=player_data.get('hole_cards', [])
+        )
+        
+        return QueryResult.success_result(player_info)
     
     def get_available_actions(self, game_id: str, player_id: str) -> QueryResult[AvailableActions]:
         """
-        获取玩家可用行动
+        获取玩家可用行动 (PLAN 44: 使用核心层逻辑)
         
         Args:
             game_id: 游戏ID
@@ -181,31 +158,66 @@ class GameQueryService:
         Returns:
             查询结果，包含可用行动
         """
+        if self._command_service is None:
+            return QueryResult.failure_result(
+                "命令服务未初始化",
+                error_code="COMMAND_SERVICE_NOT_INITIALIZED"
+            )
+        
         try:
-            if self._command_service is None:
+            # PLAN 40: 使用快照接口获取游戏状态
+            snapshot_result = self._command_service.get_game_state_snapshot(game_id)
+            if not snapshot_result.success:
                 return QueryResult.failure_result(
-                    "命令服务未初始化",
-                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
+                    snapshot_result.message,
+                    error_code=snapshot_result.error_code
                 )
             
-            # 获取游戏会话
-            session = self._command_service._get_session(game_id)
-            if session is None:
-                return QueryResult.failure_result(
-                    f"游戏 {game_id} 不存在",
-                    error_code="GAME_NOT_FOUND"
-                )
+            snapshot = snapshot_result.data
             
             # 检查玩家是否存在
-            if player_id not in session.context.players:
+            if player_id not in snapshot.players:
                 return QueryResult.failure_result(
                     f"玩家 {player_id} 不在游戏中",
                     error_code="PLAYER_NOT_IN_GAME"
                 )
+            # PLAN 44: 使用核心层逻辑确定可用行动
+            from ..core.state_machine import GameContext, GamePhase
+            from ..core.rules import determine_permissible_actions
             
-            # 根据当前阶段和玩家状态确定可用行动
-            available_actions = self._determine_available_actions(
-                session.context, player_id
+            # 构建GameContext用于核心层逻辑
+            # 需要将快照中的阶段字符串转换为枚举
+            current_phase_enum = None
+            for phase in GamePhase:
+                if phase.name == snapshot.current_phase:
+                    current_phase_enum = phase
+                    break
+            
+            if current_phase_enum is None:
+                return QueryResult.failure_result(
+                    f"无效的游戏阶段: {snapshot.current_phase}",
+                    error_code="INVALID_GAME_PHASE"
+                )
+            
+            game_context = GameContext(
+                game_id=snapshot.game_id,
+                current_phase=current_phase_enum,
+                players=snapshot.players,
+                community_cards=snapshot.community_cards,
+                pot_total=snapshot.pot_total,
+                current_bet=snapshot.current_bet,
+                active_player_id=snapshot.active_player_id
+            )
+            
+            # 调用核心层逻辑获取可用行动
+            core_actions_data = determine_permissible_actions(game_context, player_id)
+            
+            # 转换为应用层DTO
+            available_actions = AvailableActions(
+                player_id=player_id,
+                actions=core_actions_data.get_action_types_as_strings(),
+                min_bet=core_actions_data.constraints.min_call_amount,
+                max_bet=core_actions_data.constraints.max_raise_amount
             )
             
             return QueryResult.success_result(available_actions)
@@ -280,7 +292,7 @@ class GameQueryService:
     
     def get_phase_info(self, game_id: str) -> QueryResult[Dict[str, Any]]:
         """
-        获取当前阶段信息
+        获取当前阶段信息 (PLAN 40: 使用快照接口)
         
         Args:
             game_id: 游戏ID
@@ -288,94 +300,43 @@ class GameQueryService:
         Returns:
             查询结果，包含阶段信息
         """
-        try:
-            if self._command_service is None:
-                return QueryResult.failure_result(
-                    "命令服务未初始化",
-                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
-                )
-            
-            # 获取游戏会话
-            session = self._command_service._get_session(game_id)
-            if session is None:
-                return QueryResult.failure_result(
-                    f"游戏 {game_id} 不存在",
-                    error_code="GAME_NOT_FOUND"
-                )
-            
-            phase_info = {
-                'current_phase': session.state_machine.current_phase.name,
-                'transition_history': session.state_machine.transition_history,
-                'can_advance': self._can_advance_phase(session.context),
-                'next_phase': self._get_next_phase(session.state_machine.current_phase)
-            }
-            
-            return QueryResult.success_result(phase_info)
-            
-        except Exception as e:
+        if self._command_service is None:
             return QueryResult.failure_result(
-                f"获取阶段信息失败: {str(e)}",
-                error_code="GET_PHASE_INFO_FAILED"
+                "命令服务未初始化",
+                error_code="COMMAND_SERVICE_NOT_INITIALIZED"
             )
+        
+        # PLAN 40: 使用快照接口获取游戏状态
+        snapshot_result = self._command_service.get_game_state_snapshot(game_id)
+        if not snapshot_result.success:
+            return QueryResult.failure_result(
+                snapshot_result.message,
+                error_code=snapshot_result.error_code
+            )
+        
+        snapshot = snapshot_result.data
+        
+        # 临时：基于快照信息构建阶段信息
+        # TODO: 在PLAN 43中将部分逻辑移到core层
+        from ..core.state_machine import GamePhase
+        current_phase_enum = None
+        for phase in GamePhase:
+            if phase.name == snapshot.current_phase:
+                current_phase_enum = phase
+                break
+        
+        phase_info = {
+            'current_phase': snapshot.current_phase,
+            'transition_history': [],  # 快照中暂无此信息
+            'can_advance': False,  # 临时简化，TODO: 在PLAN 43中实现
+            'next_phase': self._get_next_phase(current_phase_enum) if current_phase_enum else None,
+            'community_cards': snapshot.community_cards,
+            'pot_total': snapshot.pot_total
+        }
+        
+        return QueryResult.success_result(phase_info)
     
-    def _determine_available_actions(self, context: GameContext, player_id: str) -> AvailableActions:
-        """
-        确定玩家可用行动
-        
-        Args:
-            context: 游戏上下文
-            player_id: 玩家ID
-            
-        Returns:
-            可用行动
-        """
-        player_data = context.players[player_id]
-        
-        # 基础行动
-        actions = []
-        
-        # 如果玩家还活跃
-        if player_data.get('active', False):
-            # 根据当前阶段确定可用行动
-            if context.current_phase in [GamePhase.PRE_FLOP, GamePhase.FLOP, GamePhase.TURN, GamePhase.RIVER]:
-                # 总是可以弃牌
-                actions.append('fold')
-                
-                current_bet = context.current_bet
-                player_chips = player_data.get('chips', 0)
-                player_current_bet = player_data.get('current_bet', 0)
-                
-                # 计算需要跟注的金额
-                call_amount = max(0, current_bet - player_current_bet)
-                
-                # 如果当前没有下注，可以过牌或下注
-                if current_bet == 0:
-                    actions.append('check')
-                    if player_chips > 0:
-                        actions.append('raise')  # 第一次下注也算加注
-                else:
-                    # 如果有下注，可以跟注或加注
-                    if player_chips >= call_amount:
-                        actions.append('call')
-                        
-                        # 如果还有足够筹码，可以加注
-                        # 获取大盲注金额作为最小加注增量
-                        big_blind = getattr(context, 'big_blind_amount', 20)  # 默认20
-                        min_raise = big_blind
-                        if player_chips > call_amount + min_raise:
-                            actions.append('raise')
-                
-                # 如果有筹码，总是可以全押
-                if player_chips > 0:
-                    actions.append('all_in')
-        
-        return AvailableActions(
-            player_id=player_id,
-            actions=actions,
-            min_bet=context.current_bet,
-            max_bet=player_data.get('chips', 0)
-        )
-    
+
     def calculate_random_raise_amount(self, game_id: str, player_id: str, 
                                     min_ratio: float = 0.25, max_ratio: float = 2.0) -> QueryResult[int]:
         """
@@ -634,7 +595,7 @@ class GameQueryService:
     
     def is_game_over(self, game_id: str) -> QueryResult[bool]:
         """
-        检查游戏是否已结束
+        检查游戏是否已结束 (PLAN 40: 使用快照接口)
         
         在德州扑克中，游戏在以下情况结束：
         1. 只剩下1个或0个有筹码的玩家
@@ -646,44 +607,43 @@ class GameQueryService:
         Returns:
             查询结果，包含游戏是否已结束的布尔值
         """
-        try:
-            if self._command_service is None:
-                return QueryResult.failure_result(
-                    "命令服务未初始化",
-                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
-                )
-            
-            # 获取游戏会话
-            session = self._command_service._get_session(game_id)
-            if session is None:
-                return QueryResult.failure_result(
-                    f"游戏 {game_id} 不存在",
-                    error_code="GAME_NOT_FOUND"
-                )
-            
-            # 计算有筹码的玩家数量
-            players_with_chips = [
-                player_id for player_id, player_data in session.context.players.items()
-                if player_data.get('chips', 0) > 0
-            ]
-            
-            # 如果少于2个玩家有筹码，游戏结束
-            game_over = len(players_with_chips) < 2
-            
-            result = QueryResult.success_result(game_over)
-            # 手动设置额外数据
-            result.__dict__['data_details'] = {
-                'players_with_chips_count': len(players_with_chips),
-                'players_with_chips': players_with_chips,
-                'reason': 'insufficient_players' if game_over else 'ongoing'
-            }
-            return result
-            
-        except Exception as e:
+        if self._command_service is None:
             return QueryResult.failure_result(
-                f"检查游戏结束状态失败: {str(e)}",
-                error_code="CHECK_GAME_OVER_FAILED"
+                "命令服务未初始化",
+                error_code="COMMAND_SERVICE_NOT_INITIALIZED"
             )
+        
+        # PLAN 40: 使用快照接口获取游戏状态
+        snapshot_result = self._command_service.get_game_state_snapshot(game_id)
+        if not snapshot_result.success:
+            return QueryResult.failure_result(
+                snapshot_result.message,
+                error_code=snapshot_result.error_code
+            )
+        
+        snapshot = snapshot_result.data
+        
+        # 检查是否已经是FINISHED阶段
+        if snapshot.current_phase == "FINISHED":
+            return QueryResult.success_result(True)
+        
+        # 计算有筹码的玩家数量
+        players_with_chips = [
+            player_id for player_id, player_data in snapshot.players.items()
+            if player_data.get('chips', 0) > 0
+        ]
+        
+        # 如果少于2个玩家有筹码，游戏结束
+        game_over = len(players_with_chips) < 2
+        
+        result = QueryResult.success_result(game_over)
+        # 手动设置额外数据
+        result.__dict__['data_details'] = {
+            'players_with_chips_count': len(players_with_chips),
+            'players_with_chips': players_with_chips,
+            'reason': 'insufficient_players' if game_over else 'ongoing'
+        }
+        return result
     
     def get_game_winner(self, game_id: str) -> QueryResult[Optional[str]]:
         """
@@ -843,7 +803,15 @@ class GameQueryService:
             # 检查是否是需要玩家行动的阶段
             betting_phases = ["PRE_FLOP", "FLOP", "TURN", "RIVER"]
             if current_phase in betting_phases:
-                # 在下注阶段，如果没有活跃玩家，可能是所有玩家都已行动
+                # 在下注阶段，需要更严格地检查是否所有玩家都已行动
+                # 使用CommandService的内部方法检查是否还有玩家需要行动
+                needs_action = self._command_service._find_players_needing_action(session.context)
+                
+                # 如果还有玩家需要行动，则行动未完成
+                if needs_action:
+                    return QueryResult.success_result(False)
+                
+                # 所有玩家都已行动完毕
                 return QueryResult.success_result(True)
             
             # 其他阶段（如SHOWDOWN），如果没有活跃玩家，认为可以推进
@@ -867,11 +835,10 @@ class GameQueryService:
             查询结果，包含游戏规则配置
         """
         try:
-            # 使用ConfigService获取配置
-            from .config_service import ConfigService, ConfigType
-            config_service = ConfigService()
+            # 使用注入的ConfigService获取配置
+            from .config_service import ConfigType
             
-            config_result = config_service.get_merged_config(
+            config_result = self._config_service.get_merged_config(
                 ConfigType.GAME_RULES, profile
             )
             
@@ -909,16 +876,15 @@ class GameQueryService:
             查询结果，包含AI配置
         """
         try:
-            # 使用ConfigService获取配置
-            from .config_service import ConfigService, ConfigType
-            config_service = ConfigService()
+            # 使用注入的ConfigService获取配置
+            from .config_service import ConfigType
             
             # 根据player_id选择配置配置文件
             profile = "default"
             if player_id in ["aggressive", "conservative"]:
                 profile = player_id
             
-            config_result = config_service.get_merged_config(
+            config_result = self._config_service.get_merged_config(
                 ConfigType.AI_DECISION, profile
             )
             
@@ -941,11 +907,10 @@ class GameQueryService:
             查询结果，包含UI测试配置
         """
         try:
-            # 使用ConfigService获取配置
-            from .config_service import ConfigService, ConfigType
-            config_service = ConfigService()
+            # 使用注入的ConfigService获取配置
+            from .config_service import ConfigType
             
-            config_result = config_service.get_merged_config(
+            config_result = self._config_service.get_merged_config(
                 ConfigType.UI_TEST, test_type
             )
             
@@ -1014,99 +979,5 @@ class GameQueryService:
                 error_code="CALCULATE_STATE_HASH_FAILED"
             )
 
-    def validate_player_action_rules(self, game_id: str, player_id: str, action_type: str, 
-                                   amount: int, state_before, state_after) -> QueryResult[Dict[str, Any]]:
-        """
-        验证玩家行动是否符合德州扑克规则
-        
-        Args:
-            game_id: 游戏ID
-            player_id: 玩家ID
-            action_type: 行动类型
-            amount: 行动金额
-            state_before: 行动前状态
-            state_after: 行动后状态
-            
-        Returns:
-            查询结果，包含验证结果
-        """
-        try:
-            violations = []
-            
-            # 获取玩家状态
-            player_before = state_before.players.get(player_id, {})
-            player_after = state_after.players.get(player_id, {})
-            
-            chips_before = player_before.get('chips', 0)
-            chips_after = player_after.get('chips', 0)
-            bet_before = player_before.get('current_bet', 0)
-            bet_after = player_after.get('current_bet', 0)
-            
-            # 计算筹码变化
-            chips_used = chips_before - chips_after
-            bet_increase = bet_after - bet_before
-            
-            # 根据行动类型验证规则
-            if action_type == 'fold':
-                # 弃牌：筹码不应该减少，下注不应该增加
-                if chips_used != 0:
-                    violations.append(f"弃牌规则异常: {player_id} 弃牌但筹码减少了 {chips_used}")
-                if bet_increase != 0:
-                    violations.append(f"弃牌规则异常: {player_id} 弃牌但下注增加了 {bet_increase}")
-            
-            elif action_type == 'check':
-                # 过牌：筹码和下注都不应该变化
-                if chips_used != 0:
-                    violations.append(f"过牌规则异常: {player_id} 过牌但筹码减少了 {chips_used}")
-                if bet_increase != 0:
-                    violations.append(f"过牌规则异常: {player_id} 过牌但下注增加了 {bet_increase}")
-            
-            elif action_type == 'call':
-                # 跟注：筹码减少应该等于下注增加
-                if chips_used != bet_increase:
-                    violations.append(f"跟注规则异常: {player_id} 筹码减少 {chips_used} 但下注增加 {bet_increase}")
-            
-            elif action_type in ['raise', 'bet']:
-                # 加注/下注：筹码减少应该等于下注增加
-                if chips_used != bet_increase:
-                    violations.append(f"加注规则异常: {player_id} 筹码减少 {chips_used} 但下注增加 {bet_increase}")
-                
-                # 检查最小加注规则 - 只在实际有加注金额时检查
-                if amount > 0:  # 只有当指定了加注金额时才检查最小加注规则
-                    current_bet = state_before.current_bet
-                    rules_result = self.get_game_rules_config(game_id)
-                    big_blind = 100  # 默认值
-                    if rules_result.success:
-                        big_blind = rules_result.data.get('big_blind', 100)
-                    
-                    min_raise = current_bet + big_blind
-                    if amount < min_raise and chips_after > 0:  # 不是全押的情况
-                        violations.append(f"最小加注规则异常: {player_id} 加注金额 {amount}，但最小应为 {min_raise}")
-            
-            elif action_type == 'all_in':
-                # 全押：应该用完所有筹码
-                if chips_after != 0:
-                    violations.append(f"全押规则异常: {player_id} 全押后还剩 {chips_after} 筹码")
-            
-            # 通用筹码守恒检查
-            if chips_used < 0:
-                violations.append(f"筹码异常: {player_id} 筹码增加了 {-chips_used}")
-            
-            # 构建验证结果
-            validation_result = {
-                'is_valid': len(violations) == 0,
-                'violations': violations,
-                'player_id': player_id,
-                'action_type': action_type,
-                'amount': amount,
-                'chips_used': chips_used,
-                'bet_increase': bet_increase
-            }
-            
-            return QueryResult.success_result(validation_result)
-            
-        except Exception as e:
-            return QueryResult.failure_result(
-                f"验证玩家行动规则失败: {str(e)}",
-                error_code="VALIDATE_PLAYER_ACTION_RULES_FAILED"
-            ) 
+    # PLAN 33: 移除验证逻辑 - validate_player_action_rules方法已删除
+    # 验证不是查询服务的职责，已移至ValidationService 

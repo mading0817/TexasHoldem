@@ -43,13 +43,17 @@ class GameCommandService:
     """游戏命令服务"""
     
     def __init__(self, event_bus: Optional[EventBus] = None, 
-                 enable_invariant_checks: bool = True):
+                 enable_invariant_checks: bool = True,
+                 validation_service: Optional['ValidationService'] = None,
+                 config_service: Optional['ConfigService'] = None):
         """
-        初始化命令服务
+        初始化命令服务（PLAN 32：注入ValidationService和ConfigService）
         
         Args:
             event_bus: 事件总线，如果为None则使用全局事件总线
             enable_invariant_checks: 是否启用不变量检查
+            validation_service: 验证服务
+            config_service: 配置服务
         """
         self._event_bus = event_bus or get_event_bus()
         self._sessions: Dict[str, GameSession] = {}
@@ -57,6 +61,12 @@ class GameCommandService:
         self._snapshot_manager = SnapshotManager()
         self._enable_invariant_checks = enable_invariant_checks
         self._game_invariants: Dict[str, GameInvariants] = {}
+        
+        # PLAN 32: 依赖注入ValidationService和ConfigService
+        from .validation_service import ValidationService
+        from .config_service import ConfigService
+        self._validation_service = validation_service or ValidationService(config_service or ConfigService())
+        self._config_service = config_service or ConfigService()
     
     def create_new_game(self, game_id: Optional[str] = None, 
                        player_ids: Optional[List[str]] = None) -> CommandResult:
@@ -82,13 +92,22 @@ class GameCommandService:
                     error_code="GAME_ALREADY_EXISTS"
                 )
             
+            # 从ConfigService获取游戏规则配置
+            game_rules_result = self._config_service.get_game_rules_config()
+            if not game_rules_result.success:
+                return CommandResult.failure_result(
+                    f"获取游戏规则配置失败: {game_rules_result.message}",
+                    error_code="CONFIG_LOAD_FAILED"
+                )
+            game_rules = game_rules_result.data
+            
             # 验证玩家数量
             if player_ids is None:
-                player_ids = [f"player_{i}" for i in range(2)]  # 默认2个玩家
+                player_ids = [f"player_{i}" for i in range(game_rules.min_players)]  # 使用配置的最小玩家数
             
-            if len(player_ids) < 2 or len(player_ids) > 10:
+            if len(player_ids) < game_rules.min_players or len(player_ids) > game_rules.max_players:
                 return CommandResult.validation_error(
-                    f"玩家数量必须在2-10之间，当前: {len(player_ids)}",
+                    f"玩家数量必须在{game_rules.min_players}-{game_rules.max_players}之间，当前: {len(player_ids)}",
                     error_code="INVALID_PLAYER_COUNT"
                 )
             
@@ -98,7 +117,7 @@ class GameCommandService:
             players_dict = {}
             for i, pid in enumerate(player_ids):
                 players_dict[pid] = {
-                    'chips': 1000, 
+                    'chips': game_rules.initial_chips,  # 使用配置的初始筹码
                     'active': True, 
                     'position': i  # 分配序列位置：0, 1, 2, 3, 4, 5
                 }
@@ -110,8 +129,8 @@ class GameCommandService:
                 community_cards=[],
                 pot_total=0,
                 current_bet=0,
-                small_blind=50,  # 设置小盲注
-                big_blind=100    # 设置大盲注
+                small_blind=game_rules.small_blind,  # 使用配置的小盲注
+                big_blind=game_rules.big_blind       # 使用配置的大盲注
             )
             
             # 创建游戏会话
@@ -132,15 +151,15 @@ class GameCommandService:
                 
                 self._game_invariants[game_id] = GameInvariants(
                     initial_total_chips=initial_total_chips,
-                    min_raise_multiplier=2.0
+                    min_raise_multiplier=game_rules.min_raise_multiplier  # 使用配置的最小加注倍数
                 )
             
             # 发布游戏开始事件
             event = GameStartedEvent.create(
                 game_id=game_id,
                 player_ids=player_ids,
-                small_blind=50,  # 默认小盲注
-                big_blind=100    # 默认大盲注
+                small_blind=game_rules.small_blind,  # 使用配置的小盲注
+                big_blind=game_rules.big_blind       # 使用配置的大盲注
             )
             self._event_bus.publish(event)
             
@@ -374,83 +393,38 @@ class GameCommandService:
                     error_code="GAME_NOT_FOUND"
                 )
             
-            # 验证玩家ID
-            if player_id not in session.context.players:
+            # PLAN 32: 使用ValidationService进行详细业务规则验证
+            validation_result = self._validation_service.validate_player_action(
+                session.context, player_id, action
+            )
+            
+            if not validation_result.success:
                 return CommandResult.validation_error(
-                    f"玩家 {player_id} 不在游戏中",
-                    error_code="PLAYER_NOT_IN_GAME"
+                    f"玩家行动验证失败: {validation_result.message}",
+                    error_code="VALIDATION_SERVICE_FAILED"
                 )
             
-            # 德州扑克规则验证
-            player_data = session.context.players[player_id]
-            
-            # 1. 验证0筹码玩家不能参与行动
-            if player_data.get('chips', 0) == 0:
-                return CommandResult.business_rule_violation(
-                    f"玩家 {player_id} 筹码为0，不能参与行动",
-                    error_code="ZERO_CHIPS_CANNOT_ACT"
-                )
-            
-            # 2. 验证All-In玩家不能再进行主动行动
-            if player_data.get('status') == 'all_in':
-                return CommandResult.business_rule_violation(
-                    f"玩家 {player_id} 已经All-In，不能再进行行动",
-                    error_code="ALL_IN_CANNOT_ACT"
-                )
-            
-            # 3. 验证玩家是否处于活跃状态
-            if not player_data.get('active', False):
-                return CommandResult.business_rule_violation(
-                    f"玩家 {player_id} 不处于活跃状态，不能行动",
-                    error_code="INACTIVE_PLAYER_CANNOT_ACT"
-                )
-            
-            # 4. 验证行动类型
-            valid_actions = ['fold', 'call', 'raise', 'check', 'all_in']
-            if action.action_type not in valid_actions:
-                return CommandResult.validation_error(
-                    f"无效的行动类型: {action.action_type}",
-                    error_code="INVALID_ACTION_TYPE"
-                )
-            
-            # 5. 验证下注金额
-            if action.action_type in ['raise', 'all_in'] and action.amount <= 0:
-                return CommandResult.validation_error(
-                    f"下注金额必须大于0: {action.amount}",
-                    error_code="INVALID_BET_AMOUNT"
-                )
-            
-            # 6. 验证玩家是否有足够筹码进行下注
-            if action.action_type == 'call':
-                # 对于跟注，计算实际需要的筹码
-                current_bet = player_data.get('current_bet', 0)
-                need_to_call = session.context.current_bet - current_bet
-                if need_to_call > player_data.get('chips', 0):
-                    # 筹码不足跟注，但可以全下
-                    pass  # 允许继续，状态机会自动处理为全下
-            elif action.action_type == 'raise':
-                # 对于加注，验证是否有足够筹码
-                current_bet = player_data.get('current_bet', 0)
-                need_to_bet = action.amount - current_bet
-                if need_to_bet > player_data.get('chips', 0):
+            validation_data = validation_result.data
+            if not validation_data.is_valid:
+                # 根据ValidationResult中的详细信息返回适当的错误
+                errors = validation_data.errors
+                if errors:
+                    first_error = errors[0]
+                    if first_error.error_type in ["invalid_action", "invalid_amount"]:
+                        return CommandResult.validation_error(
+                            first_error.message,
+                            error_code=first_error.error_type.upper()
+                        )
+                    else:
+                        return CommandResult.business_rule_violation(
+                            first_error.message,
+                            error_code=first_error.error_type.upper()
+                        )
+                else:
                     return CommandResult.business_rule_violation(
-                        f"玩家 {player_id} 筹码不足，无法加注到 {action.amount}",
-                        error_code="INSUFFICIENT_CHIPS"
+                        "玩家行动不符合游戏规则",
+                        error_code="VALIDATION_FAILED"
                     )
-            elif action.action_type == 'all_in':
-                # 全下不需要验证筹码数量，只要有筹码就可以
-                if player_data.get('chips', 0) <= 0:
-                    return CommandResult.business_rule_violation(
-                        f"玩家 {player_id} 没有筹码，无法全下",
-                        error_code="NO_CHIPS_FOR_ALL_IN"
-                    )
-            
-            # 7. 验证是否轮到该玩家行动
-            if session.context.active_player_id and session.context.active_player_id != player_id:
-                return CommandResult.business_rule_violation(
-                    f"当前轮到玩家 {session.context.active_player_id} 行动，不是 {player_id}",
-                    error_code="NOT_PLAYER_TURN"
-                )
             
             # 处理玩家行动
             action_dict = action.to_dict()
@@ -634,6 +608,51 @@ class GameCommandService:
     def get_active_games(self) -> List[str]:
         """获取活跃游戏列表"""
         return list(self._sessions.keys())
+    
+    def get_game_state_snapshot(self, game_id: str) -> 'QueryResult[GameStateSnapshot]':
+        """
+        获取游戏状态快照 (PLAN 39: 只读状态快照接口)
+        
+        该方法为查询服务提供解耦的状态访问接口，返回不可变的状态快照。
+        
+        Args:
+            game_id: 游戏ID
+            
+        Returns:
+            QueryResult[GameStateSnapshot]: 查询结果，包含游戏状态快照
+        """
+        try:
+            # 导入必要的类型
+            from .types import QueryResult
+            from .query_service import GameStateSnapshot
+            
+            # 获取游戏会话
+            session = self._get_session(game_id)
+            if session is None:
+                return QueryResult.business_rule_violation(
+                    f"游戏 {game_id} 不存在",
+                    error_code="GAME_NOT_FOUND"
+                )
+            
+            # 创建不可变的状态快照（只复制必要数据，避免暴露内部对象）
+            snapshot = GameStateSnapshot(
+                game_id=session.context.game_id,
+                current_phase=session.state_machine.current_phase.name,
+                players=session.context.players.copy(),  # 浅拷贝玩家数据
+                community_cards=session.context.community_cards.copy(),  # 浅拷贝公共牌
+                pot_total=session.context.pot_total,
+                current_bet=session.context.current_bet,
+                active_player_id=session.context.active_player_id,
+                timestamp=session.last_updated
+            )
+            
+            return QueryResult.success_result(snapshot)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"获取游戏状态快照失败: {str(e)}",
+                error_code="GET_GAME_STATE_SNAPSHOT_FAILED"
+            )
     
     def _verify_game_invariants(self, game_id: str, operation_context: str = "游戏操作") -> None:
         """

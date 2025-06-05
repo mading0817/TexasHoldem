@@ -12,11 +12,14 @@ ValidationService - 验证服务
 """
 
 import logging
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 
 from .types import QueryResult
 from .config_service import ConfigService, GameRulesConfig
+
+if TYPE_CHECKING:
+    from .types import PlayerAction
 
 
 @dataclass
@@ -80,21 +83,17 @@ class ValidationService:
             self.logger.error(f"加载验证规则失败: {e}")
             self.game_rules = GameRulesConfig()
     
-    def validate_player_action_rules(self, 
-                                   player_id: str, 
-                                   action_type: str, 
-                                   amount: int,
-                                   state_before: Any,
-                                   state_after: Any) -> QueryResult[ValidationResult]:
+    def validate_player_action(self, 
+                             game_context: Any,
+                             player_id: str, 
+                             player_action: 'PlayerAction') -> QueryResult[ValidationResult]:
         """
-        验证玩家行动是否符合德州扑克规则
+        验证玩家行动是否符合德州扑克规则（PLAN 31：重命名为更清晰的名称）
         
         Args:
+            game_context: 游戏上下文（由命令服务提供）
             player_id: 玩家ID
-            action_type: 行动类型 (fold, check, call, raise, all_in)
-            amount: 行动金额
-            state_before: 行动前游戏状态
-            state_after: 行动后游戏状态
+            player_action: 玩家行动详细信息
             
         Returns:
             查询结果，包含验证结果
@@ -104,42 +103,48 @@ class ValidationService:
             warnings = []
             checks_performed = 0
             
-            # 获取玩家状态
-            player_before = state_before.players.get(player_id, {})
-            player_after = state_after.players.get(player_id, {})
+            # 从PlayerAction获取行动信息
+            action_type = player_action.action_type
+            amount = player_action.amount
             
-            chips_before = player_before.get('chips', 0)
-            chips_after = player_after.get('chips', 0)
-            bet_before = player_before.get('current_bet', 0)
-            bet_after = player_after.get('current_bet', 0)
+            # 获取玩家当前状态
+            player_data = game_context.players.get(player_id, {})
+            player_chips = player_data.get('chips', 0)
+            current_bet = player_data.get('current_bet', 0)
             
-            # 1. 验证基本行动规则
+            # 1. 验证玩家是否有资格行动
             checks_performed += 1
-            action_validation = self._validate_action_type(action_type, amount, chips_before, state_before)
+            eligibility_validation = self._validate_player_action_eligibility(
+                player_id, player_data, game_context
+            )
+            if not eligibility_validation.is_valid:
+                errors.extend(eligibility_validation.errors)
+            
+            # 2. 验证基本行动规则
+            checks_performed += 1
+            action_validation = self._validate_action_type(action_type, amount, player_chips, game_context)
             if not action_validation.is_valid:
                 errors.extend(action_validation.errors)
             
-            # 2. 验证筹码变化
+            # 3. 验证下注规则（使用从ConfigService获取的规则）
             checks_performed += 1
-            chips_validation = self._validate_chips_change(
-                action_type, amount, chips_before, chips_after, bet_before, bet_after
-            )
-            if not chips_validation.is_valid:
-                errors.extend(chips_validation.errors)
-            
-            # 3. 验证下注规则
-            checks_performed += 1
-            betting_validation = self._validate_betting_rules(
-                action_type, amount, bet_before, bet_after, state_before.current_bet
+            betting_validation = self._validate_betting_rules_enhanced(
+                action_type, amount, current_bet, game_context.current_bet, player_chips
             )
             if not betting_validation.is_valid:
                 errors.extend(betting_validation.errors)
             
             # 4. 验证阶段规则
             checks_performed += 1
-            phase_validation = self._validate_phase_rules(action_type, state_before.current_phase)
+            phase_validation = self._validate_phase_rules(action_type, game_context.current_phase)
             if not phase_validation.is_valid:
                 errors.extend(phase_validation.errors)
+            
+            # 5. 验证轮次规则
+            checks_performed += 1
+            turn_validation = self._validate_turn_rules(player_id, game_context)
+            if not turn_validation.is_valid:
+                errors.extend(turn_validation.errors)
             
             result = ValidationResult(
                 is_valid=len(errors) == 0,
@@ -310,19 +315,164 @@ class ValidationService:
         
         return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=[], rule_checks_performed=1)
     
-    def _validate_phase_rules(self, action_type: str, current_phase: str) -> ValidationResult:
+    def _validate_phase_rules(self, action_type: str, current_phase) -> ValidationResult:
         """验证阶段规则"""
         errors = []
         
+        # 将GamePhase枚举转换为字符串进行比较
+        if hasattr(current_phase, 'name'):
+            phase_name = current_phase.name
+        else:
+            phase_name = str(current_phase)
+        
         # 检查当前阶段是否允许玩家行动
-        if current_phase not in self.game_rules.betting_phases:
+        if phase_name not in self.game_rules.betting_phases:
             errors.append(ValidationError(
                 rule_name="phase_allows_betting",
                 error_type="invalid_phase_action",
-                message=f"当前阶段({current_phase})不允许玩家行动",
+                message=f"当前阶段({phase_name})不允许玩家行动",
                 expected_value=self.game_rules.betting_phases,
-                actual_value=current_phase
+                actual_value=phase_name
             ))
+        
+        return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=[], rule_checks_performed=1)
+    
+    def _validate_player_action_eligibility(self, player_id: str, player_data: Dict[str, Any], 
+                                           game_context: Any) -> ValidationResult:
+        """验证玩家是否有资格行动"""
+        errors = []
+        
+        # 验证玩家是否在游戏中
+        if not player_data:
+            errors.append(ValidationError(
+                rule_name="player_exists",
+                error_type="player_not_found",
+                message=f"玩家 {player_id} 不在游戏中",
+                expected_value="exists",
+                actual_value="not_found"
+            ))
+            return ValidationResult(is_valid=False, errors=errors, warnings=[], rule_checks_performed=1)
+        
+        # 验证玩家是否处于活跃状态
+        if not player_data.get('active', False):
+            errors.append(ValidationError(
+                rule_name="player_active",
+                error_type="inactive_player",
+                message=f"玩家 {player_id} 不处于活跃状态",
+                expected_value=True,
+                actual_value=player_data.get('active', False)
+            ))
+        
+        # 验证玩家是否有筹码（除了fold行动）
+        player_chips = player_data.get('chips', 0)
+        if player_chips <= 0:
+            errors.append(ValidationError(
+                rule_name="player_has_chips",
+                error_type="no_chips",
+                message=f"玩家 {player_id} 没有筹码",
+                expected_value=">0",
+                actual_value=player_chips
+            ))
+        
+        # 验证玩家状态（不是all_in状态，除了特殊情况）
+        player_status = player_data.get('status', 'active')
+        if player_status == 'all_in':
+            errors.append(ValidationError(
+                rule_name="player_not_all_in",
+                error_type="already_all_in",
+                message=f"玩家 {player_id} 已经All-In，不能再行动",
+                expected_value="active",
+                actual_value=player_status
+            ))
+        
+        return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=[], rule_checks_performed=1)
+    
+    def _validate_turn_rules(self, player_id: str, game_context: Any) -> ValidationResult:
+        """验证轮次规则"""
+        errors = []
+        
+        # 验证是否轮到该玩家
+        if hasattr(game_context, 'active_player_id') and game_context.active_player_id:
+            if game_context.active_player_id != player_id:
+                errors.append(ValidationError(
+                    rule_name="player_turn",
+                    error_type="not_player_turn",
+                    message=f"当前轮到玩家 {game_context.active_player_id}，不是 {player_id}",
+                    expected_value=game_context.active_player_id,
+                    actual_value=player_id
+                ))
+        
+        return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=[], rule_checks_performed=1)
+    
+    def _validate_betting_rules_enhanced(self, action_type: str, amount: int,
+                                       current_player_bet: int, game_current_bet: int,
+                                       player_chips: int) -> ValidationResult:
+        """增强版下注规则验证（使用从ConfigService获取的规则）"""
+        errors = []
+        
+        if action_type == "call":
+            # Call的金额应该等于当前下注减去玩家已下注的金额
+            expected_call_amount = max(0, game_current_bet - current_player_bet)
+            if amount != expected_call_amount:
+                # 检查是否是筹码不足的情况，如果是则应该建议all-in
+                if player_chips < expected_call_amount and amount == player_chips:
+                    # 这是合法的，玩家筹码不足跟注，相当于all-in
+                    pass
+                else:
+                    errors.append(ValidationError(
+                        rule_name="call_amount_correct",
+                        error_type="incorrect_call_amount",
+                        message=f"Call金额不正确，期望 {expected_call_amount}，实际 {amount}",
+                        expected_value=expected_call_amount,
+                        actual_value=amount
+                    ))
+        
+        elif action_type == "raise":
+            # 加注金额验证
+            total_bet_after_raise = current_player_bet + amount
+            
+            # 最小加注规则：新的总下注至少是当前下注的 min_raise_multiplier 倍
+            min_total_bet = game_current_bet + self.game_rules.big_blind
+            if total_bet_after_raise < min_total_bet and player_chips > amount:  # 不是all-in的情况
+                errors.append(ValidationError(
+                    rule_name="minimum_raise_rule",
+                    error_type="insufficient_raise",
+                    message=f"加注后总下注 {total_bet_after_raise} 低于最小要求 {min_total_bet}",
+                    expected_value=min_total_bet,
+                    actual_value=total_bet_after_raise
+                ))
+            
+            # 验证玩家有足够筹码
+            if amount > player_chips:
+                errors.append(ValidationError(
+                    rule_name="sufficient_chips_for_raise",
+                    error_type="insufficient_chips",
+                    message=f"玩家筹码 {player_chips} 不足以加注 {amount}",
+                    expected_value=f">= {amount}",
+                    actual_value=player_chips
+                ))
+        
+        elif action_type == "all_in":
+            # All-in应该使用所有剩余筹码
+            if amount != player_chips:
+                errors.append(ValidationError(
+                    rule_name="all_in_amount_equals_chips",
+                    error_type="invalid_all_in_amount",
+                    message=f"All-in金额必须等于玩家剩余筹码",
+                    expected_value=player_chips,
+                    actual_value=amount
+                ))
+        
+        elif action_type == "check":
+            # Check的前提是当前没有下注，或者玩家已经跟上了当前下注
+            if game_current_bet > current_player_bet:
+                errors.append(ValidationError(
+                    rule_name="check_prerequisite",
+                    error_type="cannot_check_with_bet",
+                    message=f"当前有下注 {game_current_bet}，玩家已下注 {current_player_bet}，不能check",
+                    expected_value=current_player_bet,
+                    actual_value=game_current_bet
+                ))
         
         return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=[], rule_checks_performed=1)
     

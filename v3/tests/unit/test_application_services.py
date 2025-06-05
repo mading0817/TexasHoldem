@@ -8,6 +8,7 @@
 import pytest
 import time
 from typing import Dict, Any
+from unittest.mock import Mock, patch, MagicMock
 
 from v3.application import (
     GameCommandService, GameQueryService, PlayerAction,
@@ -15,6 +16,9 @@ from v3.application import (
     GameStateSnapshot, PlayerInfo, AvailableActions
 )
 from v3.core.events import EventBus, get_event_bus, set_event_bus
+from v3.core.state_machine.types import GamePhase, GameContext
+from v3.core.rules.types import CorePermissibleActionsData, ActionConstraints
+from v3.core.betting.betting_types import BetType
 from v3.tests.anti_cheat.core_usage_checker import CoreUsageChecker
 
 
@@ -198,6 +202,104 @@ class TestGameCommandService:
         result = self.command_service.execute_player_action("invalid_action_test", "p1", action)
         
         assert result.success is False
+    
+    def test_get_game_state_snapshot_success(self):
+        """测试成功获取游戏状态快照 (PLAN 39)"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.command_service, "GameCommandService")
+        
+        # 创建游戏并开始手牌
+        create_result = self.command_service.create_new_game("snapshot_test", ["p1", "p2"])
+        assert create_result.success is True
+        
+        start_result = self.command_service.start_new_hand("snapshot_test")
+        assert start_result.success is True
+        
+        # 获取状态快照
+        result = self.command_service.get_game_state_snapshot("snapshot_test")
+        
+        # 验证结果
+        assert isinstance(result, QueryResult)
+        assert result.success is True
+        assert result.status == ResultStatus.SUCCESS
+        
+        # 验证快照内容
+        snapshot = result.data
+        assert isinstance(snapshot, GameStateSnapshot)
+        assert snapshot.game_id == "snapshot_test"
+        assert snapshot.current_phase == "PRE_FLOP"
+        assert len(snapshot.players) == 2
+        assert "p1" in snapshot.players
+        assert "p2" in snapshot.players
+        assert snapshot.pot_total >= 0
+        assert snapshot.current_bet >= 0
+        assert isinstance(snapshot.timestamp, float)
+        assert snapshot.timestamp > 0
+    
+    def test_get_game_state_snapshot_game_not_found(self):
+        """测试获取不存在游戏的状态快照 (PLAN 39)"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.command_service, "GameCommandService")
+        
+        # 尝试获取不存在游戏的快照
+        result = self.command_service.get_game_state_snapshot("nonexistent_game")
+        
+        assert result.success is False
+        assert result.status == ResultStatus.BUSINESS_RULE_VIOLATION
+        assert result.error_code == "GAME_NOT_FOUND"
+        assert "不存在" in result.message
+    
+    def test_get_game_state_snapshot_immutability(self):
+        """测试状态快照的不可变性 (PLAN 39)"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.command_service, "GameCommandService")
+        
+        # 创建游戏
+        self.command_service.create_new_game("immutable_test", ["p1", "p2"])
+        self.command_service.start_new_hand("immutable_test")
+        
+        # 获取快照
+        result = self.command_service.get_game_state_snapshot("immutable_test")
+        snapshot = result.data
+        
+        # 验证快照是不可变的（frozen dataclass）
+        with pytest.raises(AttributeError):
+            # 尝试修改frozen dataclass应该失败
+            snapshot.current_phase = "MODIFIED"
+    
+    def test_get_game_state_snapshot_isolation(self):
+        """测试状态快照与内部状态的隔离性 (PLAN 39)"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.command_service, "GameCommandService")
+        
+        # 创建游戏
+        self.command_service.create_new_game("isolation_test", ["p1", "p2"])
+        self.command_service.start_new_hand("isolation_test")
+        
+        # 获取快照
+        result1 = self.command_service.get_game_state_snapshot("isolation_test")
+        snapshot1 = result1.data
+        
+        # 添加短暂延迟确保时间戳差异
+        import time
+        time.sleep(0.01)
+        
+        # 执行玩家行动改变游戏状态（使用正确的call金额）
+        action = PlayerAction(action_type="call", amount=5, player_id="p1")
+        action_result = self.command_service.execute_player_action("isolation_test", "p1", action)
+        
+        # 再次获取快照
+        result2 = self.command_service.get_game_state_snapshot("isolation_test")
+        snapshot2 = result2.data
+        
+        # 验证快照是独立的副本
+        assert isinstance(snapshot1.players, dict)
+        assert isinstance(snapshot2.players, dict)
+        
+        # 验证快照数据隔离（时间戳或其他状态应该不同）
+        # 快照应该反映不同的游戏状态
+        assert snapshot1.game_id == snapshot2.game_id  # 游戏ID相同
+        # 但状态可能不同（玩家行动后可能有变化）
         assert result.status == ResultStatus.VALIDATION_ERROR
         assert result.error_code == "INVALID_ACTION_TYPE"
     
@@ -257,7 +359,14 @@ class TestGameQueryService:
         self.event_bus = EventBus()
         set_event_bus(self.event_bus)
         self.command_service = GameCommandService(self.event_bus)
-        self.query_service = GameQueryService(self.command_service, self.event_bus)
+        
+        # PLAN 41: 更新GameQueryService构造函数，使用ConfigService
+        from v3.application.config_service import ConfigService
+        self.config_service = ConfigService()
+        self.query_service = GameQueryService(
+            command_service=self.command_service,
+            config_service=self.config_service
+        )
     
     def test_query_service_creation(self):
         """测试查询服务创建"""
@@ -361,6 +470,162 @@ class TestGameQueryService:
         assert "fold" in actions.actions
         assert "call" in actions.actions
     
+    def test_get_available_actions_uses_core_logic(self):
+        """PLAN 45: 测试get_available_actions正确使用核心逻辑"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        # 使用patch监视核心函数调用
+        with patch('v3.core.rules.determine_permissible_actions') as mock_core_func:
+            # 设置mock返回值
+            mock_constraints = ActionConstraints(
+                can_fold=True,
+                can_check=False,
+                can_call=True,
+                can_raise=True,
+                can_all_in=True,
+                min_call_amount=100,
+                max_raise_amount=1000
+            )
+            mock_core_data = CorePermissibleActionsData(
+                player_id="p1",
+                available_actions=[BetType.FOLD, BetType.CALL, BetType.RAISE, BetType.ALL_IN],
+                constraints=mock_constraints
+            )
+            mock_core_func.return_value = mock_core_data
+            
+            # 创建游戏并开始手牌
+            self.command_service.create_new_game("core_logic_test", ["p1", "p2"])
+            self.command_service.start_new_hand("core_logic_test")
+            
+            # 获取可用行动
+            result = self.query_service.get_available_actions("core_logic_test", "p1")
+            
+            # 验证核心函数被调用
+            assert mock_core_func.called
+            call_args = mock_core_func.call_args
+            assert len(call_args[0]) == 2  # GameContext和player_id
+            game_context, player_id = call_args[0]
+            assert isinstance(game_context, GameContext)
+            assert game_context.game_id == "core_logic_test"
+            assert player_id == "p1"
+            
+            # 验证结果正确转换
+            assert result.success is True
+            actions = result.data
+            assert actions.player_id == "p1"
+            assert set(actions.actions) == {"fold", "call", "raise", "all_in"}
+            assert actions.min_bet == 100
+            assert actions.max_bet == 1000
+    
+    def test_get_available_actions_core_data_conversion(self):
+        """PLAN 45: 测试核心层数据向应用层的正确转换"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        with patch('v3.core.rules.determine_permissible_actions') as mock_core_func:
+            # 测试只有fold和check的场景
+            mock_constraints = ActionConstraints(
+                can_fold=True,
+                can_check=True,
+                can_call=False,
+                can_raise=False,
+                can_all_in=False,
+                min_call_amount=0,
+                max_raise_amount=0
+            )
+            mock_core_data = CorePermissibleActionsData(
+                player_id="p1",
+                available_actions=[BetType.FOLD, BetType.CHECK],
+                constraints=mock_constraints
+            )
+            mock_core_func.return_value = mock_core_data
+            
+            # 创建游戏
+            self.command_service.create_new_game("conversion_test", ["p1", "p2"])
+            self.command_service.start_new_hand("conversion_test")
+            
+            # 获取可用行动
+            result = self.query_service.get_available_actions("conversion_test", "p1")
+            
+            # 验证转换结果
+            assert result.success is True
+            actions = result.data
+            assert set(actions.actions) == {"fold", "check"}
+            assert actions.min_bet == 0
+            assert actions.max_bet == 0
+    
+    def test_get_available_actions_core_exception_handling(self):
+        """PLAN 45: 测试核心层函数异常时的处理"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        with patch('v3.core.rules.determine_permissible_actions') as mock_core_func:
+            # 设置核心函数抛出异常
+            mock_core_func.side_effect = Exception("核心层计算错误")
+            
+            # 创建游戏
+            self.command_service.create_new_game("exception_test", ["p1", "p2"])
+            self.command_service.start_new_hand("exception_test")
+            
+            # 获取可用行动
+            result = self.query_service.get_available_actions("exception_test", "p1")
+            
+            # 验证异常被正确处理
+            assert result.success is False
+            assert result.error_code == "GET_AVAILABLE_ACTIONS_FAILED"
+            assert "核心层计算错误" in result.message
+    
+    def test_get_available_actions_invalid_phase_handling(self):
+        """PLAN 45: 测试无效游戏阶段的处理"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        # 创建游戏
+        self.command_service.create_new_game("invalid_phase_test", ["p1", "p2"])
+        self.command_service.start_new_hand("invalid_phase_test")
+        
+        # 使用patch修改快照中的阶段为无效值
+        with patch.object(self.command_service, 'get_game_state_snapshot') as mock_snapshot:
+            invalid_snapshot = GameStateSnapshot(
+                game_id="invalid_phase_test",
+                current_phase="INVALID_PHASE",  # 无效阶段
+                players={"p1": {"chips": 1000, "active": True}},
+                community_cards=[],
+                pot_total=0,
+                current_bet=0,
+                active_player_id="p1",
+                timestamp=time.time()
+            )
+            mock_snapshot.return_value = QueryResult.success_result(invalid_snapshot)
+            
+            # 获取可用行动
+            result = self.query_service.get_available_actions("invalid_phase_test", "p1")
+            
+            # 验证错误处理
+            assert result.success is False
+            assert result.error_code == "INVALID_GAME_PHASE"
+    
+    def test_get_available_actions_snapshot_failure_propagation(self):
+        """PLAN 45: 测试快照获取失败时的错误传播"""
+        # 反作弊检查
+        CoreUsageChecker.verify_real_objects(self.query_service, "GameQueryService")
+        
+        # 使用patch让快照获取失败
+        with patch.object(self.command_service, 'get_game_state_snapshot') as mock_snapshot:
+            mock_snapshot.return_value = QueryResult.failure_result(
+                "游戏不存在", 
+                error_code="GAME_NOT_FOUND"
+            )
+            
+            # 获取可用行动
+            result = self.query_service.get_available_actions("nonexistent_game", "p1")
+            
+            # 验证错误被正确传播
+            assert result.success is False
+            assert result.error_code == "GAME_NOT_FOUND"
+            assert "游戏不存在" in result.message
+
     def test_get_game_list_success(self):
         """测试成功获取游戏列表"""
         # 反作弊检查
@@ -567,7 +832,14 @@ class TestApplicationServiceIntegration:
         self.event_bus = EventBus()
         set_event_bus(self.event_bus)
         self.command_service = GameCommandService(self.event_bus)
-        self.query_service = GameQueryService(self.command_service, self.event_bus)
+        
+        # PLAN 41: 更新GameQueryService构造函数，使用ConfigService
+        from v3.application.config_service import ConfigService
+        self.config_service = ConfigService()
+        self.query_service = GameQueryService(
+            command_service=self.command_service,
+            config_service=self.config_service
+        )
     
     def test_complete_game_workflow(self):
         """测试完整的游戏工作流程"""

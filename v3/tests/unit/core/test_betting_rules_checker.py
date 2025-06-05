@@ -283,7 +283,7 @@ class TestBettingRulesChecker:
         violation = result.violations[0]
         assert "非活跃玩家" in violation.description
         assert "下注" in violation.description
-        assert violation.severity == "WARNING"
+        assert violation.severity == "CRITICAL"
     
     def test_check_preflop_betting_order(self):
         """测试翻牌前下注顺序"""

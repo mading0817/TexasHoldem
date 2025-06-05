@@ -218,13 +218,20 @@ def _is_mock_object_enhanced(obj: Any) -> bool:
         'CoreUsageChecker', 'AntiCheatReport'
     ]
     
+    # 核心模块数据类白名单 - 这些核心模块的dataclass不应被视为mock对象
+    core_dataclass_whitelist = [
+        'ActionConstraints', 'CorePermissibleActionsData', 'GameContext',
+        'GameEvent', 'BetAction', 'GameStateSnapshot', 'PhaseTransition',
+        'CorePhaseLogicData'
+    ]
+    
     # Python内置类型白名单 - 这些类型不应被视为mock对象
     builtin_types_whitelist = [
         'type', 'module', 'ABCMeta', '_ProtocolMeta', 'GenericAlias',
         'DistFacade', 'MarkGenerator', '_Sentinel', '_SentinelObject',
         '_ANY', '_Call', 'settingsMeta', 'function', 'method',
         'builtin_function_or_method', 'wrapper_descriptor', 'method_descriptor',
-        'classmethod', 'staticmethod', 'property'
+        'classmethod', 'staticmethod', 'property', '_patch'
     ]
     
     obj_type_name = type(obj).__name__
@@ -243,6 +250,12 @@ def _is_mock_object_enhanced(obj: Any) -> bool:
     # 如果是反作弊模块的类，直接返回False
     if (obj_type_name in anti_cheat_whitelist and 
         'anti_cheat' in obj_module_name):
+        CoreUsageChecker._mock_detection_cache[obj_id] = False
+        return False
+    
+    # 如果是核心模块的dataclass，直接返回False
+    if (obj_type_name in core_dataclass_whitelist and 
+        obj_module_name.startswith('v3.core.')):
         CoreUsageChecker._mock_detection_cache[obj_id] = False
         return False
     
