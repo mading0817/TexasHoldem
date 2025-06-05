@@ -598,8 +598,11 @@ class GameQueryService:
         检查游戏是否已结束 (PLAN 40: 使用快照接口)
         
         在德州扑克中，游戏在以下情况结束：
-        1. 只剩下1个或0个有筹码的玩家
+        1. 只剩下1个或0个有筹码的玩家能够继续下一手牌
         2. 游戏被手动终止
+        
+        注意：这与"手牌结束"不同。手牌结束是指当前手牌因为只剩一个玩家未fold而结束，
+        但游戏可以继续进行下一手牌。游戏结束是指整个游戏因为筹码分布而无法继续。
         
         Args:
             game_id: 游戏ID
@@ -623,17 +626,14 @@ class GameQueryService:
         
         snapshot = snapshot_result.data
         
-        # 检查是否已经是FINISHED阶段
-        if snapshot.current_phase == "FINISHED":
-            return QueryResult.success_result(True)
-        
-        # 计算有筹码的玩家数量
+        # 计算有筹码的玩家数量（能够继续下一手牌的玩家）
         players_with_chips = [
             player_id for player_id, player_data in snapshot.players.items()
             if player_data.get('chips', 0) > 0
         ]
         
-        # 如果少于2个玩家有筹码，游戏结束
+        # 德州扑克规则：如果少于2个玩家有筹码能够继续游戏，整个游戏结束
+        # 这与当前手牌状态无关，只看筹码分布
         game_over = len(players_with_chips) < 2
         
         result = QueryResult.success_result(game_over)
@@ -641,7 +641,8 @@ class GameQueryService:
         result.__dict__['data_details'] = {
             'players_with_chips_count': len(players_with_chips),
             'players_with_chips': players_with_chips,
-            'reason': 'insufficient_players' if game_over else 'ongoing'
+            'current_phase': snapshot.current_phase,
+            'reason': 'insufficient_players_with_chips' if game_over else 'ongoing'
         }
         return result
     

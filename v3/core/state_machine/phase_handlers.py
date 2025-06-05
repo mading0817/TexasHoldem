@@ -217,75 +217,99 @@ class PreFlopHandler(BasePhaseHandler):
         """处理跟注行动"""
         if player_id in ctx.players:
             player = ctx.players[player_id]
-            current_bet = player.get('current_bet', 0)
-            need_to_call = ctx.current_bet - current_bet
             
-            if need_to_call > 0:
-                if player['chips'] >= need_to_call:
-                    player['chips'] -= need_to_call
-                    player['current_bet'] = ctx.current_bet
-                    player['total_bet_this_hand'] = player.get('total_bet_this_hand', 0) + need_to_call
-                    ctx.pot_total += need_to_call
+            # 计算需要跟注的金额
+            current_bet = ctx.current_bet
+            player_current_bet = player.get('current_bet', 0)
+            call_amount = current_bet - player_current_bet
+            
+            if call_amount > 0:
+                # 扣除玩家筹码
+                player_chips = player.get('chips', 0)
+                if player_chips >= call_amount:
+                    player['chips'] -= call_amount
+                    player['current_bet'] = current_bet
+                    
+                    # 更新本手总投入
+                    total_bet_this_hand = player.get('total_bet_this_hand', 0)
+                    player['total_bet_this_hand'] = total_bet_this_hand + call_amount
+                    
+                    # 更新底池
+                    ctx.pot_total += call_amount
                 else:
-                    # 筹码不足，自动转为全下
-                    all_in_amount = player['chips']
+                    # 筹码不足，全押
+                    actual_amount = player_chips
                     player['chips'] = 0
-                    player['current_bet'] = current_bet + all_in_amount
-                    player['total_bet_this_hand'] = player.get('total_bet_this_hand', 0) + all_in_amount
+                    player['current_bet'] = player_current_bet + actual_amount
                     player['status'] = 'all_in'
-                    player['is_all_in'] = True  # 修复：设置is_all_in属性
-                    player['active'] = True  # 修复：all_in玩家保持活跃
-                    ctx.pot_total += all_in_amount
-        
-        # 轮换到下一个玩家
-        self._advance_to_next_player(ctx)
-        
+                    
+                    # 更新本手总投入
+                    total_bet_this_hand = player.get('total_bet_this_hand', 0)
+                    player['total_bet_this_hand'] = total_bet_this_hand + actual_amount
+                    
+                    # 更新底池
+                    ctx.pot_total += actual_amount
+            
+            # 找到下一个可行动玩家
+            next_player_id = self._find_next_actionable_player(ctx, player_id)
+            ctx.active_player_id = next_player_id
+            
         return GameEvent(
             event_type="PLAYER_CALLED",
-            data={"player_id": player_id, "amount": ctx.current_bet},
+            data={"player_id": player_id, "amount": call_amount},
             source_phase=self.phase
         )
     
     def _handle_raise(self, ctx: GameContext, player_id: str, action: Dict[str, Any]) -> GameEvent:
         """处理加注行动"""
-        raise_amount = action.get('amount', 0)
-        if raise_amount <= ctx.current_bet:
-            return GameEvent(
-                event_type="INVALID_ACTION",
-                data={"reason": "加注金额必须大于当前下注"},
-                source_phase=self.phase
-            )
-        
-        # 处理筹码和下注
         if player_id in ctx.players:
             player = ctx.players[player_id]
-            current_bet = player.get('current_bet', 0)
-            need_to_bet = raise_amount - current_bet
+            raise_amount = action.get('amount', 0)
             
-            if player['chips'] >= need_to_bet:
-                player['chips'] -= need_to_bet
-                player['current_bet'] = raise_amount
-                player['total_bet_this_hand'] = player.get('total_bet_this_hand', 0) + need_to_bet
-                ctx.pot_total += need_to_bet
-                ctx.current_bet = raise_amount
-            else:
-                # 筹码不足，自动转为全下
-                all_in_amount = player['chips']
-                player['chips'] = 0
-                player['current_bet'] = current_bet + all_in_amount
-                player['total_bet_this_hand'] = player.get('total_bet_this_hand', 0) + all_in_amount
-                player['status'] = 'all_in'
-                player['is_all_in'] = True  # 修复：设置is_all_in属性
-                player['active'] = True  # 修复：all_in玩家保持活跃
-                ctx.pot_total += all_in_amount
-                
-                # 如果全下金额大于当前下注，更新当前下注
-                if player['current_bet'] > ctx.current_bet:
-                    ctx.current_bet = player['current_bet']
-        
-        # 轮换到下一个玩家
-        self._advance_to_next_player(ctx)
-        
+            # 计算实际需要投入的筹码
+            player_current_bet = player.get('current_bet', 0)
+            actual_investment = raise_amount - player_current_bet
+            
+            if actual_investment > 0:
+                # 扣除玩家筹码
+                player_chips = player.get('chips', 0)
+                if player_chips >= actual_investment:
+                    player['chips'] -= actual_investment
+                    player['current_bet'] = raise_amount
+                    
+                    # 更新本手总投入
+                    total_bet_this_hand = player.get('total_bet_this_hand', 0)
+                    player['total_bet_this_hand'] = total_bet_this_hand + actual_investment
+                    
+                    # 更新游戏状态
+                    ctx.current_bet = raise_amount
+                    ctx.pot_total += actual_investment
+                else:
+                    # 筹码不足，全押
+                    actual_amount = player_chips
+                    player['chips'] = 0
+                    player['current_bet'] = player_current_bet + actual_amount
+                    player['status'] = 'all_in'
+                    
+                    # 更新本手总投入
+                    total_bet_this_hand = player.get('total_bet_this_hand', 0)
+                    player['total_bet_this_hand'] = total_bet_this_hand + actual_amount
+                    
+                    # 只有在全押金额超过当前下注时，才更新当前下注
+                    final_bet = player_current_bet + actual_amount
+                    if final_bet > ctx.current_bet:
+                        ctx.current_bet = final_bet
+                    
+                    # 更新底池
+                    ctx.pot_total += actual_amount
+            
+            # 重置其他玩家的行动状态（因为有人加注）
+            self._reset_players_action_status(ctx, player_id)
+            
+            # 找到下一个可行动玩家
+            next_player_id = self._find_next_actionable_player(ctx, player_id)
+            ctx.active_player_id = next_player_id
+            
         return GameEvent(
             event_type="PLAYER_RAISED",
             data={"player_id": player_id, "amount": raise_amount},
@@ -475,6 +499,19 @@ class PreFlopHandler(BasePhaseHandler):
         
         # 德州扑克规则：如果只有一个或零个可行动玩家，手牌应该结束
         return len(actionable_players) <= 1
+    
+    def _reset_players_action_status(self, ctx: GameContext, current_player_id: str) -> None:
+        """重置其他玩家的行动状态（当有玩家加注时需要）
+        
+        当有玩家加注时，其他已经行动过的玩家需要重新获得行动机会。
+        在德州扑克中，当有玩家加注时，其他已经行动的玩家需要重新做决定。
+        但在当前简化实现中，我们主要通过轮换到下一个玩家来处理。
+        这个方法预留给未来更复杂的行动状态管理。
+        """
+        # 在德州扑克中，加注会使其他玩家重新获得行动机会
+        # 但在当前简化实现中，我们主要通过轮换到下一个玩家来处理
+        # 这个方法预留给未来更复杂的行动状态管理
+        pass
 
 
 class FlopHandler(BasePhaseHandler):
@@ -736,10 +773,25 @@ class ShowdownHandler(BasePhaseHandler):
         if active_players and ctx.pot_total > 0:
             # 简单地选择第一个活跃玩家作为胜者
             winner = active_players[0]
+            winnings = ctx.pot_total
+            
             # 将奖池直接加到胜者的筹码中
-            ctx.players[winner]['chips'] += ctx.pot_total
+            ctx.players[winner]['chips'] += winnings
             # 记录奖金用于日志
-            ctx.players[winner]['winnings'] = ctx.pot_total
+            ctx.players[winner]['winnings'] = winnings
+            
+            # 生成详细的获胜者事件
+            ctx.winner_info = {
+                'winner_id': winner,
+                'winnings': winnings,
+                'hand_type': 'unknown',  # 简化处理
+                'winning_reason': 'showdown',
+                'pot_breakdown': {
+                    'main_pot': winnings,
+                    'side_pots': []
+                }
+            }
+            
             # 清空奖池
             ctx.pot_total = 0
         elif not active_players and ctx.pot_total > 0:
@@ -751,19 +803,32 @@ class ShowdownHandler(BasePhaseHandler):
                 per_player = ctx.pot_total // len(non_folded_players)
                 remainder = ctx.pot_total % len(non_folded_players)
                 
+                winner_info = {
+                    'winners': {},
+                    'total_winnings': ctx.pot_total,
+                    'winning_reason': 'split_pot',
+                    'pot_breakdown': {
+                        'main_pot': ctx.pot_total,
+                        'side_pots': []
+                    }
+                }
+                
                 for i, player_id in enumerate(non_folded_players):
                     amount = per_player + (1 if i < remainder else 0)
                     ctx.players[player_id]['chips'] += amount
                     ctx.players[player_id]['winnings'] = amount
+                    winner_info['winners'][player_id] = amount
                 
+                ctx.winner_info = winner_info
                 ctx.pot_total = 0
         
-        # *** 关键修复：立即清理下注记录，确保状态一致性 ***
-        # 奖池已经分配完毕，现在清理所有玩家的下注记录
-        # 这样不变量检查就不会看到不一致的中间状态
+        # *** 关键修复：不要在SHOWDOWN阶段清理下注记录 ***
+        # 保留下注记录，让FinishedHandler在手牌完全结束后清理
+        # 这样测试可以正确看到玩家的本手总投入
+        
+        # 只重置当前下注，保留total_bet_this_hand
         for player_data in ctx.players.values():
             player_data['current_bet'] = 0
-            player_data['total_bet_this_hand'] = 0
         
         # 重置当前下注
         ctx.current_bet = 0
@@ -802,12 +867,30 @@ class FinishedHandler(BasePhaseHandler):
     
     def _cleanup_hand(self, ctx: GameContext) -> None:
         """清理本手牌的状态"""
-        # 重置玩家状态（但保留手牌和筹码）
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # *** 关键修复：在清理前记录最终状态供测试验证 ***
+        if not hasattr(ctx, 'final_hand_stats'):
+            ctx.final_hand_stats = {}
+            
+        # 记录每个玩家本手牌的最终投入统计
+        for player_id, player_data in ctx.players.items():
+            ctx.final_hand_stats[player_id] = {
+                'total_bet_this_hand': player_data.get('total_bet_this_hand', 0),
+                'final_chips': player_data.get('chips', 0),
+                'winnings': player_data.get('winnings', 0),
+                'status': player_data.get('status', 'unknown')
+            }
+        
+        logger.info(f"[手牌统计] 最终投入记录: {ctx.final_hand_stats}")
+        
+        # 现在可以安全地清理状态
         for player_data in ctx.players.values():
             # 清除状态标记
             player_data.pop('status', None)
             player_data.pop('winnings', None)
-            # 重置本手牌的下注
+            # *** 现在才重置本手牌的下注记录 ***
             player_data['current_bet'] = 0
             player_data['total_bet_this_hand'] = 0
         
@@ -819,9 +902,16 @@ class FinishedHandler(BasePhaseHandler):
         # 清除摊牌完成标记
         if hasattr(ctx, 'showdown_complete'):
             delattr(ctx, 'showdown_complete')
+            
+        # 清除获胜者信息（已经记录在final_hand_stats中）
+        if hasattr(ctx, 'winner_info'):
+            delattr(ctx, 'winner_info')
     
     def _handle_auto_finish(self, ctx: GameContext) -> None:
         """处理自动结束的手牌（德州扑克规则：只有一个活跃玩家时自动获胜）"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         # 获取非折牌玩家（包括全下玩家）
         non_folded_players = [
             pid for pid, data in ctx.players.items()
@@ -834,51 +924,43 @@ class FinishedHandler(BasePhaseHandler):
             if data.get('chips', 0) > 0
         ]
         
+        logger.info(f"[游戏结果] 手牌结束处理 - 底池: {ctx.pot_total}, 非折牌玩家: {non_folded_players}, 有筹码玩家: {players_with_chips}")
+        
         if ctx.pot_total > 0:
             if len(non_folded_players) == 1:
                 # 只有一个非折牌玩家，自动获胜
                 winner_id = non_folded_players[0]
                 winner_data = ctx.players[winner_id]
+                winnings = ctx.pot_total
                 
                 # 将奖池加到获胜者的筹码中
-                winner_data['chips'] += ctx.pot_total
-                winner_data['winnings'] = ctx.pot_total
+                winner_data['chips'] += winnings
+                winner_data['winnings'] = winnings
+                
+                # 生成详细的获胜者事件
+                ctx.winner_info = {
+                    'winner_id': winner_id,
+                    'winnings': winnings,
+                    'hand_type': 'fold_win',  # 对手弃牌获胜
+                    'winning_reason': 'all_others_folded',
+                    'pot_breakdown': {
+                        'main_pot': winnings,
+                        'side_pots': []
+                    }
+                }
                 
                 # 清空奖池
                 ctx.pot_total = 0
                 
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.info(f"[游戏结果] 自动获胜: {winner_id} 获得 {winner_data['winnings']} 筹码（其他玩家弃牌）")
-            elif len(non_folded_players) > 1:
-                # 多个非折牌玩家，需要进行摊牌比较
-                # 这里简化处理：选择第一个非折牌玩家作为获胜者
-                winner_id = non_folded_players[0]
-                winner_data = ctx.players[winner_id]
+                logger.info(f"[游戏结果] 自动获胜: {winner_id} 获得 {winnings} 筹码（其他玩家弃牌）")
+            elif len(non_folded_players) == 0:
+                # 所有玩家都弃牌了，这是异常情况
+                logger.warning(f"[游戏结果] 异常：所有玩家都弃牌，底池 {ctx.pot_total} 将被保留")
+                # 在这种情况下，底池保留不分配
                 
-                # 将奖池加到获胜者的筹码中
-                winner_data['chips'] += ctx.pot_total
-                winner_data['winnings'] = ctx.pot_total
-                
-                # 清空奖池
-                ctx.pot_total = 0
-                
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.info(f"[游戏结果] 摊牌获胜: {winner_id} 获得 {winner_data['winnings']} 筹码（{len(non_folded_players)}人摊牌）")
-            elif len(non_folded_players) == 0 and players_with_chips:
-                # 所有玩家都弃牌，异常情况
-                # 将奖池分给第一个有筹码的玩家
-                winner_id = players_with_chips[0]
-                ctx.players[winner_id]['chips'] += ctx.pot_total
-                ctx.players[winner_id]['winnings'] = ctx.pot_total
-                ctx.pot_total = 0
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"[游戏异常] 异常获胜: {winner_id} 获得 {ctx.players[winner_id]['winnings']} 筹码（所有玩家弃牌）")
-            else:
-                # 没有玩家有筹码，奖池消失（极端异常情况）
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"[游戏错误] 奖池 {ctx.pot_total} 筹码无法分配（没有合格的获胜者）")
-                ctx.pot_total = 0 
+        # 记录获胜事件，供测试验证使用
+        if hasattr(ctx, 'winner_info') and ctx.winner_info:
+            logger.info(f"[获胜者信息] {ctx.winner_info}")
+        
+        # *** 重要：在手牌完全结束后才清理下注记录 ***
+        # 现在可以安全地清理下注记录，因为获胜者信息已经生成 

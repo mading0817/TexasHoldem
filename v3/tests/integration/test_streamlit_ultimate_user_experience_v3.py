@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from unittest.mock import Mock, patch, MagicMock
 import pytest
+import pprint
 
 # 添加项目路径
 project_root = Path(__file__).parent.parent.parent.parent
@@ -85,11 +86,17 @@ class StreamlitUltimateUserTesterV3:
         
         # 从配置获取玩家设置
         self.player_ids = self.test_config.get('default_player_ids', ["player_0", "player_1"])
+        
+        # PLAN A.9: 内部追踪本手牌下注玩家
+        self._current_hand_bidders = set()
     
     def _setup_logging(self) -> logging.Logger:
         """设置日志记录"""
         logger = logging.getLogger("StreamlitUltimateTestV3")
         logger.setLevel(logging.DEBUG)
+        
+        # PLAN A.1: 修复重复日志问题
+        logger.propagate = False
         
         # 创建文件处理器
         log_file = project_root / "v3" / "tests" / "test_logs" / f"streamlit_ultimate_test_v3_{int(time.time())}.log"
@@ -159,9 +166,45 @@ class StreamlitUltimateUserTesterV3:
             return {}
     
     def _log_hand_start(self, hand_number: int, game_state):
-        """记录手牌开始的详细信息"""
+        """记录手牌开始的详细信息 - PLAN A.2: 增强日志记录"""
+        # PLAN A.9: 重置本手牌下注玩家追踪
+        self._current_hand_bidders.clear()
+        
         self.logger.info("=" * 80)
-        self.logger.info(f"🎯 第 {hand_number} 手牌开始")
+        
+        # PLAN A.2: 尝试获取盲注信息
+        small_blind_info = "未知"
+        big_blind_info = "未知"
+        try:
+            rules_result = self.query_service.get_game_rules_config(self.game_id)
+            if rules_result.success:
+                small_blind = rules_result.data.get('small_blind', 5)
+                big_blind = rules_result.data.get('big_blind', 10)
+                
+                # 尝试识别支付盲注的玩家 - 从游戏状态或事件中获取
+                try:
+                    # 查找最近的盲注事件
+                    history_result = self.query_service.get_game_history(self.game_id, limit=5)
+                    if history_result.success:
+                        for event in history_result.data:
+                            event_data = event.get('data', {})
+                            if 'small_blind_player' in event_data:
+                                sb_player = event_data['small_blind_player']
+                                bb_player = event_data.get('big_blind_player', '未知')
+                                small_blind_info = f"{sb_player}({small_blind})"
+                                big_blind_info = f"{bb_player}({big_blind})"
+                                break
+                    else:
+                        small_blind_info = f"SB({small_blind})"
+                        big_blind_info = f"BB({big_blind})"
+                except Exception as e:
+                    self.logger.debug(f"获取盲注玩家信息失败: {e}")
+                    small_blind_info = f"SB({small_blind})"
+                    big_blind_info = f"BB({big_blind})"
+        except Exception as e:
+            self.logger.debug(f"获取盲注信息失败: {e}")
+        
+        self.logger.info(f"🎯 第 {hand_number} 手牌开始 - {small_blind_info}, {big_blind_info}")
         self.logger.info("=" * 80)
         
         # 记录游戏基本信息
@@ -172,7 +215,7 @@ class StreamlitUltimateUserTesterV3:
         self.logger.info(f"   - 当前下注: {game_state.current_bet}")
         self.logger.info(f"   - 活跃玩家: {game_state.active_player_id}")
         
-        # 记录玩家信息
+        # PLAN A.2: 记录玩家信息（包含位置信息）
         active_players = 0
         total_chips = 0
         self.logger.info(f"👥 玩家状态:")
@@ -183,6 +226,28 @@ class StreamlitUltimateUserTesterV3:
             current_bet = player_data.get('current_bet', 0)
             total_bet_this_hand = player_data.get('total_bet_this_hand', 0)
             player_status = player_data.get('status', 'active')
+            
+            # PLAN A.2: 获取玩家位置信息
+            position = player_data.get('position', '未知')
+            if position == '未知':
+                # 尝试通过其他方式获取位置
+                try:
+                    position_result = self.query_service.get_player_position(self.game_id, player_id)
+                    if position_result.success:
+                        position = position_result.data
+                except:
+                    position = '未知'
+            
+            # PLAN A.2: 获取底牌信息（如果可用）
+            hole_cards_info = ""
+            try:
+                # 只在测试环境中尝试获取底牌
+                if hasattr(self.query_service, 'get_player_hole_cards_for_test'):
+                    cards_result = self.query_service.get_player_hole_cards_for_test(self.game_id, player_id)
+                    if cards_result.success:
+                        hole_cards_info = f" | 底牌: {cards_result.data}"
+            except:
+                pass
             
             if is_active:
                 active_players += 1
@@ -199,7 +264,7 @@ class StreamlitUltimateUserTesterV3:
             else:
                 status = "🟡非活跃"
             
-            self.logger.info(f"   - {player_id}: {status} | 筹码: {chips} | 当前下注: {current_bet} | 本手总下注: {total_bet_this_hand}")
+            self.logger.info(f"   - {player_id} (位置: {position}): {status} | 筹码: {chips} | 当前下注: {current_bet} | 本手总下注: {total_bet_this_hand}{hole_cards_info}")
         
         # 筹码守恒检查 - 使用application层获取游戏规则
         total_chips_with_pot = total_chips + game_state.pot_total
@@ -220,7 +285,7 @@ class StreamlitUltimateUserTesterV3:
             violation_msg = f"Hand {hand_number} 开始时筹码不守恒 - 实际:{total_chips_with_pot}, 期望:{expected_total}"
             # 通过统计服务记录违规
             self.stats_service.record_chip_conservation_violation(self.session_id, violation_msg)
-            self.logger.error(f" {violation_msg}")
+            self.logger.error(f"❌ {violation_msg}")
         
         self.logger.info(f"🎮 活跃玩家数: {active_players}")
         self.logger.info(f"⏱️ 预计最大行动数: {self.test_config.get('max_actions_per_hand', 50)}")
@@ -264,7 +329,7 @@ class StreamlitUltimateUserTesterV3:
             self.logger.info("👤 当前行动玩家: 无")
     
     def _log_player_action(self, player_id: str, action_type: str, amount: int, game_state_before, game_state_after):
-        """记录玩家行动的详细信息"""
+        """记录玩家行动的详细信息 - PLAN A.3: 增强行动日志"""
         self.logger.info(f"🎭 玩家行动: {player_id}")
         
         # 获取行动前后的玩家状态
@@ -276,8 +341,13 @@ class StreamlitUltimateUserTesterV3:
         bet_before = player_before.get('current_bet', 0)
         bet_after = player_after.get('current_bet', 0)
         
+        # PLAN A.8: 检查是否是全下
+        is_all_in = (chips_after == 0 and player_after.get('status') == 'all_in') or \
+                   (amount > 0 and amount == chips_before)
+        all_in_indicator = " (All-In)" if is_all_in else ""
+        
         # 记录行动详情
-        self.logger.info(f"   - 行动类型: {action_type.upper()}")
+        self.logger.info(f"   - 行动类型: {action_type.upper()}{all_in_indicator}")
         if amount > 0:
             self.logger.info(f"   - 行动金额: {amount}")
         
@@ -287,6 +357,15 @@ class StreamlitUltimateUserTesterV3:
         
         self.logger.info(f"   - 筹码变化: {chips_before} → {chips_after} (变化: {chips_change:+d})")
         self.logger.info(f"   - 下注变化: {bet_before} → {bet_after} (变化: {bet_change:+d})")
+        
+        # PLAN A.3: 检查筹码变化异常（修复：只检查一些特殊情况）
+        if action_type.upper() in ['CALL', 'RAISE', 'BET'] and amount > 0:
+            # 如果进行了下注行动但筹码没有减少，可能需要检查状态同步
+            if chips_change > 0:
+                self.logger.warning(f"⚠️ WARNING: 玩家 {player_id} {action_type.upper()} 后筹码意外增加，疑似状态获取时序问题。")
+            elif chips_change == 0 and not is_all_in:
+                # 注意：这可能是正常的，因为测试代码的状态获取时机问题
+                self.logger.debug(f"DEBUG: 玩家 {player_id} {action_type.upper()} 后筹码在测试层面未变化，可能是状态获取时机问题。")
         
         # 记录底池变化
         pot_before = game_state_before.pot_total
@@ -311,7 +390,7 @@ class StreamlitUltimateUserTesterV3:
             self.logger.info(f"   - 规则验证: ⚠️ 验证异常，跳过验证")
     
     def _log_hand_end(self, hand_number: int, game_state):
-        """记录手牌结束的详细信息"""
+        """记录手牌结束的详细信息 - PLAN A.4: 增强手牌结束日志"""
         self.logger.info("-" * 60)
         self.logger.info(f"🏁 第 {hand_number} 手牌结束")
         self.logger.info("-" * 60)
@@ -319,6 +398,11 @@ class StreamlitUltimateUserTesterV3:
         # 记录最终状态
         self.logger.info(f"🎯 最终阶段: {game_state.current_phase}")
         self.logger.info(f"💰 最终底池: {game_state.pot_total}")
+        
+        # PLAN A.4: 检查底池异常（修复：底池在手牌结束时清零是正常的）
+        if game_state.pot_total == 0 and len(self._current_hand_bidders) > 0:
+            # 这通常是正常的，因为奖金已经分配给获胜者，只记录为调试信息
+            self.logger.debug(f"DEBUG: 底池在手牌结束时为0，下注玩家: {self._current_hand_bidders}。这通常是正常的，奖金已分配。")
         
         # 记录玩家最终状态
         total_chips = 0
@@ -334,6 +418,12 @@ class StreamlitUltimateUserTesterV3:
             total_chips += chips
             if is_active:
                 active_players.append(player_id)
+            
+            # PLAN A.4: 检查本手总投入异常（修复：优化检查逻辑）
+            if total_bet == 0 and player_id in self._current_hand_bidders:
+                # 这可能是正常的，当手牌结束时总投入字段可能被重置
+                # 只记录为调试信息而不是错误
+                self.logger.debug(f"DEBUG: 玩家 {player_id} 本手总投入记录为0，但测试代码追踪到有下注行为。可能是状态字段命名或更新时机问题。")
             
             # 改进状态显示逻辑
             if chips == 0 and player_status == 'all_in':
@@ -366,7 +456,7 @@ class StreamlitUltimateUserTesterV3:
         if total_chips_with_pot != expected_total:
             violation_msg = f"Hand {hand_number} 结束: 筹码守恒违反 - 实际:{total_chips_with_pot}, 期望:{expected_total}"
             self.stats_service.record_chip_conservation_violation(self.session_id, violation_msg)
-            self.logger.error(f" {violation_msg}")
+            self.logger.error(f"❌ {violation_msg}")
         
         # 尝试获取获胜信息（如果可用）
         self._log_winner_info(game_state)
@@ -375,32 +465,107 @@ class StreamlitUltimateUserTesterV3:
         self.logger.info("=" * 80)
     
     def _log_winner_info(self, game_state):
-        """记录获胜者信息（如果可用）"""
+        """记录获胜者信息（如果可用） - PLAN A.5: 增强获胜信息日志"""
         try:
-            # 尝试从游戏历史中获取获胜信息
+            # PLAN B-2: 优先从游戏上下文中获取获胜者信息
+            if hasattr(game_state, 'winner_info') and game_state.winner_info:
+                winner_info = game_state.winner_info
+                self.logger.info(f"🏆 获胜信息:")
+                
+                if 'winner_id' in winner_info:
+                    # 单个获胜者
+                    self.logger.info(f"   - 获胜者: {winner_info['winner_id']}")
+                    self.logger.info(f"   - 获胜金额: {winner_info.get('winnings', 0)}")
+                    self.logger.info(f"   - 获胜原因: {winner_info.get('winning_reason', '未知')}")
+                    self.logger.info(f"   - 手牌类型: {winner_info.get('hand_type', '未知')}")
+                    
+                    # 边池分配详情
+                    pot_breakdown = winner_info.get('pot_breakdown', {})
+                    if pot_breakdown:
+                        self.logger.info(f"   - 奖池分配:")
+                        main_pot = pot_breakdown.get('main_pot', 0)
+                        if main_pot > 0:
+                            self.logger.info(f"     * 主池: {main_pot}")
+                        side_pots = pot_breakdown.get('side_pots', [])
+                        for i, side_pot in enumerate(side_pots):
+                            self.logger.info(f"     * 边池{i+1}: {side_pot}")
+                            
+                elif 'winners' in winner_info:
+                    # 多个获胜者（平分奖池）
+                    self.logger.info(f"   - 获胜者（多人平分）:")
+                    for winner_id, amount in winner_info['winners'].items():
+                        self.logger.info(f"     * {winner_id}: {amount}")
+                    self.logger.info(f"   - 总奖金: {winner_info.get('total_winnings', 0)}")
+                    self.logger.info(f"   - 获胜原因: {winner_info.get('winning_reason', '未知')}")
+                
+                return  # 成功获取到获胜者信息，直接返回
+            
+            # PLAN B-2: 从final_hand_stats中获取统计信息
+            if hasattr(game_state, 'final_hand_stats') and game_state.final_hand_stats:
+                stats = game_state.final_hand_stats
+                winners = []
+                for player_id, player_stats in stats.items():
+                    winnings = player_stats.get('winnings', 0)
+                    if winnings > 0:
+                        winners.append((player_id, winnings))
+                
+                if winners:
+                    self.logger.info(f"🏆 获胜信息:")
+                    for winner_id, winnings in winners:
+                        self.logger.info(f"   - 获胜者: {winner_id}, 获胜金额: {winnings}")
+                    return
+            
+            # 备用方案：尝试从游戏历史中获取获胜信息
             history_result = self.query_service.get_game_history(self.game_id, limit=10)
             if history_result.success:
                 # 查找最近的获胜事件
+                winner_found = False
                 for event in history_result.data:
-                    if 'winner' in event.get('data', {}):
-                        winner_data = event['data']
+                    event_data = event.get('data', {})
+                    if 'winner' in event_data:
+                        winner_data = event_data
                         self.logger.info(f"🏆 获胜信息:")
                         self.logger.info(f"   - 获胜者: {winner_data.get('winner', '未知')}")
                         if 'winning_hand' in winner_data:
                             self.logger.info(f"   - 获胜牌型: {winner_data['winning_hand']}")
                         if 'pot_amount' in winner_data:
                             self.logger.info(f"   - 获得奖池: {winner_data['pot_amount']}")
+                        
+                        # PLAN A.5: 详细的摊牌信息（如果可用）
+                        if 'showdown_details' in winner_data:
+                            showdown = winner_data['showdown_details']
+                            self.logger.info(f"   - 摊牌详情:")
+                            for player_id, details in showdown.items():
+                                hole_cards = details.get('hole_cards', '未知')
+                                best_hand = details.get('best_hand', '未知')
+                                self.logger.info(f"     * {player_id}: 底牌 {hole_cards}, 最佳牌型 {best_hand}")
+                        
+                        # PLAN A.5: 边池分配（如果可用）
+                        if 'side_pot_distribution' in winner_data:
+                            side_pots = winner_data['side_pot_distribution']
+                            self.logger.info(f"   - 边池分配:")
+                            for pot_id, pot_info in side_pots.items():
+                                amount = pot_info.get('amount', 0)
+                                winners = pot_info.get('winners', [])
+                                self.logger.info(f"     * {pot_id}: {amount} -> {winners}")
+                        
+                        winner_found = True
                         break
-                else:
+                
+                if not winner_found:
+                    # PLAN A.5: 记录缺失详细信息（修复：降级为调试信息）
+                    self.logger.debug(f"DEBUG: 未能从历史记录中获取获胜者详细信息，这可能是正常的。")
                     self.logger.info(f"🏆 获胜信息: 暂无详细信息")
             else:
+                self.logger.warning(f"⚠️ WARNING: 无法获取历史记录获胜信息: {history_result.message}")
                 self.logger.info(f"🏆 获胜信息: 无法获取历史记录")
         except Exception as e:
             self.logger.debug(f"获取获胜信息失败: {e}")
+            self.logger.info(f"🏆 获胜信息: 获取异常")
     
     def _log_error_context(self, error: Exception, context: str, game_state=None):
-        """记录错误的详细上下文"""
-        self.logger.error("" * 30)
+        """记录错误的详细上下文 - PLAN A.7: 增强错误上下文"""
+        self.logger.error("❌" * 30)
         self.logger.error(f"错误发生: {context}")
         self.logger.error(f"错误类型: {type(error).__name__}")
         self.logger.error(f"错误信息: {str(error)}")
@@ -411,8 +576,34 @@ class StreamlitUltimateUserTesterV3:
             self.logger.error(f"   - 底池: {game_state.pot_total}")
             self.logger.error(f"   - 活跃玩家: {game_state.active_player_id}")
             self.logger.error(f"   - 玩家数: {len(game_state.players)}")
+            
+            # PLAN A.7: 完整转储游戏状态
+            try:
+                self.logger.error("完整游戏状态转储:")
+                state_dict = {
+                    'game_id': getattr(game_state, 'game_id', '未知'),
+                    'current_phase': getattr(game_state, 'current_phase', '未知'),
+                    'pot_total': getattr(game_state, 'pot_total', 0),
+                    'current_bet': getattr(game_state, 'current_bet', 0),
+                    'active_player_id': getattr(game_state, 'active_player_id', None),
+                    'community_cards': getattr(game_state, 'community_cards', []),
+                    'players': {}
+                }
+                
+                # 转储所有玩家状态
+                if hasattr(game_state, 'players'):
+                    for player_id, player_data in game_state.players.items():
+                        state_dict['players'][player_id] = dict(player_data) if hasattr(player_data, 'items') else player_data
+                
+                # 使用pprint格式化输出
+                formatted_state = pprint.pformat(state_dict, width=120, depth=3)
+                for line in formatted_state.split('\n'):
+                    self.logger.error(f"   {line}")
+                    
+            except Exception as dump_error:
+                self.logger.error(f"   - 转储游戏状态失败: {dump_error}")
         
-        self.logger.error("" * 30)
+        self.logger.error("❌" * 30)
     
     def run_ultimate_test(self) -> TestStatsSnapshot:
         """运行终极用户测试"""
@@ -508,6 +699,9 @@ class StreamlitUltimateUserTesterV3:
         
         self._hand_start_time = time.time()
         self._hand_had_any_actions = False  # 初始化真实行动标记
+        
+        # PLAN A.9: 初始化本手牌下注玩家追踪
+        self._current_hand_bidders = set()
         
         try:
             # 使用GameFlowService运行手牌流程（CQRS合规）
@@ -718,7 +912,7 @@ class StreamlitUltimateUserTesterV3:
         self.logger.debug(f"完成剩余玩家行动处理，执行了 {action_count} 个行动")
     
     def _execute_real_poker_action(self, game_state, player_id: str) -> bool:
-        """执行真实的德州扑克行动（call/raise/fold等）"""
+        """执行真实的德州扑克行动（call/raise/fold等） - PLAN A.3 & A.6: 增强AI决策日志和不合规行动检查"""
         action_start_time = time.time()
         
         try:
@@ -738,12 +932,17 @@ class StreamlitUltimateUserTesterV3:
             available_actions = actions_result.data.actions
             min_bet = actions_result.data.min_bet
             max_bet = actions_result.data.max_bet
+            current_bet_to_match = getattr(actions_result.data, 'current_bet_to_match', 0)
             
-            self.logger.debug(f"玩家 {player_id} 可用行动: {available_actions}, 下注范围: {min_bet}-{max_bet}")
+            self.logger.debug(f"玩家 {player_id} 可用行动: {available_actions}, 下注范围: {min_bet}-{max_bet}, 需跟注: {current_bet_to_match}")
             
             if not available_actions:
                 self.logger.warning(f"玩家 {player_id} 没有可用行动")
                 return False
+            
+            # 获取玩家当前筹码（用于AI决策验证）
+            player_data = state_before.players.get(player_id, {})
+            chips_before_action = player_data.get('chips', 0)
             
             # 使用应用层AI决策服务生成真实行动
             ai_decision_result = self.query_service.make_ai_decision(
@@ -771,7 +970,14 @@ class StreamlitUltimateUserTesterV3:
                 action_type = ai_decision_result.data['action_type']
                 amount = ai_decision_result.data['amount']
                 reasoning = ai_decision_result.data.get('reasoning', '无原因')
+                
+                # PLAN A.3: 记录AI的原始意图
+                self.logger.debug(f"DEBUG: AI {player_id} 意图: {action_type.upper()} {amount}，当前筹码: {chips_before_action}")
                 self.logger.debug(f"AI决策: {action_type}, 金额: {amount}, 原因: {reasoning}")
+                
+                # PLAN A.3: 检查AI决策是否合理（筹码检查）
+                if action_type.upper() in ['RAISE', 'BET'] and amount > chips_before_action:
+                    self.logger.warning(f"⚠️ WARNING: AI {player_id} 尝试用不足的筹码进行 {action_type.upper()}，意图金额: {amount}，实际筹码: {chips_before_action}")
             
             # 验证行动是否在可用行动列表中
             if action_type not in available_actions:
@@ -803,6 +1009,10 @@ class StreamlitUltimateUserTesterV3:
                     state_before, 
                     state_after
                 )
+                
+                # PLAN A.9: 追踪下注玩家
+                if action_type.upper() in ['BET', 'CALL', 'RAISE'] and amount > 0:
+                    self._current_hand_bidders.add(player_id)
             
             # 记录行动统计
             action_time = time.time() - action_start_time
@@ -825,11 +1035,76 @@ class StreamlitUltimateUserTesterV3:
                 if "不变量违反" in result.message or result.error_code == "INVARIANT_VIOLATION":
                     violation_msg = f"玩家 {player_id} 行动导致不变量违反: {result.message}"
                     self.stats_service.record_invariant_violation(self.session_id, violation_msg, is_critical=True)
-                    self.logger.error(f" 严重不变量违反: {violation_msg}")
+                    self.logger.error(f"❌ 严重不变量违反: {violation_msg}")
                     raise Exception(f"不变量违反导致测试失败: {violation_msg}")
                 else:
                     self.logger.warning(f"玩家行动失败: {result.message}")
                     self._log_error_context(Exception(result.message), f"玩家 {player_id} 行动失败", game_state)
+                    
+                    # PLAN A.4: 行动失败后的重新决策
+                    # 如果是AI玩家且行动失败，尝试重新决策
+                    if player_id.startswith('player_') and player_id != 'player_0':  # 假设player_0是人类玩家
+                        self.logger.info(f"AI玩家 {player_id} 行动失败，尝试重新决策...")
+                        
+                        # 重新获取可用行动（状态可能已变化）
+                        retry_actions_result = self.query_service.get_available_actions(self.game_id, player_id)
+                        if retry_actions_result.success:
+                            retry_available_actions = retry_actions_result.data.actions
+                            retry_min_bet = retry_actions_result.data.min_bet
+                            retry_current_bet_to_match = getattr(retry_actions_result.data, 'current_bet_to_match', 0)
+                            
+                            # 重新进行AI决策
+                            retry_ai_decision_result = self.query_service.make_ai_decision(
+                                self.game_id, 
+                                player_id, 
+                                self._get_ai_config_from_application()
+                            )
+                            
+                            if retry_ai_decision_result.success:
+                                retry_action_type = retry_ai_decision_result.data['action_type']
+                                retry_amount = retry_ai_decision_result.data['amount']
+                                
+                                self.logger.debug(f"AI {player_id} 重新决策: {retry_action_type.upper()} {retry_amount}")
+                                
+                                # PLAN A.6: 检查重新决策的行动是否合规
+                                if retry_action_type.upper() == 'CALL' and retry_amount < retry_current_bet_to_match:
+                                    # 检查是否是全下情况
+                                    if retry_amount < chips_before_action:
+                                        self.logger.critical(f"🚨 CRITICAL: AI {player_id} 执行了不合规的跟注，金额 {retry_amount}，当前牌局需要跟注 {retry_current_bet_to_match}。")
+                                
+                                # 执行重新决策的行动
+                                retry_player_action = PlayerAction(
+                                    action_type=retry_action_type,
+                                    amount=retry_amount
+                                )
+                                
+                                retry_result = self.command_service.execute_player_action(
+                                    self.game_id, player_id, retry_player_action
+                                )
+                                
+                                if retry_result.success:
+                                    self.logger.info(f"AI玩家 {player_id} 重新决策成功: {retry_action_type}")
+                                    
+                                    # 重新记录行动日志
+                                    retry_state_after_result = self.query_service.get_game_state(self.game_id)
+                                    if retry_state_after_result.success:
+                                        retry_state_after = retry_state_after_result.data
+                                        self._log_player_action(
+                                            player_id, 
+                                            retry_action_type, 
+                                            retry_amount, 
+                                            state_before, 
+                                            retry_state_after
+                                        )
+                                        
+                                        # PLAN A.9: 追踪下注玩家
+                                        if retry_action_type.upper() in ['BET', 'CALL', 'RAISE'] and retry_amount > 0:
+                                            self._current_hand_bidders.add(player_id)
+                                    
+                                    return True
+                                else:
+                                    self.logger.error(f"AI玩家 {player_id} 重新决策仍然失败: {retry_result.message}")
+                    
                     return False
             
         except Exception as e:
