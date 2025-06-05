@@ -83,8 +83,8 @@ class AIConfig:
 class RandomAIConfig(AIConfig):
     """随机AI配置"""
     seed: Optional[int] = None     # 随机种子，用于测试重现
-    min_bet_ratio: float = 0.1     # 最小下注比例（相对于底池）
-    max_bet_ratio: float = 1.0     # 最大下注比例（相对于底池）
+    min_bet_ratio: float = 0.2     # 最小下注比例（相对于底池）
+    max_bet_ratio: float = 0.5     # 最大下注比例（相对于底池）
     
     def __post_init__(self):
         super().__post_init__()

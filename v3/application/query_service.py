@@ -473,6 +473,117 @@ class GameQueryService:
                 error_code="CALCULATE_RANDOM_RAISE_FAILED"
             )
     
+    def make_ai_decision(self, game_id: str, player_id: str, 
+                        ai_config: Optional[Dict[str, Any]] = None) -> QueryResult[Dict[str, Any]]:
+        """
+        为指定玩家生成AI决策（遵循CQRS模式的统一入口）
+        
+        Args:
+            game_id: 游戏ID
+            player_id: 玩家ID
+            ai_config: AI配置参数（如概率权重等）
+            
+        Returns:
+            查询结果，包含AI决策信息 {action_type: str, amount: int, reasoning: str}
+        """
+        try:
+            import random
+            
+            # 获取可用行动
+            available_actions_result = self.get_available_actions(game_id, player_id)
+            if not available_actions_result.success:
+                return QueryResult.failure_result(
+                    f"无法获取玩家 {player_id} 的可用行动: {available_actions_result.message}",
+                    error_code="CANNOT_GET_AVAILABLE_ACTIONS"
+                )
+            
+            available_actions = available_actions_result.data.actions
+            if not available_actions:
+                return QueryResult.success_result({
+                    'action_type': 'fold',
+                    'amount': 0,
+                    'reasoning': '无可用行动，默认弃牌'
+                })
+            
+            # 应用AI决策概率（可配置）
+            if ai_config is None:
+                ai_config = {}
+            
+            # 设置默认概率权重
+            action_weights = {
+                'fold': ai_config.get('fold_weight', 0.15),
+                'check': ai_config.get('check_weight', 0.35),
+                'call': ai_config.get('call_weight', 0.35),
+                'raise': ai_config.get('raise_weight', 0.125),
+                'all_in': ai_config.get('all_in_weight', 0.025)
+            }
+            
+            # 筛选可用行动及其权重
+            available_weights = {action: action_weights.get(action, 0.1) 
+                               for action in available_actions}
+            
+            # 归一化权重
+            total_weight = sum(available_weights.values())
+            if total_weight > 0:
+                normalized_weights = {action: weight / total_weight 
+                                    for action, weight in available_weights.items()}
+            else:
+                # 如果权重全为0，使用均匀分布
+                normalized_weights = {action: 1.0 / len(available_actions) 
+                                    for action in available_actions}
+            
+            # 使用加权随机选择
+            actions = list(normalized_weights.keys())
+            weights = list(normalized_weights.values())
+            chosen_action = random.choices(actions, weights=weights)[0]
+            
+            # 计算行动金额
+            amount = 0
+            reasoning = f"概率选择行动: {chosen_action}"
+            
+            if chosen_action in ['fold', 'check']:
+                amount = 0
+            elif chosen_action == 'call':
+                amount = available_actions_result.data.min_bet
+                reasoning += f", 跟注金额: {amount}"
+            elif chosen_action == 'raise':
+                # 使用现有的随机加注金额计算
+                min_ratio = ai_config.get('min_bet_ratio', 0.3)
+                max_ratio = ai_config.get('max_bet_ratio', 0.7)
+                raise_result = self.calculate_random_raise_amount(game_id, player_id, min_ratio, max_ratio)
+                if raise_result.success:
+                    amount = raise_result.data
+                    reasoning += f", 加注金额: {amount}"
+                else:
+                    # 回退到跟注
+                    chosen_action = 'call'
+                    amount = available_actions_result.data.min_bet
+                    reasoning = f"加注失败，回退到跟注: {amount}"
+            elif chosen_action == 'all_in':
+                # 获取玩家筹码作为all-in金额
+                game_state_result = self.get_game_state(game_id)
+                if game_state_result.success:
+                    player_data = game_state_result.data.players.get(player_id, {})
+                    amount = player_data.get('chips', 0)
+                    reasoning += f", 全押金额: {amount}"
+                else:
+                    # 回退到弃牌
+                    chosen_action = 'fold'
+                    amount = 0
+                    reasoning = "无法获取玩家筹码，回退到弃牌"
+            
+            return QueryResult.success_result({
+                'action_type': chosen_action,
+                'amount': amount,
+                'reasoning': reasoning
+            })
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"生成AI决策失败: {str(e)}",
+                error_code="AI_DECISION_FAILED"
+            )
+    
     def _can_advance_phase(self, context: GameContext) -> bool:
         """
         检查是否可以推进阶段
@@ -638,4 +749,408 @@ class GameQueryService:
             return QueryResult.failure_result(
                 f"获取游戏获胜者失败: {str(e)}",
                 error_code="GET_GAME_WINNER_FAILED"
+            )
+    
+    def should_advance_phase(self, game_id: str) -> QueryResult[bool]:
+        """
+        判断是否应该推进游戏阶段
+        
+        Args:
+            game_id: 游戏ID
+            
+        Returns:
+            查询结果，包含是否应该推进阶段的布尔值
+        """
+        try:
+            if self._command_service is None:
+                return QueryResult.failure_result(
+                    "命令服务未初始化",
+                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
+                )
+            
+            # 获取游戏会话
+            session = self._command_service._get_session(game_id)
+            if session is None:
+                return QueryResult.failure_result(
+                    f"游戏 {game_id} 不存在",
+                    error_code="GAME_NOT_FOUND"
+                )
+            
+            # 如果已经是FINISHED阶段，不需要推进
+            if session.state_machine.current_phase.name == "FINISHED":
+                return QueryResult.success_result(False)
+            
+            # 检查是否有活跃玩家
+            active_player_id = session.context.active_player_id
+            
+            # 如果有活跃玩家，不推进阶段
+            if active_player_id is not None:
+                return QueryResult.success_result(False)
+            
+            # 检查是否所有玩家都已行动完毕
+            all_action_complete_result = self.all_players_action_complete(game_id)
+            if not all_action_complete_result.success:
+                return QueryResult.failure_result(
+                    all_action_complete_result.message,
+                    error_code=all_action_complete_result.error_code
+                )
+            
+            should_advance = all_action_complete_result.data
+            return QueryResult.success_result(should_advance)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"判断是否推进阶段失败: {str(e)}",
+                error_code="SHOULD_ADVANCE_PHASE_FAILED"
+            )
+    
+    def all_players_action_complete(self, game_id: str) -> QueryResult[bool]:
+        """
+        检查是否所有玩家都已完成行动
+        
+        Args:
+            game_id: 游戏ID
+            
+        Returns:
+            查询结果，包含所有玩家是否都已完成行动的布尔值
+        """
+        try:
+            if self._command_service is None:
+                return QueryResult.failure_result(
+                    "命令服务未初始化",
+                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
+                )
+            
+            # 获取游戏会话
+            session = self._command_service._get_session(game_id)
+            if session is None:
+                return QueryResult.failure_result(
+                    f"游戏 {game_id} 不存在",
+                    error_code="GAME_NOT_FOUND"
+                )
+            
+            current_phase = session.state_machine.current_phase.name
+            
+            # 如果是FINISHED阶段，行动已完成
+            if current_phase == "FINISHED":
+                return QueryResult.success_result(True)
+            
+            # 检查是否有活跃玩家
+            active_player_id = session.context.active_player_id
+            if active_player_id is not None:
+                return QueryResult.success_result(False)  # 还有活跃玩家，行动未完成
+            
+            # 检查是否是需要玩家行动的阶段
+            betting_phases = ["PRE_FLOP", "FLOP", "TURN", "RIVER"]
+            if current_phase in betting_phases:
+                # 在下注阶段，如果没有活跃玩家，可能是所有玩家都已行动
+                return QueryResult.success_result(True)
+            
+            # 其他阶段（如SHOWDOWN），如果没有活跃玩家，认为可以推进
+            return QueryResult.success_result(True)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"检查玩家行动完成状态失败: {str(e)}",
+                error_code="ALL_PLAYERS_ACTION_COMPLETE_FAILED"
+            )
+    
+    def get_game_rules_config(self, game_id: str) -> QueryResult[Dict[str, Any]]:
+        """
+        获取游戏规则配置
+        
+        Args:
+            game_id: 游戏ID
+            
+        Returns:
+            查询结果，包含游戏规则配置
+        """
+        try:
+            if self._command_service is None:
+                return QueryResult.failure_result(
+                    "命令服务未初始化",
+                    error_code="COMMAND_SERVICE_NOT_INITIALIZED"
+                )
+            
+            # 获取游戏会话
+            session = self._command_service._get_session(game_id)
+            if session is None:
+                return QueryResult.failure_result(
+                    f"游戏 {game_id} 不存在",
+                    error_code="GAME_NOT_FOUND"
+                )
+            
+            # 构建游戏规则配置
+            rules_config = {
+                'small_blind': session.context.small_blind,
+                'big_blind': session.context.big_blind,
+                'initial_chips': 1000,  # 默认初始筹码
+                'max_players': 10,
+                'min_players': 2,
+                'betting_phases': ["PRE_FLOP", "FLOP", "TURN", "RIVER"],
+                'non_betting_phases': ["INIT", "SHOWDOWN", "FINISHED"]
+            }
+            
+            return QueryResult.success_result(rules_config)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"获取游戏规则配置失败: {str(e)}",
+                error_code="GET_GAME_RULES_CONFIG_FAILED"
+            )
+
+    def get_ai_config(self, player_id: str = "default") -> QueryResult[Dict[str, Any]]:
+        """
+        获取AI配置
+        
+        Args:
+            player_id: 玩家ID，用于个性化配置
+            
+        Returns:
+            查询结果，包含AI配置
+        """
+        try:
+            # 默认AI配置 - 应该从配置文件或数据库读取
+            ai_config = {
+                'fold_weight': 0.15,
+                'check_weight': 0.35,
+                'call_weight': 0.35,
+                'raise_weight': 0.125,
+                'all_in_weight': 0.025,
+                'min_bet_ratio': 0.3,
+                'max_bet_ratio': 0.7
+            }
+            
+            # 可以根据player_id定制配置
+            if player_id == "aggressive":
+                ai_config.update({
+                    'raise_weight': 0.3,
+                    'all_in_weight': 0.1,
+                    'fold_weight': 0.1
+                })
+            elif player_id == "conservative":
+                ai_config.update({
+                    'fold_weight': 0.3,
+                    'check_weight': 0.4,
+                    'raise_weight': 0.05
+                })
+            
+            return QueryResult.success_result(ai_config)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"获取AI配置失败: {str(e)}",
+                error_code="GET_AI_CONFIG_FAILED"
+            )
+
+    def get_ui_test_config(self, test_type: str = "ultimate") -> QueryResult[Dict[str, Any]]:
+        """
+        获取UI测试配置
+        
+        Args:
+            test_type: 测试类型 (ultimate, quick, stress等)
+            
+        Returns:
+            查询结果，包含UI测试配置
+        """
+        try:
+            # 基础配置
+            base_config = {
+                'default_player_ids': ["player_0", "player_1", "player_2", "player_3", "player_4", "player_5"],
+                'initial_chips_per_player': 1000,
+                'max_actions_per_hand': 50,
+                'max_consecutive_same_states': 3,
+                'log_level': 'DEBUG',
+                'enable_detailed_logging': True,
+                'enable_chip_conservation_check': True,
+                'enable_invariant_violation_check': True
+            }
+            
+            # 根据测试类型定制配置
+            if test_type == "ultimate":
+                base_config.update({
+                    'num_hands': 100,
+                    'initial_chips_per_player': 10000,  # 增加到100BB以支持长期测试
+                    'max_actions_per_hand': 50,
+                    'enable_performance_metrics': True,
+                    'enable_stress_testing': True
+                })
+            elif test_type == "quick":
+                base_config.update({
+                    'num_hands': 15,
+                    'initial_chips_per_player': 1000,  # 保持15BB对快速测试
+                    'max_actions_per_hand': 30,
+                    'enable_performance_metrics': False,
+                    'log_level': 'INFO'
+                })
+            elif test_type == "stress":
+                base_config.update({
+                    'num_hands': 1000,
+                    'initial_chips_per_player': 50000,  # 500BB支持超长期测试
+                    'max_actions_per_hand': 100,
+                    'enable_performance_metrics': True,
+                    'enable_stress_testing': True,
+                    'log_level': 'WARNING'
+                })
+            
+            return QueryResult.success_result(base_config)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"获取UI测试配置失败: {str(e)}",
+                error_code="GET_UI_TEST_CONFIG_FAILED"
+            )
+
+    def calculate_game_state_hash(self, game_id: str) -> QueryResult[str]:
+        """
+        计算游戏状态哈希值
+        
+        Args:
+            game_id: 游戏ID
+            
+        Returns:
+            查询结果，包含状态哈希值
+        """
+        try:
+            import hashlib
+            import json
+            
+            # 获取游戏状态
+            state_result = self.get_game_state(game_id)
+            if not state_result.success:
+                return QueryResult.failure_result(
+                    f"无法获取游戏状态: {state_result.message}",
+                    error_code=state_result.error_code
+                )
+            
+            game_state = state_result.data
+            
+            # 提取关键状态信息
+            state_info = {
+                'phase': game_state.current_phase,
+                'pot_total': game_state.pot_total,
+                'current_bet': game_state.current_bet,
+                'active_player': game_state.active_player_id,
+                'community_cards_count': len(game_state.community_cards),
+            }
+            
+            # 添加玩家状态信息
+            player_states = {}
+            for player_id, player_data in game_state.players.items():
+                player_states[player_id] = {
+                    'chips': player_data.get('chips', 0),
+                    'current_bet': player_data.get('current_bet', 0),
+                    'active': player_data.get('active', False),
+                    'status': player_data.get('status', 'unknown')
+                }
+            
+            state_info['players'] = player_states
+            
+            # 计算哈希
+            state_json = json.dumps(state_info, sort_keys=True)
+            state_hash = hashlib.md5(state_json.encode('utf-8')).hexdigest()[:12]
+            
+            return QueryResult.success_result(state_hash)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"计算状态哈希失败: {str(e)}",
+                error_code="CALCULATE_STATE_HASH_FAILED"
+            )
+
+    def validate_player_action_rules(self, game_id: str, player_id: str, action_type: str, 
+                                   amount: int, state_before, state_after) -> QueryResult[Dict[str, Any]]:
+        """
+        验证玩家行动是否符合德州扑克规则
+        
+        Args:
+            game_id: 游戏ID
+            player_id: 玩家ID
+            action_type: 行动类型
+            amount: 行动金额
+            state_before: 行动前状态
+            state_after: 行动后状态
+            
+        Returns:
+            查询结果，包含验证结果
+        """
+        try:
+            violations = []
+            
+            # 获取玩家状态
+            player_before = state_before.players.get(player_id, {})
+            player_after = state_after.players.get(player_id, {})
+            
+            chips_before = player_before.get('chips', 0)
+            chips_after = player_after.get('chips', 0)
+            bet_before = player_before.get('current_bet', 0)
+            bet_after = player_after.get('current_bet', 0)
+            
+            # 计算筹码变化
+            chips_used = chips_before - chips_after
+            bet_increase = bet_after - bet_before
+            
+            # 根据行动类型验证规则
+            if action_type == 'fold':
+                # 弃牌：筹码不应该减少，下注不应该增加
+                if chips_used != 0:
+                    violations.append(f"弃牌规则异常: {player_id} 弃牌但筹码减少了 {chips_used}")
+                if bet_increase != 0:
+                    violations.append(f"弃牌规则异常: {player_id} 弃牌但下注增加了 {bet_increase}")
+            
+            elif action_type == 'check':
+                # 过牌：筹码和下注都不应该变化
+                if chips_used != 0:
+                    violations.append(f"过牌规则异常: {player_id} 过牌但筹码减少了 {chips_used}")
+                if bet_increase != 0:
+                    violations.append(f"过牌规则异常: {player_id} 过牌但下注增加了 {bet_increase}")
+            
+            elif action_type == 'call':
+                # 跟注：筹码减少应该等于下注增加
+                if chips_used != bet_increase:
+                    violations.append(f"跟注规则异常: {player_id} 筹码减少 {chips_used} 但下注增加 {bet_increase}")
+            
+            elif action_type in ['raise', 'bet']:
+                # 加注/下注：筹码减少应该等于下注增加
+                if chips_used != bet_increase:
+                    violations.append(f"加注规则异常: {player_id} 筹码减少 {chips_used} 但下注增加 {bet_increase}")
+                
+                # 检查最小加注规则 - 只在实际有加注金额时检查
+                if amount > 0:  # 只有当指定了加注金额时才检查最小加注规则
+                    current_bet = state_before.current_bet
+                    rules_result = self.get_game_rules_config(game_id)
+                    big_blind = 100  # 默认值
+                    if rules_result.success:
+                        big_blind = rules_result.data.get('big_blind', 100)
+                    
+                    min_raise = current_bet + big_blind
+                    if amount < min_raise and chips_after > 0:  # 不是全押的情况
+                        violations.append(f"最小加注规则异常: {player_id} 加注金额 {amount}，但最小应为 {min_raise}")
+            
+            elif action_type == 'all_in':
+                # 全押：应该用完所有筹码
+                if chips_after != 0:
+                    violations.append(f"全押规则异常: {player_id} 全押后还剩 {chips_after} 筹码")
+            
+            # 通用筹码守恒检查
+            if chips_used < 0:
+                violations.append(f"筹码异常: {player_id} 筹码增加了 {-chips_used}")
+            
+            # 构建验证结果
+            validation_result = {
+                'is_valid': len(violations) == 0,
+                'violations': violations,
+                'player_id': player_id,
+                'action_type': action_type,
+                'amount': amount,
+                'chips_used': chips_used,
+                'bet_increase': bet_increase
+            }
+            
+            return QueryResult.success_result(validation_result)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"验证玩家行动规则失败: {str(e)}",
+                error_code="VALIDATE_PLAYER_ACTION_RULES_FAILED"
             ) 

@@ -30,6 +30,7 @@ from .types import (
 
 from .command_service import GameCommandService, GameSession
 from .query_service import GameQueryService, GameStateSnapshot, PlayerInfo, AvailableActions
+from .test_stats_service import TestStatsService, TestStatsSnapshot
 
 __version__ = "3.0.0"
 
@@ -47,10 +48,12 @@ __all__ = [
     # 服务
     "GameCommandService",
     "GameQueryService",
+    "TestStatsService",
     
     # 数据类
     "GameSession",
     "GameStateSnapshot",
     "PlayerInfo",
     "AvailableActions",
+    "TestStatsSnapshot",
 ] 
