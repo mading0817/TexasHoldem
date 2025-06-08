@@ -25,7 +25,8 @@ from .types import (
 from .snapshot_manager import (
     SnapshotManager,
     SnapshotCreationError,
-    SnapshotRestoreError
+    SnapshotRestoreError,
+    get_snapshot_manager
 )
 from .serializer import (
     SnapshotSerializer,
@@ -43,6 +44,7 @@ __all__ = [
     
     # 快照管理器
     'SnapshotManager',
+    'get_snapshot_manager',
     'SnapshotCreationError',
     'SnapshotRestoreError',
     

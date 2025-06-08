@@ -239,6 +239,47 @@ class ChipLedger:
                 timestamp=time.time()
             )
     
+    def settle_hand(self, transactions: Dict[str, int]) -> None:
+        """
+        结算一手牌，原子性地处理所有玩家的筹码输赢。
+        这会清空所有冻结的筹码，然后根据传入的交易字典调整玩家余额。
+
+        Args:
+            transactions: 一个字典，{player_id: net_chip_change}。
+                          赢家用正数表示，输家用负数表示。
+        """
+        with self._lock:
+            # 1. 记录结算前的总筹码，用于验证
+            total_before_settle = self.get_total_chips()
+
+            # 2. 清空所有冻结的筹码
+            self._frozen_chips.clear()
+            
+            # 3. 应用净变化
+            for player_id, net_change in transactions.items():
+                self._player_balances[player_id] = self._player_balances.get(player_id, 0) + net_change
+                
+                # 记录详细的Settle交易
+                transaction = ChipTransaction(
+                    transaction_id=f"settle_{player_id}_{len(self._transaction_history)}",
+                    transaction_type=TransactionType.SETTLE,
+                    player_id=player_id,
+                    amount=abs(net_change),
+                    timestamp=time.time(),
+                    description=f"手牌结算: 净变化 {net_change}",
+                    metadata={'net_change': net_change}
+                )
+                self._transaction_history.append(transaction)
+
+            # 4. 验证筹码守恒
+            total_after_settle = self.get_total_chips()
+            if total_before_settle != total_after_settle:
+                # 这是一个严重的内部错误，应立即抛出异常
+                raise RuntimeError(
+                    f"手牌结算后筹码不守恒! "
+                    f"结算前: {total_before_settle}, 结算后: {total_after_settle}"
+                )
+
     def get_transaction_history(self, player_id: Optional[str] = None) -> List[ChipTransaction]:
         """
         获取交易历史

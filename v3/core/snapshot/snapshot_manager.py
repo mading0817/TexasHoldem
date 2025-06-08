@@ -15,8 +15,9 @@ from .types import (
 from ..state_machine.types import GameContext, GamePhase
 from ..deck.card import Card
 from ..chips.chip_transaction import ChipTransaction
+from ..chips.chip_ledger import ChipLedger
 
-__all__ = ['SnapshotManager', 'SnapshotCreationError', 'SnapshotRestoreError']
+__all__ = ['SnapshotManager', 'SnapshotCreationError', 'SnapshotRestoreError', 'get_snapshot_manager']
 
 
 class SnapshotCreationError(Exception):
@@ -73,7 +74,7 @@ class SnapshotManager:
             )
             
             # 创建玩家快照
-            players = self._create_player_snapshots(game_context.players)
+            players = self._create_player_snapshots(game_context)
             
             # 创建奖池快照
             pot = self._create_pot_snapshot(game_context)
@@ -130,6 +131,11 @@ class SnapshotManager:
             # 恢复玩家信息
             players = self._restore_players_from_snapshot(snapshot.players)
             
+            # 从快照恢复筹码账本和当前手牌下注
+            initial_balances = {p.player_id: p.chips for p in snapshot.players}
+            ledger = ChipLedger(initial_balances)
+            current_hand_bets = {p.player_id: p.total_bet_this_hand for p in snapshot.players if p.total_bet_this_hand > 0}
+            
             # 恢复社区牌
             community_cards = list(snapshot.community_cards)
             
@@ -138,11 +144,12 @@ class SnapshotManager:
                 game_id=snapshot.game_id,
                 current_phase=snapshot.phase,
                 players=players,
+                chip_ledger=ledger,
                 community_cards=community_cards,
-                pot_total=snapshot.pot.total_pot,
                 current_bet=snapshot.current_bet,
-                small_blind=snapshot.small_blind_amount,  # 从快照恢复小盲注
-                big_blind=snapshot.big_blind_amount,      # 从快照恢复大盲注
+                current_hand_bets=current_hand_bets,
+                small_blind=snapshot.small_blind_amount,
+                big_blind=snapshot.big_blind_amount,
                 active_player_id=self._get_active_player_id(snapshot)
             )
             
@@ -217,7 +224,7 @@ class SnapshotManager:
         # 更新历史记录
         self._snapshot_history = self._snapshot_history[to_remove_count:]
     
-    def _create_player_snapshots(self, players: Dict[str, Any]) -> tuple:
+    def _create_player_snapshots(self, game_context: GameContext) -> tuple:
         """从游戏上下文的玩家信息创建玩家快照
         
         平衡修复：is_active表示"在游戏中且未弃牌"，但增强active_player_position逻辑
@@ -225,7 +232,7 @@ class SnapshotManager:
         """
         player_snapshots = []
         
-        for player_id, player_data in players.items():
+        for player_id, player_data in game_context.players.items():
             # 处理手牌
             hole_cards = ()
             if 'hole_cards' in player_data and player_data['hole_cards']:
@@ -239,10 +246,13 @@ class SnapshotManager:
             # is_active表示"在游戏中且未弃牌"
             is_in_hand = base_active and player_status not in ['folded', 'out']
             
+            # (Phase 4 Fix) 从ChipLedger获取筹码的唯一真实来源
+            chips = game_context.chip_ledger.get_balance(player_id)
+            
             player_snapshot = PlayerSnapshot(
                 player_id=player_id,
                 name=player_data.get('name', player_id),
-                chips=player_data.get('chips', 0),
+                chips=chips, # 修复：使用ChipLedger的真实筹码
                 hole_cards=hole_cards,
                 position=player_data.get('position', 0),
                 is_active=is_in_hand,  # 修复：在游戏中且未弃牌
@@ -257,11 +267,18 @@ class SnapshotManager:
     
     def _create_pot_snapshot(self, game_context: GameContext) -> PotSnapshot:
         """从游戏上下文创建奖池快照"""
+        total_pot = sum(game_context.current_hand_bets.values())
+        
+        eligible_players = set(game_context.current_hand_bets.keys())
+        for p_id, p_data in game_context.players.items():
+            if p_data.get('status') not in ['folded', 'out']:
+                eligible_players.add(p_id)
+
         return PotSnapshot(
-            main_pot=game_context.pot_total,
-            side_pots=(),  # 需要从游戏上下文获取边池信息
-            total_pot=game_context.pot_total,
-            eligible_players=tuple(game_context.players.keys())
+            main_pot=total_pot,  # 简化，真实边池由PotManager在结算时计算
+            side_pots=(),
+            total_pot=total_pot,
+            eligible_players=tuple(sorted(list(eligible_players)))
         )
     
     def _get_active_player_position(self, game_context: GameContext) -> Optional[int]:
@@ -346,10 +363,26 @@ class SnapshotManager:
         return None
     
     def _store_snapshot(self, snapshot: GameStateSnapshot):
-        """存储快照到内存"""
+        """存储快照并管理历史记录"""
+        if len(self._snapshot_history) >= self._max_history_size:
+            # 移除最旧的快照ID和对象
+            oldest_id = self._snapshot_history.pop(0)
+            self._snapshots.pop(oldest_id, None)
+            
         self._snapshots[snapshot.metadata.snapshot_id] = snapshot
         self._snapshot_history.append(snapshot.metadata.snapshot_id)
-        
-        # 如果历史记录超过限制，清理旧快照
-        if len(self._snapshot_history) > self._max_history_size:
-            self.clear_old_snapshots(self._max_history_size // 2) 
+
+# 全局单例
+_snapshot_manager_instance: Optional[SnapshotManager] = None
+
+def get_snapshot_manager() -> SnapshotManager:
+    """
+    获取快照管理器的单例实例
+    
+    Returns:
+        SnapshotManager: 快照管理器实例
+    """
+    global _snapshot_manager_instance
+    if _snapshot_manager_instance is None:
+        _snapshot_manager_instance = SnapshotManager()
+    return _snapshot_manager_instance 

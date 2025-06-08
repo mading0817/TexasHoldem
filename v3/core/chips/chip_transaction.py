@@ -19,6 +19,7 @@ class TransactionType(Enum):
     TRANSFER = auto()    # 转移筹码
     FREEZE = auto()      # 冻结筹码
     UNFREEZE = auto()    # 解冻筹码
+    SETTLE = auto()      # 结算手牌
 
 
 @dataclass(frozen=True)

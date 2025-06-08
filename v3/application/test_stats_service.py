@@ -217,6 +217,38 @@ class TestStatsService:
                 error_code="RECORD_HAND_FAILED_FAILED"
             )
     
+    def record_error(self, session_id: str, error_message: str, is_critical: bool = False) -> QueryResult[bool]:
+        """
+        记录通用错误
+        
+        Args:
+            session_id: 测试会话ID
+            error_message: 错误信息
+            is_critical: 是否为严重错误
+            
+        Returns:
+            查询结果，表示是否成功
+        """
+        try:
+            if session_id not in self._stats_store:
+                return QueryResult.failure_result(
+                    f"测试会话 {session_id} 不存在",
+                    error_code="TEST_SESSION_NOT_FOUND"
+                )
+            
+            stats = self._stats_store[session_id]
+            stats.errors.append(f"ERROR: {error_message}")
+            if is_critical:
+                stats.critical_errors += 1
+            
+            return QueryResult.success_result(True)
+            
+        except Exception as e:
+            return QueryResult.failure_result(
+                f"记录错误失败: {str(e)}",
+                error_code="RECORD_ERROR_FAILED"
+            )
+    
     def record_user_action(self, session_id: str, action_type: str, success: bool, 
                           action_time: float = None, error_message: str = None) -> QueryResult[bool]:
         """

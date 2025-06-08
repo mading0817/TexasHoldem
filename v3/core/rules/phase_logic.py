@@ -7,6 +7,7 @@
 from typing import Optional, List, Dict, Any
 from ..state_machine.types import GamePhase, GameEvent, GameContext
 from .types import PhaseTransition, CorePhaseLogicData
+from .result import OperationResult
 
 __all__ = [
     'get_possible_next_phases',
@@ -16,7 +17,7 @@ __all__ = [
 ]
 
 
-def get_possible_next_phases(current_phase: GamePhase, context: Optional[GameContext] = None) -> List[GamePhase]:
+def get_possible_next_phases(current_phase: GamePhase, context: Optional[GameContext] = None) -> OperationResult[List[GamePhase]]:
     """
     获取从当前阶段可能转换到的所有下一阶段
     
@@ -25,7 +26,7 @@ def get_possible_next_phases(current_phase: GamePhase, context: Optional[GameCon
         context: 游戏上下文（可选，用于条件判断）
         
     Returns:
-        可能的下一阶段列表
+        包含可能的下一阶段列表的操作结果
     """
     # 德州扑克标准阶段转换规则
     phase_transitions = {
@@ -46,11 +47,11 @@ def get_possible_next_phases(current_phase: GamePhase, context: Optional[GameCon
         if _only_one_active_player(context):
             possible_phases = [GamePhase.FINISHED]
     
-    return possible_phases
+    return OperationResult.success_result(data=possible_phases)
 
 
 def get_defined_next_phase_for_event(current_phase: GamePhase, event_type: str, 
-                                    context: Optional[GameContext] = None) -> Optional[GamePhase]:
+                                    context: Optional[GameContext] = None) -> OperationResult[Optional[GamePhase]]:
     """
     根据事件类型获取明确定义的下一阶段
     
@@ -60,7 +61,7 @@ def get_defined_next_phase_for_event(current_phase: GamePhase, event_type: str,
         context: 游戏上下文（可选）
         
     Returns:
-        下一阶段，如果事件不会触发阶段转换则返回None
+        包含下一阶段的操作结果，如果事件不会触发阶段转换则data为None
     """
     # 德州扑克事件驱动的阶段转换规则
     event_transitions = {
@@ -100,14 +101,17 @@ def get_defined_next_phase_for_event(current_phase: GamePhase, event_type: str,
         if next_phase is not None and context is not None:
             # 验证转换的合法性
             if not _is_valid_transition(current_phase, next_phase, context):
-                return None
+                return OperationResult.failure_result(
+                    message=f"从 {current_phase} 到 {next_phase} 的转换在当前上下文无效",
+                    error_code="INVALID_TRANSITION"
+                )
         
-        return next_phase
+        return OperationResult.success_result(data=next_phase)
     
-    return None
+    return OperationResult.success_result(data=None)
 
 
-def get_next_phase_in_sequence(current_phase: GamePhase) -> Optional[GamePhase]:
+def get_next_phase_in_sequence(current_phase: GamePhase) -> OperationResult[Optional[GamePhase]]:
     """
     获取德州扑克标准序列中的下一阶段
     
@@ -115,7 +119,7 @@ def get_next_phase_in_sequence(current_phase: GamePhase) -> Optional[GamePhase]:
         current_phase: 当前游戏阶段
         
     Returns:
-        序列中的下一阶段，如果已是最后阶段则返回None
+        包含序列中的下一阶段的操作结果，如果已是最后阶段则data为None
     """
     # 德州扑克标准阶段序列
     phase_sequence = [
@@ -131,12 +135,15 @@ def get_next_phase_in_sequence(current_phase: GamePhase) -> Optional[GamePhase]:
     try:
         current_index = phase_sequence.index(current_phase)
         if current_index < len(phase_sequence) - 1:
-            return phase_sequence[current_index + 1]
+            return OperationResult.success_result(data=phase_sequence[current_index + 1])
     except ValueError:
         # 当前阶段不在标准序列中
-        pass
+        return OperationResult.failure_result(
+            f"当前阶段 {current_phase} 不在标准序列中",
+            error_code="INVALID_PHASE"
+        )
     
-    return None
+    return OperationResult.success_result(data=None)
 
 
 def get_core_phase_logic_data(current_phase: GamePhase, context: Optional[GameContext] = None) -> CorePhaseLogicData:
@@ -150,8 +157,11 @@ def get_core_phase_logic_data(current_phase: GamePhase, context: Optional[GameCo
     Returns:
         核心阶段逻辑数据
     """
-    possible_next = get_possible_next_phases(current_phase, context)
-    default_next = get_next_phase_in_sequence(current_phase)
+    possible_next_result = get_possible_next_phases(current_phase, context)
+    default_next_result = get_next_phase_in_sequence(current_phase)
+    
+    possible_next = possible_next_result.data if possible_next_result.success else []
+    default_next = default_next_result.data if default_next_result.success else None
     
     # 构建有效的转换列表
     valid_transitions = []
@@ -206,8 +216,10 @@ def _is_valid_transition(from_phase: GamePhase, to_phase: GamePhase, context: Ga
         转换是否合法
     """
     # 基本的转换合法性验证
-    possible_phases = get_possible_next_phases(from_phase, context)
-    return to_phase in possible_phases
+    possible_phases_result = get_possible_next_phases(from_phase, context)
+    if not possible_phases_result.success:
+        return False
+    return to_phase in possible_phases_result.data
 
 
 def _get_transition_condition(from_phase: GamePhase, to_phase: GamePhase) -> Optional[str]:

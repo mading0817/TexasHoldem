@@ -184,22 +184,6 @@
 
 ---
 
-## 七、锦标赛规则补充
-
-### 7.1 盲注结构
-
-* 盲注金额按照预设的时间间隔逐渐增加。
-
-* 可设置前注（Ante），即每位玩家在发牌前投入的强制性小额注金。
-
-### 7.2 淘汰与晋级
-
-* 当玩家筹码为零时被淘汰。
-
-* 根据比赛规则，最后剩余的玩家获得冠军，其余玩家根据淘汰顺序排名。
-
----
-
 [1]: https://oag.ca.gov/sites/all/files/agweb/pdfs/gambling/BGC_texas.pdf?utm_source=chatgpt.com "[PDF] 2016 Revision- Texas Hold 'Em RULES"
 [2]: https://www.pokernews.com/poker-rules/texas-holdem.htm?utm_source=chatgpt.com "How to Play Texas Hold'em Poker: Holdem Rules & Hands"
 [3]: https://upswingpoker.com/poker-rules/texas-holdem-rules/?utm_source=chatgpt.com "How to Play Texas Hold'em | Poker Rules"

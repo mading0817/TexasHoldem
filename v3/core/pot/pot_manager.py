@@ -7,6 +7,7 @@
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass
 from ..chips.chip_ledger import ChipLedger
+from ..eval.types import HandResult
 
 __all__ = ['PotManager', 'SidePot', 'PotDistributionResult']
 
@@ -62,30 +63,37 @@ class PotManager:
     def calculate_side_pots(self, player_bets: Dict[str, int]) -> List[SidePot]:
         """
         计算边池分配
-        
+
         Args:
             player_bets: 玩家下注记录 {player_id: bet_amount}
-            
+
         Returns:
             边池列表
         """
         if not player_bets:
             return []
+
+        # 过滤掉没有下注的玩家
+        active_bets = {p: b for p, b in player_bets.items() if b > 0}
+        if not active_bets:
+            return []
+
+        self._side_pots.clear()
+        self._pot_counter = 0
+
+        # 获取所有不重复的下注额，并排序
+        sorted_bet_levels = sorted(list(set(active_bets.values())))
         
-        # 按下注金额排序
-        sorted_bets = sorted(player_bets.items(), key=lambda x: x[1])
-        side_pots = []
+        last_level = 0
         
-        previous_level = 0
-        remaining_players = set(player_bets.keys())
-        
-        for i, (player_id, bet_amount) in enumerate(sorted_bets):
-            if bet_amount <= previous_level:
-                continue
+        for i, level in enumerate(sorted_bet_levels):
+            # 找出所有下注额大于等于当前层级的玩家
+            # 这些玩家对当前层级的底池有贡献
+            contributors = {p for p, b in active_bets.items() if b >= level}
             
-            # 计算当前层级的边池
-            level_contribution = bet_amount - previous_level
-            pot_amount = level_contribution * len(remaining_players)
+            # 计算当前层级的贡献额
+            contribution_per_player = level - last_level
+            pot_amount = contribution_per_player * len(contributors)
             
             if pot_amount > 0:
                 pot_id = f"pot_{self._pot_counter}"
@@ -94,22 +102,74 @@ class PotManager:
                 side_pot = SidePot(
                     pot_id=pot_id,
                     amount=pot_amount,
-                    eligible_players=remaining_players.copy(),
+                    eligible_players=contributors,
                     is_main_pot=(i == 0)
                 )
-                side_pots.append(side_pot)
+                self._side_pots.append(side_pot)
             
-            # 移除当前玩家（如果他们全押了）
-            if i < len(sorted_bets) - 1:
-                next_bet = sorted_bets[i + 1][1]
-                if bet_amount < next_bet:
-                    remaining_players.discard(player_id)
+            last_level = level
             
-            previous_level = bet_amount
-        
-        self._side_pots = side_pots
-        return side_pots.copy()
+        return self._side_pots.copy()
     
+    def distribute_pots(self, side_pots: List[SidePot], player_hand_results: Dict[str, HandResult]) -> Dict[str, int]:
+        """
+        根据玩家手牌强度，分配所有边池
+
+        Args:
+            side_pots: 待分配的边池列表
+            player_hand_results: 参与摊牌玩家的手牌评估结果 {player_id: HandResult}
+
+        Returns:
+            一个字典，包含每个获胜玩家及其赢得的总金额 {player_id: total_winnings}
+        """
+        winnings = {player_id: 0 for player_id in player_hand_results.keys()}
+
+        # 通常边池是从主池开始，按顺序分配
+        for pot in side_pots:
+            # 找出有资格争夺此底池且参与摊牌的玩家
+            eligible_players_in_showdown = [
+                p_id for p_id in pot.eligible_players if p_id in player_hand_results
+            ]
+
+            if not eligible_players_in_showdown:
+                # 这种情况理论上不应该发生，但作为保护，跳过这个池
+                continue
+
+            # 在有资格的玩家中找到最好的手牌
+            best_hand_in_pot: Optional[HandResult] = None
+            for player_id in eligible_players_in_showdown:
+                hand_result = player_hand_results[player_id]
+                if best_hand_in_pot is None or hand_result.compare_to(best_hand_in_pot) > 0:
+                    best_hand_in_pot = hand_result
+
+            # 找到所有拥有这手最好牌的玩家（处理平分底池的情况）
+            if best_hand_in_pot is None:
+                continue
+                
+            pot_winners = [
+                player_id for player_id in eligible_players_in_showdown
+                if player_hand_results[player_id].compare_to(best_hand_in_pot) == 0
+            ]
+
+            # 在赢家之间分配底池金额
+            if pot_winners:
+                pot_amount = pot.amount
+                per_winner_amount = pot_amount // len(pot_winners)
+                remainder = pot_amount % len(pot_winners)
+
+                # 为了确定性地分配余数，按玩家ID排序
+                sorted_pot_winners = sorted(pot_winners)
+                for i, winner_id in enumerate(sorted_pot_winners):
+                    win_amount = per_winner_amount
+                    if i < remainder:
+                        win_amount += 1
+                    
+                    if win_amount > 0:
+                        winnings[winner_id] = winnings.get(winner_id, 0) + win_amount
+
+        # 返回只包含有奖金的玩家
+        return {p_id: amount for p_id, amount in winnings.items() if amount > 0}
+
     def distribute_winnings(self, winners: Dict[str, int], hand_strengths: Dict[str, int]) -> PotDistributionResult:
         """
         分配奖金到获胜者
@@ -189,13 +249,22 @@ class PotManager:
         remaining_chips = side_pot.amount % len(top_winners)
         
         distributions = {}
-        for player_id in top_winners:
-            distributions[player_id] = per_winner_amount
+        # 为了确定性地分配余数，按玩家ID排序
+        sorted_winners = sorted(top_winners)
         
+        for i, player_id in enumerate(sorted_winners):
+            amount = per_winner_amount
+            if i < remaining_chips:
+                amount += 1
+            distributions[player_id] = amount
+        
+        # 移除分配为0的玩家
+        distributions = {p: a for p, a in distributions.items() if a > 0}
+
         return PotDistributionResult(
             distributions=distributions,
             total_distributed=side_pot.amount,
-            remaining_chips=remaining_chips
+            remaining_chips=0  # 余数已经分配
         )
     
     def get_total_pot_amount(self) -> int:

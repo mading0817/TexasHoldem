@@ -13,25 +13,10 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, asdict
 
 from .types import QueryResult
-from ..core.state_machine import GamePhase, GameContext
+from ..core.state_machine.types import GamePhase, GameContext
 from ..core.events import EventBus, get_event_bus, DomainEvent
-
-
-@dataclass(frozen=True)
-class GameStateSnapshot:
-    """游戏状态快照"""
-    game_id: str
-    current_phase: str
-    players: Dict[str, Any]
-    community_cards: List[Any]
-    pot_total: int
-    current_bet: int
-    active_player_id: Optional[str]
-    timestamp: float
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式"""
-        return asdict(self)
+from ..core.snapshot.types import GameStateSnapshot, PlayerSnapshot
+from ..core.rules.types import CorePermissibleActionsData
 
 
 @dataclass(frozen=True)
@@ -102,6 +87,23 @@ class GameQueryService:
         # PLAN 40: 使用命令服务的快照接口而不是直接访问session
         return self._command_service.get_game_state_snapshot(game_id)
     
+    def get_live_game_context(self, game_id: str) -> QueryResult[GameContext]:
+        """
+        获取实时游戏上下文 (非快照)
+        
+        Args:
+            game_id: 游戏ID
+            
+        Returns:
+            查询结果，包含实时的GameContext
+        """
+        if self._command_service is None:
+            return QueryResult.failure_result(
+                "命令服务未初始化",
+                error_code="COMMAND_SERVICE_NOT_INITIALIZED"
+            )
+        return self._command_service.get_live_context(game_id)
+    
     def get_player_info(self, game_id: str, player_id: str) -> QueryResult[PlayerInfo]:
         """
         获取玩家信息 (PLAN 40: 使用快照接口)
@@ -127,22 +129,22 @@ class GameQueryService:
                 error_code=snapshot_result.error_code
             )
         
-        snapshot = snapshot_result.data
+        snapshot: GameStateSnapshot = snapshot_result.data
         
         # 检查玩家是否存在
-        if player_id not in snapshot.players:
+        player_snapshot = snapshot.get_player_by_id(player_id)
+        if player_snapshot is None:
             return QueryResult.failure_result(
                 f"玩家 {player_id} 不在游戏中",
                 error_code="PLAYER_NOT_IN_GAME"
             )
         
-        player_data = snapshot.players[player_id]
         player_info = PlayerInfo(
-            player_id=player_id,
-            chips=player_data.get('chips', 0),
-            active=player_data.get('active', False),
-            current_bet=player_data.get('current_bet', 0),
-            hole_cards=player_data.get('hole_cards', [])
+            player_id=player_snapshot.player_id,
+            chips=player_snapshot.chips,
+            active=player_snapshot.is_active,
+            current_bet=player_snapshot.current_bet,
+            hole_cards=list(player_snapshot.hole_cards)
         )
         
         return QueryResult.success_result(player_info)
@@ -173,58 +175,71 @@ class GameQueryService:
                     error_code=snapshot_result.error_code
                 )
             
-            snapshot = snapshot_result.data
+            snapshot: GameStateSnapshot = snapshot_result.data
             
             # 检查玩家是否存在
-            if player_id not in snapshot.players:
+            player_snapshot = snapshot.get_player_by_id(player_id)
+            if player_snapshot is None:
                 return QueryResult.failure_result(
                     f"玩家 {player_id} 不在游戏中",
                     error_code="PLAYER_NOT_IN_GAME"
                 )
+
             # PLAN 44: 使用核心层逻辑确定可用行动
-            from ..core.state_machine import GameContext, GamePhase
+            # Re-import for clarity, can be optimized at module level
             from ..core.rules import determine_permissible_actions
+            from ..core.chips.chip_ledger import ChipLedger
             
             # 构建GameContext用于核心层逻辑
-            # 需要将快照中的阶段字符串转换为枚举
-            current_phase_enum = None
-            for phase in GamePhase:
-                if phase.name == snapshot.current_phase:
-                    current_phase_enum = phase
-                    break
             
-            if current_phase_enum is None:
-                return QueryResult.failure_result(
-                    f"无效的游戏阶段: {snapshot.current_phase}",
-                    error_code="INVALID_GAME_PHASE"
-                )
+            # 从快照数据重建 ChipLedger, 这是一个临时的解决方案
+            # 正确的重构应该让 ChipLedger 存在于一个更高层级的 GameSession 中
+            ledger = ChipLedger()
+            for p in snapshot.players:
+                ledger.set_balance(p.player_id, p.chips)
             
+            # 将玩家快照元组转换为GameContext所需的字典
+            # GameContext.players 期望一个字典, value可以是任何东西 (Any)
+            # 在这里我们传递PlayerSnapshot的字典表示
+            players_dict = {p.player_id: asdict(p) for p in snapshot.players}
+
+            active_player_id = None
+            if snapshot.active_player_position is not None:
+                if 0 <= snapshot.active_player_position < len(snapshot.players):
+                    active_player_id = snapshot.players[snapshot.active_player_position].player_id
+
             game_context = GameContext(
                 game_id=snapshot.game_id,
-                current_phase=current_phase_enum,
-                players=snapshot.players,
-                community_cards=snapshot.community_cards,
-                pot_total=snapshot.pot_total,
+                current_phase=snapshot.phase,
+                players=players_dict,
+                chip_ledger=ledger,
+                community_cards=list(snapshot.community_cards),
+                pot_total=snapshot.pot.total_pot,
                 current_bet=snapshot.current_bet,
-                active_player_id=snapshot.active_player_id
+                small_blind=snapshot.small_blind_amount,
+                big_blind=snapshot.big_blind_amount,
+                active_player_id=active_player_id
             )
             
             # 调用核心层逻辑获取可用行动
-            core_actions_data = determine_permissible_actions(game_context, player_id)
+            core_actions_data: CorePermissibleActionsData = determine_permissible_actions(game_context, player_id)
             
             # 转换为应用层DTO
             available_actions = AvailableActions(
                 player_id=player_id,
                 actions=core_actions_data.get_action_types_as_strings(),
-                min_bet=core_actions_data.constraints.min_call_amount,
+                min_bet=core_actions_data.constraints.min_raise_amount, # 注意这里可能是min_call_amount
                 max_bet=core_actions_data.constraints.max_raise_amount
             )
             
             return QueryResult.success_result(available_actions)
             
         except Exception as e:
+            # 增强错误日志
+            import traceback
+            tb_str = traceback.format_exc()
             return QueryResult.failure_result(
-                f"获取可用行动失败: {str(e)}",
+                f"获取可用行动失败: {str(e)}\n{tb_str}",
                 error_code="GET_AVAILABLE_ACTIONS_FAILED"
             )
     

@@ -91,6 +91,28 @@ class ProjectCleaner:
             "Pipfile.lock",
             "poetry.lock",
         }
+        
+        # 添加特定需要清理的目录（相对于项目根目录）
+        # 这些目录中的文件会被清理，但保留__init__.py文件
+        self.specific_cleanup_dirs = [
+            "v3/tests/test_logs",
+            "v3/tests/temp"
+        ]
+        
+        # 定义特定目录中要清理的文件模式
+        self.specific_dir_file_patterns = [
+            "*.log",           # 测试日志文件
+            "*.txt",           # 文本日志文件
+            "*.tmp",           # 临时文件
+            "*.temp",          # 临时文件
+            "*.debug",         # 调试文件
+            "*.out",           # 输出文件
+            "*.err",           # 错误日志文件
+            "*.bak",           # 备份文件
+            "test_*.py",       # 临时测试文件（以test_开头的Python文件，但排除正式测试）
+            "debug_*.py",      # 调试Python文件
+            "temp_*.py",       # 临时Python文件
+        ]
     
     def find_files_to_clean(self) -> List[Path]:
         """
@@ -190,6 +212,54 @@ class ProjectCleaner:
         except (OSError, PermissionError):
             return False
     
+    def clean_specific_directories(self, dry_run: bool = False) -> int:
+        """
+        清理特定目录中的文件（保留__init__.py和其他重要文件）。
+        
+        Args:
+            dry_run: 是否为试运行模式
+            
+        Returns:
+            成功删除的文件数量
+        """
+        deleted_count = 0
+        
+        for dir_path_str in self.specific_cleanup_dirs:
+            dir_path = self.project_root / dir_path_str
+            
+            # 检查目录是否存在
+            if not dir_path.exists() or not dir_path.is_dir():
+                continue
+            
+            # 遍历目录中的所有文件
+            for file_path in dir_path.iterdir():
+                if not file_path.is_file():
+                    continue
+                
+                # 跳过受保护的文件（如__init__.py）
+                if file_path.name in self.protected_files or file_path.name == "__init__.py":
+                    continue
+                
+                # 检查是否匹配特定目录的清理模式
+                should_clean = False
+                for pattern in self.specific_dir_file_patterns:
+                    if file_path.match(pattern) or file_path.name == pattern:
+                        should_clean = True
+                        break
+                
+                # 如果匹配清理模式，则删除文件
+                if should_clean:
+                    try:
+                        if not dry_run:
+                            file_path.unlink()
+                            self.deleted_files.append(file_path)
+                        deleted_count += 1
+                        print(f"{'[DRY RUN] ' if dry_run else ''}删除特定目录文件: {file_path}")
+                    except (OSError, PermissionError) as e:
+                        print(f"无法删除特定目录文件 {file_path}: {e}")
+        
+        return deleted_count
+    
     def clean_files(self, files: List[Path], dry_run: bool = False) -> int:
         """
         清理文件。
@@ -274,19 +344,24 @@ class ProjectCleaner:
         # 清理目录
         deleted_dirs = self.clean_dirs(dirs_to_clean, dry_run)
         
+        # 清理特定目录中的文件
+        deleted_specific_files = self.clean_specific_directories(dry_run)
+        
         # 统计结果
         result = {
             'files_found': len(files_to_clean),
             'dirs_found': len(dirs_to_clean),
             'files_deleted': deleted_files,
             'dirs_deleted': deleted_dirs,
+            'specific_files_deleted': deleted_specific_files,
             'dry_run': dry_run
         }
         
         print("-" * 50)
         print(f"清理完成:")
-        print(f"  文件: {deleted_files}/{len(files_to_clean)}")
+        print(f"  常规文件: {deleted_files}/{len(files_to_clean)}")
         print(f"  目录: {deleted_dirs}/{len(dirs_to_clean)}")
+        print(f"  特定目录文件: {deleted_specific_files}")
         
         return result
     
@@ -300,7 +375,35 @@ class ProjectCleaner:
         files_to_clean = self.find_files_to_clean()
         dirs_to_clean = self.find_dirs_to_clean()
         
-        return len(files_to_clean) > 0 or len(dirs_to_clean) > 0
+        # 检查特定目录是否有需要清理的文件
+        specific_files_need_cleanup = False
+        for dir_path_str in self.specific_cleanup_dirs:
+            dir_path = self.project_root / dir_path_str
+            
+            if not dir_path.exists() or not dir_path.is_dir():
+                continue
+            
+            for file_path in dir_path.iterdir():
+                if not file_path.is_file():
+                    continue
+                
+                # 跳过受保护的文件
+                if file_path.name in self.protected_files or file_path.name == "__init__.py":
+                    continue
+                
+                # 检查是否匹配清理模式
+                for pattern in self.specific_dir_file_patterns:
+                    if file_path.match(pattern) or file_path.name == pattern:
+                        specific_files_need_cleanup = True
+                        break
+                
+                if specific_files_need_cleanup:
+                    break
+            
+            if specific_files_need_cleanup:
+                break
+        
+        return len(files_to_clean) > 0 or len(dirs_to_clean) > 0 or specific_files_need_cleanup
 
 
 def main():

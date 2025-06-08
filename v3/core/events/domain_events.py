@@ -318,4 +318,54 @@ class CommunityCardsRevealedEvent(DomainEvent):
             data,
             correlation_id
         )
+        return cls(**base_event.__dict__)
+
+
+@dataclass(frozen=True)
+class PlayerJoinedEvent(DomainEvent):
+    """玩家加入事件"""
+
+    @classmethod
+    def create(
+        cls,
+        game_id: str,
+        player_id: str,
+        initial_chips: int,
+        correlation_id: Optional[str] = None
+    ) -> PlayerJoinedEvent:
+        data = {
+            'player_id': player_id,
+            'initial_chips': initial_chips
+        }
+        base_event = DomainEvent.create(
+            EventType.PLAYER_JOINED,
+            game_id,
+            data,
+            correlation_id
+        )
+        return cls(**base_event.__dict__)
+
+
+@dataclass(frozen=True)
+class HandEndedEvent(DomainEvent):
+    """手牌结束事件"""
+
+    @classmethod
+    def create(
+        cls,
+        game_id: str,
+        winners: Dict[str, int],  # player_id -> amount won
+        pot_distribution: list[Dict[str, Any]],
+        correlation_id: Optional[str] = None
+    ) -> HandEndedEvent:
+        data = {
+            'winners': winners,
+            'pot_distribution': pot_distribution
+        }
+        base_event = DomainEvent.create(
+            EventType.HAND_ENDED,
+            game_id,
+            data,
+            correlation_id
+        )
         return cls(**base_event.__dict__) 

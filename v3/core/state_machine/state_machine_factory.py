@@ -6,10 +6,13 @@
 
 from typing import Dict
 from .types import GamePhase
-from .phase_handlers import (
-    InitHandler, PreFlopHandler, FlopHandler, TurnHandler,
-    RiverHandler, ShowdownHandler, FinishedHandler
-)
+from .init_handler import InitHandler
+from .pre_flop_handler import PreFlopHandler
+from .flop_handler import FlopHandler
+from .turn_handler import TurnHandler
+from .river_handler import RiverHandler
+from .showdown_handler import ShowdownHandler
+from .finished_handler import FinishedHandler
 
 __all__ = ['StateMachineFactory']
 

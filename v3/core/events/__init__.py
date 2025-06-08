@@ -21,6 +21,8 @@ Event Types:
     PotUpdatedEvent: 边池更新事件
     CardsDealtEvent: 发牌事件
     CommunityCardsRevealedEvent: 公共牌揭示事件
+    PlayerJoinedEvent: 玩家加入事件
+    HandEndedEvent: 手牌结束事件
     
 Functions:
     get_event_bus: 获取全局事件总线实例
@@ -39,6 +41,8 @@ from .domain_events import (
     PotUpdatedEvent,
     CardsDealtEvent,
     CommunityCardsRevealedEvent,
+    PlayerJoinedEvent,
+    HandEndedEvent,
 )
 
 from .event_bus import (
@@ -64,6 +68,8 @@ __all__ = [
     "PotUpdatedEvent",
     "CardsDealtEvent",
     "CommunityCardsRevealedEvent",
+    "PlayerJoinedEvent",
+    "HandEndedEvent",
     
     # 事件总线
     "EventHandler",

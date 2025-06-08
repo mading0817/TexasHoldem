@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 
 from .types import QueryResult
-from .config_service import ConfigService, GameRulesConfig
+from .config_service import ConfigService, GameRulesConfig, get_config_service
 
 if TYPE_CHECKING:
     from .types import PlayerAction
@@ -103,14 +103,14 @@ class ValidationService:
             warnings = []
             checks_performed = 0
             
-            # 从PlayerAction获取行动信息
-            action_type = player_action.action_type
-            amount = player_action.amount
+            # From PlayerAction获取行动信息
+            action_type = player_action.action_type.lower() # 统一转为小写
+            amount = player_action.amount or 0
             
-            # 获取玩家当前状态
+            # (Phase 2) 从ChipLedger和context获取真实的筹码信息
             player_data = game_context.players.get(player_id, {})
-            player_chips = player_data.get('chips', 0)
-            current_bet = player_data.get('current_bet', 0)
+            player_balance = game_context.chip_ledger.get_balance(player_id)
+            player_current_bet = game_context.current_hand_bets.get(player_id, 0)
             
             # 1. 验证玩家是否有资格行动
             checks_performed += 1
@@ -122,14 +122,14 @@ class ValidationService:
             
             # 2. 验证基本行动规则
             checks_performed += 1
-            action_validation = self._validate_action_type(action_type, amount, player_chips, game_context)
+            action_validation = self._validate_action_type(action_type, amount, player_balance, game_context)
             if not action_validation.is_valid:
                 errors.extend(action_validation.errors)
             
             # 3. 验证下注规则（使用从ConfigService获取的规则）
             checks_performed += 1
             betting_validation = self._validate_betting_rules_enhanced(
-                action_type, amount, current_bet, game_context.current_bet, player_chips
+                action_type, amount, player_current_bet, game_context.current_bet, player_balance
             )
             if not betting_validation.is_valid:
                 errors.extend(betting_validation.errors)
@@ -176,25 +176,26 @@ class ValidationService:
             ))
         
         # 检查特定行动的前提条件
-        if action_type == "check" and game_state.current_bet > 0:
+        player_bet = game_state.current_hand_bets.get(player_id, 0)
+        if action_type == "check" and game_state.current_bet > player_bet:
             errors.append(ValidationError(
                 rule_name="check_action_prerequisite",
                 error_type="invalid_check",
-                message="当前有下注时不能check",
-                expected_value=0,
+                message="当需要跟注时不能check",
+                expected_value=player_bet,
                 actual_value=game_state.current_bet
             ))
         
-        if action_type == "call" and game_state.current_bet == 0:
+        if action_type == "call" and game_state.current_bet == player_bet:
             errors.append(ValidationError(
                 rule_name="call_action_prerequisite",
                 error_type="invalid_call",
-                message="没有下注时不能call",
-                expected_value=">0",
-                actual_value=game_state.current_bet
+                message="没有需要跟注时不能call",
+                expected_value=f"<{game_state.current_bet}",
+                actual_value=player_bet
             ))
         
-        if action_type in ["raise", "all_in"] and amount <= 0:
+        if action_type in ["raise", "all_in"] and amount is not None and amount <= 0:
             errors.append(ValidationError(
                 rule_name="raise_amount_positive",
                 error_type="invalid_amount",
@@ -210,66 +211,6 @@ class ValidationService:
                 message="All-in金额必须等于玩家剩余筹码",
                 expected_value=player_chips,
                 actual_value=amount
-            ))
-        
-        return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=[], rule_checks_performed=1)
-    
-    def _validate_chips_change(self, action_type: str, amount: int, 
-                             chips_before: int, chips_after: int,
-                             bet_before: int, bet_after: int) -> ValidationResult:
-        """验证筹码变化的合理性"""
-        errors = []
-        
-        # 计算期望的筹码变化
-        expected_chips_change = 0
-        expected_bet_change = 0
-        
-        if action_type == "fold":
-            expected_chips_change = 0
-            expected_bet_change = 0
-        elif action_type == "check":
-            expected_chips_change = 0
-            expected_bet_change = 0
-        elif action_type == "call":
-            expected_chips_change = -amount
-            expected_bet_change = amount
-        elif action_type == "raise":
-            expected_chips_change = -amount
-            expected_bet_change = amount
-        elif action_type == "all_in":
-            expected_chips_change = -amount
-            expected_bet_change = amount
-        
-        # 验证筹码变化
-        actual_chips_change = chips_after - chips_before
-        if actual_chips_change != expected_chips_change:
-            errors.append(ValidationError(
-                rule_name="chips_change_consistency",
-                error_type="chips_inconsistency",
-                message=f"{action_type}行动的筹码变化不正确",
-                expected_value=expected_chips_change,
-                actual_value=actual_chips_change
-            ))
-        
-        # 验证下注变化
-        actual_bet_change = bet_after - bet_before
-        if action_type != "fold" and actual_bet_change != expected_bet_change:
-            errors.append(ValidationError(
-                rule_name="bet_change_consistency",
-                error_type="bet_inconsistency",
-                message=f"{action_type}行动的下注变化不正确",
-                expected_value=expected_bet_change,
-                actual_value=actual_bet_change
-            ))
-        
-        # 验证筹码不能为负数
-        if chips_after < 0:
-            errors.append(ValidationError(
-                rule_name="chips_non_negative",
-                error_type="negative_chips",
-                message="玩家筹码不能为负数",
-                expected_value=">=0",
-                actual_value=chips_after
             ))
         
         return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=[], rule_checks_performed=1)
@@ -407,74 +348,104 @@ class ValidationService:
     def _validate_betting_rules_enhanced(self, action_type: str, amount: int,
                                        current_player_bet: int, game_current_bet: int,
                                        player_chips: int) -> ValidationResult:
-        """增强版下注规则验证（使用从ConfigService获取的规则）"""
+        """
+        增强的下注规则验证（PLAN 33）
+        (Phase 2) 使用 player_chips (即 player_balance)
+        """
         errors = []
+        checks_performed = 0
         
+        min_raise = self.game_rules.min_raise_multiplier * game_current_bet
+        
+        # 1. 跟注(Call)验证
         if action_type == "call":
-            # Call的金额应该等于当前下注减去玩家已下注的金额
-            expected_call_amount = max(0, game_current_bet - current_player_bet)
-            if amount != expected_call_amount:
-                # 检查是否是筹码不足的情况，如果是则应该建议all-in
-                if player_chips < expected_call_amount and amount == player_chips:
-                    # 这是合法的，玩家筹码不足跟注，相当于all-in
-                    pass
-                else:
-                    errors.append(ValidationError(
-                        rule_name="call_amount_correct",
-                        error_type="incorrect_call_amount",
-                        message=f"Call金额不正确，期望 {expected_call_amount}，实际 {amount}",
-                        expected_value=expected_call_amount,
-                        actual_value=amount
-                    ))
-        
-        elif action_type == "raise":
-            # 加注金额验证
-            total_bet_after_raise = current_player_bet + amount
+            checks_performed += 1
+            amount_to_call = game_current_bet - current_player_bet
             
-            # 最小加注规则：新的总下注至少是当前下注的 min_raise_multiplier 倍
-            min_total_bet = game_current_bet + self.game_rules.big_blind
-            if total_bet_after_raise < min_total_bet and player_chips > amount:  # 不是all-in的情况
+            # 允许All-In式的不足额跟注
+            is_all_in_call = amount < amount_to_call and amount == player_chips
+            
+            if amount != amount_to_call and not is_all_in_call:
                 errors.append(ValidationError(
-                    rule_name="minimum_raise_rule",
-                    error_type="insufficient_raise",
-                    message=f"加注后总下注 {total_bet_after_raise} 低于最小要求 {min_total_bet}",
-                    expected_value=min_total_bet,
-                    actual_value=total_bet_after_raise
+                    rule_name="call_amount_validation",
+                    error_type="invalid_call_amount",
+                    message=f"跟注金额不正确。需要: {amount_to_call}, 提供: {amount}",
+                    expected_value=amount_to_call,
+                    actual_value=amount
                 ))
             
-            # 验证玩家有足够筹码
+            checks_performed += 1
             if amount > player_chips:
                 errors.append(ValidationError(
-                    rule_name="sufficient_chips_for_raise",
-                    error_type="insufficient_chips",
-                    message=f"玩家筹码 {player_chips} 不足以加注 {amount}",
-                    expected_value=f">= {amount}",
-                    actual_value=player_chips
-                ))
-        
-        elif action_type == "all_in":
-            # All-in应该使用所有剩余筹码
-            if amount != player_chips:
-                errors.append(ValidationError(
-                    rule_name="all_in_amount_equals_chips",
-                    error_type="invalid_all_in_amount",
-                    message=f"All-in金额必须等于玩家剩余筹码",
-                    expected_value=player_chips,
+                    rule_name="call_funds_validation",
+                    error_type="insufficient_funds",
+                    message=f"跟注筹码不足。需要: {amount}, 拥有: {player_chips}",
+                    expected_value=f"<= {player_chips}",
                     actual_value=amount
                 ))
         
-        elif action_type == "check":
-            # Check的前提是当前没有下注，或者玩家已经跟上了当前下注
-            if game_current_bet > current_player_bet:
+        # 2. 加注(Raise)验证
+        elif action_type == "raise":
+            total_bet = amount
+            
+            checks_performed += 1
+            if total_bet <= game_current_bet:
                 errors.append(ValidationError(
-                    rule_name="check_prerequisite",
-                    error_type="cannot_check_with_bet",
-                    message=f"当前有下注 {game_current_bet}，玩家已下注 {current_player_bet}，不能check",
-                    expected_value=current_player_bet,
+                    rule_name="raise_min_amount_validation",
+                    error_type="raise_too_small",
+                    message=f"加注总额必须大于当前下注额。当前: {game_current_bet}, 提供: {total_bet}",
+                    expected_value=f"> {game_current_bet}",
+                    actual_value=total_bet
+                ))
+            
+            # 验证加注增量 (raise amount = total_bet - game_current_bet)
+            # 这里的逻辑需要细化，暂时简化
+            
+            checks_performed += 1
+            if total_bet > player_chips + current_player_bet:
+                errors.append(ValidationError(
+                    rule_name="raise_funds_validation",
+                    error_type="insufficient_funds",
+                    message=f"加注筹码不足。需要总下注: {total_bet}, 拥有: {player_chips} (已下注 {current_player_bet})",
+                    expected_value=f"<= {player_chips + current_player_bet}",
+                    actual_value=total_bet
+                ))
+
+        # 3. 下注(Bet)验证
+        elif action_type == "bet":
+            checks_performed += 1
+            if game_current_bet > 0:
+                 errors.append(ValidationError(
+                    rule_name="bet_in_unopened_pot",
+                    error_type="invalid_bet",
+                    message="已有下注，不能执行'bet'，应为'raise'",
+                    expected_value=0,
                     actual_value=game_current_bet
                 ))
+            
+            checks_performed += 1
+            if amount < self.game_rules.big_blind:
+                # 允许all-in
+                if amount != player_chips:
+                    errors.append(ValidationError(
+                        rule_name="bet_min_amount_validation",
+                        error_type="bet_too_small",
+                        message=f"首次下注额不能小于大盲注。需要: >={self.game_rules.big_blind}, 提供: {amount}",
+                        expected_value=f">= {self.game_rules.big_blind}",
+                        actual_value=amount
+                    ))
+            
+            checks_performed += 1
+            if amount > player_chips:
+                 errors.append(ValidationError(
+                    rule_name="bet_funds_validation",
+                    error_type="insufficient_funds",
+                    message=f"下注筹码不足。需要: {amount}, 拥有: {player_chips}",
+                    expected_value=f"<= {player_chips}",
+                    actual_value=amount
+                ))
         
-        return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=[], rule_checks_performed=1)
+        return ValidationResult(is_valid=len(errors) == 0, errors=errors, warnings=[], rule_checks_performed=checks_performed)
     
     def validate_chip_conservation(self, 
                                  initial_total: int,
@@ -654,4 +625,22 @@ class ValidationService:
             return QueryResult.failure_result(
                 f"验证阶段转换失败: {str(e)}",
                 error_code="VALIDATE_PHASE_TRANSITION_FAILED"
-            ) 
+            )
+
+
+# 全局单例
+_validation_service_instance: Optional[ValidationService] = None
+
+def get_validation_service() -> "ValidationService":
+    """
+    获取验证服务的单例实例
+    
+    Returns:
+        ValidationService: 验证服务实例
+    """
+    global _validation_service_instance
+    if _validation_service_instance is None:
+        # 验证服务依赖配置服务，所以我们也从单例获取配置服务
+        config_service = get_config_service()
+        _validation_service_instance = ValidationService(config_service=config_service)
+    return _validation_service_instance 

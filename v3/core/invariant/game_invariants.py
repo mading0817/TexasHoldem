@@ -205,21 +205,8 @@ class GameInvariants:
         Returns:
             GameInvariants: 配置好的不变量检查器
         """
-        from ..state_machine.types import GamePhase
-        
-        # 从快照中计算初始总筹码
-        if snapshot.phase == GamePhase.INIT:
-            # INIT阶段：底池应该为0，只计算玩家筹码
-            initial_chips = sum(player.chips for player in snapshot.players)
-            
-            # 验证INIT阶段的假设
-            if snapshot.pot.total_pot != 0:
-                # 如果底池不为0，仍然加上，但这可能表示有问题
-                initial_chips += snapshot.pot.total_pot
-        else:
-            # 非INIT阶段：当前筹码分布可能已经包含下注
-            # 需要计算真实的总筹码：玩家筹码 + 底池
-            initial_chips = sum(player.chips for player in snapshot.players) + snapshot.pot.total_pot
+        # 计算总筹码的唯一真实来源：所有玩家持有的筹码 + 所有在底池中的筹码
+        initial_chips = sum(p.chips for p in snapshot.players) + snapshot.pot.total_pot
         
         return cls(
             initial_total_chips=initial_chips,

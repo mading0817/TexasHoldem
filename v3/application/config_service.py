@@ -425,6 +425,21 @@ class ConfigService:
             
         except Exception as e:
             return QueryResult.failure_result(
-                f"列出配置配置文件失败: {str(e)}",
-                error_code="LIST_PROFILES_FAILED"
-            ) 
+                f"列出可用配置失败: {str(e)}",
+                error_code="LIST_AVAILABLE_PROFILES_FAILED"
+            )
+
+# 全局单例
+_config_service_instance: Optional[ConfigService] = None
+
+def get_config_service() -> ConfigService:
+    """
+    获取配置服务的全局单例
+    
+    Returns:
+        ConfigService: 配置服务实例
+    """
+    global _config_service_instance
+    if _config_service_instance is None:
+        _config_service_instance = ConfigService()
+    return _config_service_instance 
